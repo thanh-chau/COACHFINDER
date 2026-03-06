@@ -147,7 +147,7 @@ export function AdminDashboard() {
               }}
               className="text-white"
             >
-              Coach<span className="text-rose-400">Hub</span>
+              Coach<span className="text-rose-400">Finder</span>
             </div>
             <div
               style={{ fontSize: "0.62rem", fontWeight: 600 }}

@@ -20,7 +20,7 @@ export function Footer() {
                 <Zap className="w-5 h-5 text-white" fill="white" />
               </div>
               <span style={{ fontWeight: 700, fontSize: "1.25rem" }} className="text-white tracking-tight">
-                Coach<span className="text-orange-500">Hub</span>
+                Coach<span className="text-orange-500">Finder</span>
               </span>
             </div>
             <p className="text-gray-400 mb-6" style={{ fontSize: "0.875rem", lineHeight: 1.75 }}>

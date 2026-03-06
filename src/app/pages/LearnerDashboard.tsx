@@ -103,7 +103,7 @@ export function LearnerDashboard() {
             <Dumbbell className="w-[18px] h-[18px] text-white" />
           </div>
           <span style={{ fontWeight: 800, fontSize: "1.15rem", letterSpacing: "-0.02em" }} className="text-white">
-            Coach<span className="text-orange-400">Hub</span>
+            Coach<span className="text-orange-400">Finder</span>
           </span>
           <button className="ml-auto lg:hidden p-1.5 rounded-lg bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-colors" onClick={() => setSidebarOpen(false)}>
             <X className="w-4 h-4" />

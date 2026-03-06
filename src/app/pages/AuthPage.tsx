@@ -99,7 +99,7 @@ function LeftPanel({ mode }: { mode: AuthMode }) {
             <Dumbbell className="w-5 h-5 text-white" />
           </div>
           <span style={{ fontSize: "1.3rem", fontWeight: 800 }} className="text-white tracking-tight">
-            Coach<span className="text-orange-400">Hub</span>
+            Coach<span className="text-orange-400">Finder</span>
           </span>
         </Link>
 
@@ -513,7 +513,7 @@ export function AuthPage() {
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
               <Dumbbell className="w-4 h-4 text-white" />
             </div>
-            <span style={{ fontSize: "1.1rem", fontWeight: 800 }} className="text-gray-900">Coach<span className="text-orange-500">Hub</span></span>
+            <span style={{ fontSize: "1.1rem", fontWeight: 800 }} className="text-gray-900">Coach<span className="text-orange-500">Finder</span></span>
           </Link>
           <Link to="/" className="hidden lg:flex items-center gap-1.5 text-gray-400 hover:text-gray-600 transition-colors">
             <ArrowLeft className="w-4 h-4" />
