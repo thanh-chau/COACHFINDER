@@ -245,7 +245,7 @@ export function Pricing() {
         </div>
 
         {/* ── Plan cards ─────────────────────────────────── */}
-        <div className={`grid grid-cols-1 gap-6 items-start ${
+        <div className={`grid grid-cols-1 gap-6 items-stretch ${
           activeTab === "learner"
             ? "md:grid-cols-2 max-w-3xl mx-auto"
             : "md:grid-cols-3"
@@ -258,7 +258,7 @@ export function Pricing() {
             return (
               <div
                 key={plan.id}
-                className={`relative rounded-3xl border-2 ${plan.border} overflow-hidden transition-all duration-300 hover:shadow-xl ${
+                className={`relative rounded-3xl border-2 ${plan.border} overflow-hidden transition-all duration-300 hover:shadow-xl flex flex-col ${
                   plan.highlight ? "scale-105 shadow-2xl" : "hover:-translate-y-1"
                 }`}
               >
@@ -316,8 +316,8 @@ export function Pricing() {
                 </div>
 
                 {/* Features */}
-                <div className="bg-white p-6">
-                  <ul className="space-y-3 mb-7">
+                <div className="bg-white p-6 flex flex-col flex-1">
+                  <ul className="space-y-3 mb-7 flex-1">
                     {plan.features.map((f) => (
                       <li key={f.text} className="flex items-start gap-3">
                         <div className={`mt-0.5 shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${f.ok ? "bg-green-100" : "bg-gray-100"}`}>
