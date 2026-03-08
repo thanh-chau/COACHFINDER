@@ -1,9 +1,43 @@
 import { Link } from "react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Menu, X, Zap } from "lucide-react";
+
+const NAV_ITEMS = [
+  { label: "Tìm HLV", href: "#coaches" },
+  { label: "Môn thể thao", href: "#sports" },
+  { label: "AI Phân tích", href: "#ai-analysis" },
+  { label: "Video 360°", href: "#video-360" },
+  { label: "Bảng giá", href: "#pricing" },
+];
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [active, setActive] = useState<string | null>(null);
+
+  useEffect(() => {
+    const ids = NAV_ITEMS.map((i) => i.href.slice(1));
+    const observers: IntersectionObserver[] = [];
+
+    ids.forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const obs = new IntersectionObserver(
+        ([entry]) => { if (entry.isIntersecting) setActive(id); },
+        { rootMargin: "-40% 0px -55% 0px" }
+      );
+      obs.observe(el);
+      observers.push(obs);
+    });
+
+    return () => observers.forEach((o) => o.disconnect());
+  }, []);
+
+  const handleNav = (href: string) => {
+    setIsOpen(false);
+    setActive(href.slice(1));
+    const el = document.querySelector(href);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm">
@@ -21,17 +55,20 @@ export function Navbar() {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-8">
-            {["Tìm HLV", "Môn thể thao", "AI Phân tích", "Video 360°", "Bảng giá"].map((item) => (
-              <a
-                key={item}
-                href="#"
-                className={`transition-colors duration-200 ${item === "AI Phân tích" ? "text-orange-500 hover:text-orange-600" : "text-gray-600 hover:text-orange-500"}`}
-                style={{ fontSize: "0.9rem" }}
-              >
-                {item === "AI Phân tích" && <span className="mr-1">🤖</span>}
-                {item}
-              </a>
-            ))}
+            {NAV_ITEMS.map((item) => {
+              const isActive = active === item.href.slice(1);
+              return (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  onClick={(e) => { e.preventDefault(); handleNav(item.href); }}
+                  className={`transition-colors duration-200 ${isActive ? "text-orange-500 font-semibold" : "text-gray-600 hover:text-orange-500"}`}
+                  style={{ fontSize: "0.9rem" }}
+                >
+                  {item.label}
+                </a>
+              );
+            })}
           </div>
 
           {/* CTA Buttons */}
@@ -65,11 +102,19 @@ export function Navbar() {
       {/* Mobile menu */}
       {isOpen && (
         <div className="md:hidden bg-white border-t border-gray-100 px-4 py-4 flex flex-col gap-4">
-          {["Tìm HLV", "Môn thể thao", "AI Phân tích", "Video 360°", "Bảng giá"].map((item) => (
-            <a key={item} href="#" className="text-gray-700 hover:text-orange-500 py-2 border-b border-gray-50">
-              {item}
-            </a>
-          ))}
+          {NAV_ITEMS.map((item) => {
+            const isActive = active === item.href.slice(1);
+            return (
+              <a
+                key={item.label}
+                href={item.href}
+                onClick={(e) => { e.preventDefault(); handleNav(item.href); }}
+                className={`py-2 border-b border-gray-50 transition-colors duration-200 ${isActive ? "text-orange-500 font-semibold" : "text-gray-700 hover:text-orange-500"}`}
+              >
+                {item.label}
+              </a>
+            );
+          })}
           <div className="flex flex-col gap-2 pt-2">
             <Link to="/auth" className="py-2.5 rounded-xl border border-gray-200 text-gray-700 text-center" style={{ fontSize: "0.9rem" }}>
               Đăng nhập

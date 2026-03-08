@@ -5,8 +5,8 @@ import { Check, X, Zap, Crown, Star, Users, Video, BarChart3, Shield, Dumbbell, 
 const learnerPlans = [
   {
     id: "free",
-    name: "Free",
-    tagline: "Khởi đầu hành trình",
+    name: "Gói Thường",
+    tagline: "Phù hợp cho người mới bắt đầu",
     icon: Star,
     iconColor: "text-gray-500",
     monthlyPrice: 0,
@@ -17,68 +17,40 @@ const learnerPlans = [
     highlight: false,
     btnStyle: "bg-gray-900 text-white hover:bg-gray-800",
     features: [
-      { text: "Tìm kiếm HLV cơ bản", ok: true },
-      { text: "Xem 5 hồ sơ HLV/tháng", ok: true },
-      { text: "Nhắn tin giới hạn (3 tin/ngày)", ok: true },
-      { text: "Đặt lịch 1 buổi thử miễn phí", ok: true },
-      { text: "3 lần phân tích AI/tháng", ok: true },
-      { text: "Xem video 360° công khai", ok: true },
-      { text: "Báo cáo AI PDF chi tiết", ok: false },
-      { text: "30 lần phân tích AI/tháng", ok: false },
-      { text: "AI Coach 1-1 không giới hạn", ok: false },
-      { text: "Kế hoạch dinh dưỡng AI", ok: false },
+      { text: "Tạo tài khoản học viên", ok: true },
+      { text: "Xem hồ sơ HLV", ok: true },
+      { text: "Tìm kiếm và lọc HLV theo môn học, trình độ, mục tiêu", ok: true },
+      { text: "Đặt lịch học", ok: true },
+      { text: "Lưu HLV yêu thích", ok: true },
+      { text: "Xem lịch sử buổi học", ok: true },
+      { text: "Nhận hỗ trợ cơ bản từ hệ thống", ok: true },
+      { text: "Upload video để nhận đánh giá", ok: false },
+      { text: "AI feedback kỹ thuật chi tiết", ok: false },
+      { text: "Lộ trình luyện tập cá nhân hóa", ok: false },
     ],
   },
   {
     id: "pro",
-    name: "Pro",
-    tagline: "Dành cho người nghiêm túc",
+    name: "Gói Pro",
+    tagline: "Phù hợp cho học viên muốn cải thiện nhanh hơn",
     icon: Zap,
     iconColor: "text-orange-500",
-    monthlyPrice: 199000,
-    yearlyPrice: 149000,
+    monthlyPrice: 99000,
+    yearlyPrice: 82500,
     color: "from-orange-50 to-red-50",
     border: "border-orange-300",
     badge: "Phổ biến nhất",
     highlight: true,
     btnStyle: "bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600 shadow-lg shadow-orange-200",
     features: [
-      { text: "Tìm kiếm & nhắn tin không giới hạn", ok: true },
-      { text: "Xem không giới hạn hồ sơ HLV", ok: true },
-      { text: "Đặt lịch không giới hạn", ok: true },
-      { text: "30 lần phân tích AI/tháng", ok: true },
-      { text: "Báo cáo AI PDF + biểu đồ", ok: true },
-      { text: "Xem & upload video 360°", ok: true },
-      { text: "Theo dõi tiến độ nâng cao", ok: true },
-      { text: "Hỗ trợ email trong giờ hành chính", ok: true },
-      { text: "AI Coach 1-1 không giới hạn", ok: false },
-      { text: "Kế hoạch dinh dưỡng AI cá nhân hóa", ok: false },
-    ],
-  },
-  {
-    id: "premium",
-    name: "Premium",
-    tagline: "Trải nghiệm đỉnh cao",
-    icon: Crown,
-    iconColor: "text-amber-500",
-    monthlyPrice: 499000,
-    yearlyPrice: 379000,
-    color: "from-amber-50 to-yellow-50",
-    border: "border-amber-300",
-    badge: "Toàn diện nhất",
-    highlight: false,
-    btnStyle: "bg-gradient-to-r from-amber-500 to-yellow-500 text-white hover:from-amber-600 hover:to-yellow-600 shadow-lg shadow-amber-200",
-    features: [
-      { text: "Tất cả tính năng Pro", ok: true },
-      { text: "Phân tích AI không giới hạn", ok: true },
-      { text: "AI Coach 1-1 không giới hạn", ok: true },
-      { text: "Upload video 360° không giới hạn", ok: true },
-      { text: "Annotation & chú thích video 360°", ok: true },
-      { text: "Kế hoạch dinh dưỡng AI cá nhân hóa", ok: true },
-      { text: "Analytics dashboard nâng cao", ok: true },
-      { text: "Hỗ trợ ưu tiên 24/7 (chat + gọi)", ok: true },
-      { text: "Giảm giá 20% mọi buổi tập", ok: true },
-      { text: "Báo cáo sức khỏe hàng tháng", ok: true },
+      { text: "Bao gồm toàn bộ quyền lợi gói thường", ok: true },
+      { text: "Upload video để nhận đánh giá", ok: true },
+      { text: "AI feedback kỹ thuật chi tiết hơn", ok: true },
+      { text: "Theo dõi tiến bộ theo thời gian", ok: true },
+      { text: "Gợi ý lỗi sai và cách sửa", ok: true },
+      { text: "Lộ trình luyện tập cá nhân hóa", ok: true },
+      { text: "Ưu tiên hỗ trợ", ok: true },
+      { text: "Ưu tiên ghép với HLV phù hợp hơn", ok: true },
     ],
   },
 ];
@@ -87,8 +59,8 @@ const learnerPlans = [
 const coachPlans = [
   {
     id: "coach-starter",
-    name: "Starter",
-    tagline: "Bắt đầu sự nghiệp HLV",
+    name: "Gói Thường",
+    tagline: "Phù hợp cho HLV mới tham gia nền tảng",
     icon: Dumbbell,
     iconColor: "text-green-500",
     monthlyPrice: 0,
@@ -98,72 +70,67 @@ const coachPlans = [
     badge: null,
     highlight: false,
     btnStyle: "bg-gray-900 text-white hover:bg-gray-800",
-    commission: "20% hoa hồng/giao dịch",
     features: [
-      { text: "Trang hồ sơ HLV cơ bản", ok: true },
-      { text: "Nhận tối đa 10 học viên", ok: true },
-      { text: "Đăng tối đa 3 video giới thiệu", ok: true },
-      { text: "Chat với học viên", ok: true },
-      { text: "Lịch đặt buổi tập online", ok: true },
-      { text: "Thanh toán qua CoachFinder", ok: true },
-      { text: "Upload video 360°", ok: false },
-      { text: "Dashboard analytics nâng cao", ok: false },
-      { text: "Huy hiệu \"Verified Pro\"", ok: false },
-      { text: "Ưu tiên hiển thị tìm kiếm", ok: false },
+      { text: "Tạo hồ sơ HLV", ok: true },
+      { text: "Đăng thông tin cá nhân, kinh nghiệm, môn dạy", ok: true },
+      { text: "Nhận booking từ học viên", ok: true },
+      { text: "Quản lý lịch dạy cơ bản", ok: true },
+      { text: "Quản lý danh sách học viên cơ bản", ok: true },
+      { text: "Xem đánh giá từ học viên", ok: true },
+      { text: "Upload video 360° không giới hạn", ok: false },
+      { text: "Theo dõi tiến bộ học viên", ok: false },
+      { text: "Ưu tiên hiển thị trong tìm kiếm", ok: false },
+      { text: "Dashboard doanh thu & hiệu suất chi tiết", ok: false },
     ],
   },
   {
     id: "coach-pro",
-    name: "Pro Coach",
-    tagline: "Mở rộng & phát triển",
+    name: "Gói Pro",
+    tagline: "Phù hợp cho HLV muốn tăng độ chuyên nghiệp",
     icon: BarChart3,
     iconColor: "text-blue-500",
-    monthlyPrice: 299000,
-    yearlyPrice: 229000,
+    monthlyPrice: 200000,
+    yearlyPrice: 167000,
     color: "from-blue-50 to-indigo-50",
     border: "border-blue-300",
     badge: "Được chọn nhiều nhất",
     highlight: true,
     btnStyle: "bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 shadow-lg shadow-blue-200",
-    commission: "12% hoa hồng/giao dịch",
     features: [
-      { text: "Không giới hạn học viên", ok: true },
-      { text: "Upload không giới hạn video", ok: true },
-      { text: "Upload & phát video 360°", ok: true },
-      { text: "Annotation video chuyên nghiệp", ok: true },
-      { text: "Dashboard analytics học viên", ok: true },
-      { text: "Huy hiệu \"Verified Pro\" nổi bật", ok: true },
-      { text: "Hiển thị ưu tiên trong tìm kiếm", ok: true },
-      { text: "Kế hoạch tập luyện tùy chỉnh", ok: true },
-      { text: "AI hỗ trợ xây dựng giáo án", ok: false },
-      { text: "Hoa hồng 0% (gói Elite)", ok: false },
+      { text: "Bao gồm toàn bộ quyền lợi gói thường", ok: true },
+      { text: "Hồ sơ nổi bật hơn trên nền tảng", ok: true },
+      { text: "Upload video 360° không giới hạn", ok: true },
+      { text: "Công cụ quản lý học viên tốt hơn", ok: true },
+      { text: "Theo dõi tiến bộ của học viên", ok: true },
+      { text: "Xem thống kê lượt xem hồ sơ, lượt booking", ok: true },
+      { text: "Hỗ trợ xây dựng hình ảnh chuyên nghiệp", ok: true },
+      { text: "Ưu tiên hiển thị trong tìm kiếm", ok: false },
+      { text: "Gắn nhãn HLV nổi bật / xác minh", ok: false },
+      { text: "Dashboard doanh thu & hiệu suất chi tiết", ok: false },
     ],
   },
   {
     id: "coach-elite",
-    name: "Elite Coach",
-    tagline: "Dành cho HLV hàng đầu",
+    name: "Gói Premium",
+    tagline: "Phù hợp cho HLV muốn tối đa hóa doanh thu",
     icon: Globe,
     iconColor: "text-purple-500",
-    monthlyPrice: 699000,
-    yearlyPrice: 529000,
+    monthlyPrice: 400000,
+    yearlyPrice: 333000,
     color: "from-purple-50 to-violet-50",
     border: "border-purple-300",
-    badge: "Tối thượng",
+    badge: "Đề xuất",
     highlight: false,
     btnStyle: "bg-gradient-to-r from-purple-600 to-violet-600 text-white hover:from-purple-700 hover:to-violet-700 shadow-lg shadow-purple-200",
-    commission: "0% hoa hồng",
     features: [
-      { text: "Tất cả tính năng Pro Coach", ok: true },
-      { text: "Hoa hồng 0% — giữ 100% doanh thu", ok: true },
-      { text: "AI hỗ trợ xây dựng giáo án tự động", ok: true },
-      { text: "Phân tích video 360° học viên bằng AI", ok: true },
-      { text: "Trang profile riêng (custom URL)", ok: true },
-      { text: "Tích hợp thanh toán quốc tế", ok: true },
-      { text: "Hỗ trợ account manager riêng", ok: true },
-      { text: "Ưu tiên #1 trong tất cả tìm kiếm", ok: true },
-      { text: "Badge \"Elite\" độc quyền", ok: true },
-      { text: "Báo cáo kinh doanh hàng tháng", ok: true },
+      { text: "Bao gồm toàn bộ quyền lợi gói Pro", ok: true },
+      { text: "Ưu tiên hiển thị cao hơn trong tìm kiếm", ok: true },
+      { text: "Gắn nhãn HLV nổi bật / xác minh", ok: true },
+      { text: "Dashboard doanh thu và hiệu suất chi tiết", ok: true },
+      { text: "Quản lý học viên nâng cao", ok: true },
+      { text: "Quản lý lịch dạy và nhắc lịch tự động", ok: true },
+      { text: "Ưu tiên tiếp cận học viên tiềm năng", ok: true },
+      { text: "Hỗ trợ thương hiệu cá nhân ở mức cao hơn", ok: true },
     ],
   },
 ];
@@ -242,7 +209,7 @@ export function Pricing() {
                 Gói dành riêng cho Huấn Luyện Viên
               </div>
               <p style={{ fontSize: "0.82rem", lineHeight: 1.65 }} className="text-gray-500">
-                Xây dựng thương hiệu cá nhân, quản lý học viên, upload video 360° và tăng doanh thu với bộ công cụ chuyên nghiệp. Phí hoa hồng giảm dần theo gói.
+                Xây dựng thương hiệu cá nhân, quản lý học viên, upload video 360° và tăng doanh thu với bộ công cụ chuyên nghiệp.
               </p>
             </div>
           </div>
@@ -278,7 +245,11 @@ export function Pricing() {
         </div>
 
         {/* ── Plan cards ─────────────────────────────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+        <div className={`grid grid-cols-1 gap-6 items-start ${
+          activeTab === "learner"
+            ? "md:grid-cols-2 max-w-3xl mx-auto"
+            : "md:grid-cols-3"
+        }`}>
           {plans.map((plan) => {
             const Icon = plan.icon;
             const price = isYearly ? plan.yearlyPrice : plan.monthlyPrice;
@@ -341,18 +312,7 @@ export function Pricing() {
                     </p>
                   )}
 
-                  {/* Commission badge (coach only) */}
-                  {isCoach && "commission" in plan && (
-                    <div className={`mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border ${
-                      (plan as typeof coachPlans[0]).commission.includes("0%")
-                        ? "bg-green-500/10 border-green-400/30 text-green-700"
-                        : "bg-white/60 border-gray-200 text-gray-600"
-                    }`}>
-                      <span style={{ fontSize: "0.78rem", fontWeight: 700 }}>
-                        💸 {(plan as typeof coachPlans[0]).commission}
-                      </span>
-                    </div>
-                  )}
+                  {/* Commission badge: removed */}
                 </div>
 
                 {/* Features */}

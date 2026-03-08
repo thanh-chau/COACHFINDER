@@ -14,13 +14,13 @@ export function HomePage() {
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
-      <Hero />
-      <SportCategories />
-      <HowItWorks />
-      <AIVideoAnalysis />
-      <CoachStudio />
-      <FeaturedCoaches />
-      <Pricing />
+      <div id="home"><Hero /></div>
+      <div id="coaches"><FeaturedCoaches /></div>
+      <div id="sports"><SportCategories /></div>
+      <div id="how-it-works"><HowItWorks /></div>
+      <div id="ai-analysis"><AIVideoAnalysis /></div>
+      <div id="video-360"><CoachStudio /></div>
+      <div id="pricing"><Pricing /></div>
       <Testimonials />
       <CTASection />
       <Footer />

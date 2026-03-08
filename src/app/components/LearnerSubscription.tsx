@@ -1,9 +1,8 @@
 import { useState } from "react";
 import {
-  Check, X, Zap, Crown, Sparkles, ChevronRight,
+  Check, X, Zap, Sparkles, ChevronRight,
   CreditCard, Smartphone, Building2, Shield,
-  ArrowLeft, CheckCircle2, Star, Users, Brain,
-  Video, Calendar, MessageCircle, BarChart2,
+  ArrowLeft, CheckCircle2, Star, Brain,
   Gift, Clock, AlertCircle, Lock, Flame
 } from "lucide-react";
 
@@ -11,92 +10,49 @@ import {
 const PLANS = [
   {
     id: "free",
-    name: "Free",
+    name: "Gói Thường",
     icon: Sparkles,
     color: "gray",
     accent: "#6b7280",
     monthlyPrice: 0,
     yearlyPrice: 0,
-    desc: "Bắt đầu hành trình thể thao của bạn",
+    desc: "Phù hợp cho người mới bắt đầu, chỉ cần các tính năng cơ bản.",
     badge: null,
     cta: "Gói hiện tại",
     current: true,
-    features: {
-      coaches: "1 HLV",
-      ai: "3 lần/tháng",
-      video360: "Cơ bản",
-      schedule: "Cơ bản",
-      chat: "Giới hạn",
-      group: false,
-      priority: false,
-      analytics: false,
-      offline: false,
-      badge: false,
-    },
+    features: [
+      "Tạo tài khoản học viên",
+      "Xem hồ sơ HLV",
+      "Tìm kiếm và lọc HLV theo môn học, trình độ, mục tiêu",
+      "Đặt lịch học",
+      "Lưu HLV yêu thích",
+      "Xem lịch sử buổi học",
+      "Nhận hỗ trợ cơ bản từ hệ thống",
+    ],
   },
   {
     id: "pro",
-    name: "Pro",
+    name: "Gói Pro",
     icon: Zap,
     color: "orange",
     accent: "#f97316",
-    monthlyPrice: 199000,
-    yearlyPrice: 1990000,
-    desc: "Dành cho người luyện tập nghiêm túc",
+    monthlyPrice: 99000,
+    yearlyPrice: 990000,
+    desc: "Phù hợp cho học viên muốn học nghiêm túc và cải thiện nhanh hơn.",
     badge: "Phổ biến nhất",
     cta: "Nâng cấp Pro",
     current: false,
-    features: {
-      coaches: "5 HLV",
-      ai: "20 lần/tháng",
-      video360: "Full HD",
-      schedule: "Nâng cao",
-      chat: "Không giới hạn",
-      group: true,
-      priority: true,
-      analytics: false,
-      offline: false,
-      badge: false,
-    },
+    features: [
+      "Bao gồm toàn bộ quyền lợi gói thường",
+      "Upload video để nhận đánh giá",
+      "AI feedback kỹ thuật chi tiết hơn",
+      "Theo dõi tiến bộ theo thời gian",
+      "Gợi ý lỗi sai và cách sửa",
+      "Lộ trình luyện tập cá nhân hóa",
+      "Ưu tiên hỗ trợ",
+      "Ưu tiên ghép với HLV phù hợp hơn",
+    ],
   },
-  {
-    id: "premium",
-    name: "Premium",
-    icon: Crown,
-    color: "purple",
-    accent: "#8b5cf6",
-    monthlyPrice: 499000,
-    yearlyPrice: 4990000,
-    desc: "Trải nghiệm đỉnh cao không giới hạn",
-    badge: "Tốt nhất",
-    cta: "Nâng cấp Premium",
-    current: false,
-    features: {
-      coaches: "Không giới hạn",
-      ai: "Không giới hạn",
-      video360: "4K + Exclusive",
-      schedule: "Premium ưu tiên",
-      chat: "VIP 24/7",
-      group: true,
-      priority: true,
-      analytics: true,
-      offline: true,
-      badge: true,
-    },
-  },
-];
-
-const FEATURE_ROWS = [
-  { key: "coaches", icon: Users, label: "Số HLV theo học" },
-  { key: "ai", icon: Brain, label: "AI phân tích động tác" },
-  { key: "video360", icon: Video, label: "Video 360° HLV" },
-  { key: "schedule", icon: Calendar, label: "Đặt lịch tập" },
-  { key: "chat", icon: MessageCircle, label: "Chat với HLV" },
-  { key: "group", icon: Users, label: "Nhóm tập online" },
-  { key: "priority", icon: Zap, label: "Hỗ trợ ưu tiên" },
-  { key: "analytics", icon: BarChart2, label: "Phân tích tiến độ chi tiết" },
-  { key: "offline", icon: Calendar, label: "Buổi tập offline đặc biệt" },
-  { key: "badge", icon: Crown, label: "Badge Premium Profile" },
 ];
 
 const PAYMENT_METHODS = [
@@ -234,8 +190,8 @@ function PaymentModal({
             <div className="space-y-4">
               {[
                 { icon: CheckCircle2, text: `Gói ${plan.name} hiệu lực ngay hôm nay`, sub: "4 tháng 3, 2026" },
-                { icon: Zap, text: "Tính năng mới đã được mở khoá", sub: plan.features.coaches + " HLV · " + plan.features.ai + " AI" },
-                { icon: Brain, text: "AI phân tích động tác nâng cấp", sub: plan.features.ai },
+                { icon: Zap, text: "Tính năng mới đã được mở khoá", sub: "Upload video · AI feedback kỹ thuật" },
+                { icon: Brain, text: "AI phân tích động tác nâng cấp", sub: "Phân tích chi tiết · Gợi ý lỗi sai" },
               ].map(({ icon: Icon, text, sub }) => (
                 <div key={text} className="flex items-center gap-3 p-3.5 bg-gray-50 rounded-2xl">
                   <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
@@ -459,11 +415,11 @@ export function LearnerSubscription() {
             <div className="flex items-center gap-2 mb-0.5">
               <span style={{ fontWeight: 800, fontSize: "1.05rem" }}>Gói hiện tại: </span>
               <span className="bg-white/20 px-2.5 py-0.5 rounded-full" style={{ fontWeight: 700, fontSize: "0.82rem" }}>
-                Free
+                Gói Thường
               </span>
             </div>
             <p style={{ fontSize: "0.82rem", lineHeight: 1.6 }} className="text-orange-100">
-              Bạn đang dùng 1/1 HLV · 3/3 lần AI còn lại tháng này. Nâng cấp để mở khoá toàn bộ tính năng!
+              Bạn đang dùng gói Thường. Nâng cấp lên Pro để mở khoá AI feedback và video phân tích kỹ thuật!
             </p>
           </div>
           <div className="hidden sm:flex items-center gap-2 shrink-0">
@@ -501,7 +457,7 @@ export function LearnerSubscription() {
       </div>
 
       {/* ── PLAN CARDS ──────────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {PLANS.map((plan) => {
           const c = PlanColor(plan.color);
           const PlanIcon = plan.icon;
@@ -519,7 +475,7 @@ export function LearnerSubscription() {
               {/* Popular badge */}
               {plan.badge && (
                 <div className={`absolute -top-3.5 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3.5 py-1 rounded-full ${c.badge} shadow-sm`} style={{ fontSize: "0.72rem", fontWeight: 700, whiteSpace: "nowrap" }}>
-                  {plan.id === "premium" ? <Crown className="w-3 h-3" /> : <Star className="w-3 h-3" />}
+                  <Star className="w-3 h-3" />
                   {plan.badge}
                 </div>
               )}
@@ -566,22 +522,12 @@ export function LearnerSubscription() {
 
               {/* Features */}
               <div className="space-y-2.5 flex-1 mb-6">
-                {[
-                  { label: plan.features.coaches + " HLV", ok: true },
-                  { label: "AI phân tích: " + plan.features.ai, ok: true },
-                  { label: "Video 360°: " + plan.features.video360, ok: true },
-                  { label: "Nhóm tập online", ok: plan.features.group },
-                  { label: "Hỗ trợ ưu tiên", ok: plan.features.priority },
-                  { label: "Phân tích tiến độ chi tiết", ok: plan.features.analytics },
-                  { label: "Buổi offline đặc biệt", ok: plan.features.offline },
-                ].map(({ label, ok }) => (
+                {plan.features.map((label) => (
                   <div key={label} className="flex items-center gap-2.5">
-                    <div className={`w-4.5 h-4.5 rounded-full flex items-center justify-center shrink-0 ${ok ? `${c.bg}` : "bg-gray-100"}`}>
-                      {ok
-                        ? <Check className={`w-2.5 h-2.5 ${c.text}`} strokeWidth={3} />
-                        : <X className="w-2.5 h-2.5 text-gray-300" strokeWidth={3} />}
+                    <div className={`w-4.5 h-4.5 rounded-full flex items-center justify-center shrink-0 ${c.bg}`}>
+                      <Check className={`w-2.5 h-2.5 ${c.text}`} strokeWidth={3} />
                     </div>
-                    <span style={{ fontSize: "0.82rem" }} className={ok ? "text-gray-700" : "text-gray-400"}>{label}</span>
+                    <span style={{ fontSize: "0.82rem" }} className="text-gray-700">{label}</span>
                   </div>
                 ))}
               </div>
@@ -616,50 +562,48 @@ export function LearnerSubscription() {
           <table className="w-full">
             <thead>
               <tr className="bg-gray-50">
-                <th className="text-left px-6 py-3.5 text-gray-500" style={{ fontSize: "0.78rem", fontWeight: 700, width: "40%" }}>Tính năng</th>
-                {PLANS.map(p => {
-                  const c = PlanColor(p.color);
-                  return (
-                    <th key={p.id} className="px-4 py-3.5 text-center" style={{ fontSize: "0.82rem", fontWeight: 800 }}>
-                      <span className={p.current ? "text-gray-500" : c.text}>{p.name}</span>
-                    </th>
-                  );
-                })}
+                <th className="text-left px-6 py-3.5 text-gray-500" style={{ fontSize: "0.78rem", fontWeight: 700, width: "50%" }}>Tính năng</th>
+                <th className="px-4 py-3.5 text-center" style={{ fontSize: "0.82rem", fontWeight: 800 }}>
+                  <span className="text-gray-500">Gói Thường</span>
+                </th>
+                <th className="px-4 py-3.5 text-center" style={{ fontSize: "0.82rem", fontWeight: 800 }}>
+                  <span className="text-orange-500">Gói Pro</span>
+                </th>
               </tr>
             </thead>
             <tbody>
-              {FEATURE_ROWS.map((row, idx) => {
-                const RowIcon = row.icon;
-                return (
-                  <tr key={row.key} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50/60"}>
-                    <td className="px-6 py-3.5">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-                          <RowIcon className="w-3.5 h-3.5 text-gray-500" />
-                        </div>
-                        <span style={{ fontSize: "0.83rem" }} className="text-gray-700">{row.label}</span>
-                      </div>
-                    </td>
-                    {PLANS.map(plan => {
-                      const val = plan.features[row.key as keyof typeof plan.features];
-                      const c = PlanColor(plan.color);
-                      return (
-                        <td key={plan.id} className="px-4 py-3.5 text-center">
-                          {typeof val === "boolean" ? (
-                            val
-                              ? <div className={`w-6 h-6 rounded-full ${c.bg} flex items-center justify-center mx-auto`}>
-                                  <Check className={`w-3.5 h-3.5 ${c.text}`} strokeWidth={3} />
-                                </div>
-                              : <X className="w-4 h-4 text-gray-300 mx-auto" strokeWidth={2.5} />
-                          ) : (
-                            <span style={{ fontSize: "0.8rem", fontWeight: 600 }} className={plan.current ? "text-gray-400" : c.text}>{val as string}</span>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
+              {[
+                { label: "Tạo tài khoản học viên", free: true, pro: true },
+                { label: "Xem hồ sơ HLV", free: true, pro: true },
+                { label: "Tìm kiếm và lọc HLV theo môn học, trình độ, mục tiêu", free: true, pro: true },
+                { label: "Đặt lịch học", free: true, pro: true },
+                { label: "Lưu HLV yêu thích", free: true, pro: true },
+                { label: "Xem lịch sử buổi học", free: true, pro: true },
+                { label: "Nhận hỗ trợ cơ bản từ hệ thống", free: true, pro: true },
+                { label: "Upload video để nhận đánh giá", free: false, pro: true },
+                { label: "AI feedback kỹ thuật chi tiết hơn", free: false, pro: true },
+                { label: "Theo dõi tiến bộ theo thời gian", free: false, pro: true },
+                { label: "Gợi ý lỗi sai và cách sửa", free: false, pro: true },
+                { label: "Lộ trình luyện tập cá nhân hóa", free: false, pro: true },
+                { label: "Ưu tiên hỗ trợ", free: false, pro: true },
+                { label: "Ưu tiên ghép với HLV phù hợp hơn", free: false, pro: true },
+              ].map((row, idx) => (
+                <tr key={row.label} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50/60"}>
+                  <td className="px-6 py-3.5">
+                    <span style={{ fontSize: "0.83rem" }} className="text-gray-700">{row.label}</span>
+                  </td>
+                  <td className="px-4 py-3.5 text-center">
+                    {row.free
+                      ? <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center mx-auto"><Check className="w-3.5 h-3.5 text-gray-600" strokeWidth={3} /></div>
+                      : <X className="w-4 h-4 text-gray-300 mx-auto" strokeWidth={2.5} />}
+                  </td>
+                  <td className="px-4 py-3.5 text-center">
+                    {row.pro
+                      ? <div className="w-6 h-6 rounded-full bg-orange-100 flex items-center justify-center mx-auto"><Check className="w-3.5 h-3.5 text-orange-500" strokeWidth={3} /></div>
+                      : <X className="w-4 h-4 text-gray-300 mx-auto" strokeWidth={2.5} />}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
