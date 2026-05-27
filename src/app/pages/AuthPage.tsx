@@ -4,43 +4,10 @@ import { Link, useNavigate } from "react-router";
 import {
   Eye, EyeOff, ArrowLeft, ChevronRight, Check,
   Dumbbell, GraduationCap, Mail, Lock, User,
-  Phone, Award, Clock, FileText, AlertCircle,
-  Zap, Shield, Brain, Star, KeyRound, Copy
+  Phone, AlertCircle, Zap, Shield, Brain, Star
 } from "lucide-react";
-
-// ─── Demo accounts ────────────────────────────────────────────────────────────
-const DEMO_ACCOUNTS = [
-  {
-    email: "hocvien@demo.com",
-    password: "demo1234",
-    role: "learner" as const,
-    name: "Nguyễn Minh Anh",
-    label: "Học viên",
-    icon: "🎓",
-    accent: "orange",
-    redirect: "/dashboard/learner",
-  },
-  {
-    email: "hlv@demo.com",
-    password: "demo1234",
-    role: "coach" as const,
-    name: "Trần Văn Đức",
-    label: "HLV Pro Coach",
-    icon: "🏋️",
-    accent: "blue",
-    redirect: "/dashboard/coach",
-  },
-  {
-    email: "admin@coachfinder.vn",
-    password: "admin2026",
-    role: "admin" as const,
-    name: "Super Admin",
-    label: "Quản trị viên",
-    icon: "🛡️",
-    accent: "rose",
-    redirect: "/dashboard/admin",
-  },
-];
+import { login, registerAccount } from "../api/auth";
+import { getDashboardPath, saveAuthSession } from "../utils/authSession";
 
 const AUTH_BG =
   "https://images.unsplash.com/photo-1693214674477-1159bddf1598?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmaXRuZXNzJTIwY29hY2glMjB0cmFpbmluZyUyMGF0aGxldGUlMjBtb2RpdmF0aW9uJTIwZGFyayUyMGd5bXxlbnwxfHx8fDE3NzI2Mzc1Mjd8MA&ixlib=rb-4.1.0&q=80&w=1080";
@@ -48,12 +15,6 @@ const AUTH_BG =
 type AuthMode = "login" | "register";
 type Role = "learner" | "coach" | "admin";
 type RegisterStep = 1 | 2;
-
-const sports = [
-  "Thể hình / Gym", "Bóng đá", "Tennis", "Bơi lội",
-  "Yoga", "Quyền anh / Boxing", "Chạy bộ", "Bóng rổ",
-  "Cầu lông", "Võ thuật", "CrossFit", "Cycling", "Pilates", "Khác",
-];
 
 // ─── Reusable input ───────────────────────────────────────────────────────────
 function FormInput({
@@ -151,76 +112,6 @@ function LeftPanel({ mode }: { mode: AuthMode }) {
   );
 }
 
-// ─── Demo accounts panel ─────────────────────────────────────────────────────
-function DemoPanel({ onFill }: { onFill: (email: string, password: string) => void }) {
-  const [copied, setCopied] = useState<string | null>(null);
-
-  const handleCopy = (e: React.MouseEvent, text: string, key: string) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(text).catch(() => {});
-    setCopied(key);
-    setTimeout(() => setCopied(null), 1500);
-  };
-
-  const accentClass = (accent: string) => {
-    if (accent === "orange") return "border-orange-200 bg-orange-50/50 hover:border-orange-300 hover:bg-orange-50";
-    if (accent === "blue") return "border-blue-200 bg-blue-50/50 hover:border-blue-300 hover:bg-blue-50";
-    return "border-rose-200 bg-rose-50/50 hover:border-rose-300 hover:bg-rose-50";
-  };
-
-  const badgeClass = (accent: string) => {
-    if (accent === "orange") return "bg-orange-100 text-orange-600";
-    if (accent === "blue") return "bg-blue-100 text-blue-600";
-    return "bg-rose-100 text-rose-600";
-  };
-
-  return (
-    <div className="mb-6 bg-gradient-to-br from-slate-50 to-gray-50 border-2 border-dashed border-gray-200 rounded-2xl p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <KeyRound className="w-4 h-4 text-gray-500" />
-        <span style={{ fontWeight: 700, fontSize: "0.82rem" }} className="text-gray-600">Tài khoản demo — nhấn để điền nhanh</span>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-        {DEMO_ACCOUNTS.map((acc) => (
-          <div
-            key={acc.email}
-            onClick={() => onFill(acc.email, acc.password)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={e => e.key === "Enter" && onFill(acc.email, acc.password)}
-            className={`relative text-left p-3 rounded-xl border-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98] select-none ${accentClass(acc.accent)}`}
-          >
-            <div className="flex items-center gap-2 mb-1.5">
-              <span style={{ fontSize: "1rem" }}>{acc.icon}</span>
-              <span style={{ fontWeight: 700, fontSize: "0.8rem" }} className="text-gray-800 truncate">{acc.label}</span>
-              <span className={`ml-auto px-1.5 py-0.5 rounded-full shrink-0 ${badgeClass(acc.accent)}`} style={{ fontSize: "0.62rem", fontWeight: 700 }}>
-                Demo
-              </span>
-            </div>
-            <div className="space-y-0.5">
-              <div className="flex items-center justify-between gap-1">
-                <span style={{ fontSize: "0.68rem" }} className="text-gray-500 font-mono truncate">{acc.email}</span>
-                <span
-                  onClick={e => handleCopy(e, acc.email, acc.email)}
-                  role="button" tabIndex={0}
-                  onKeyDown={e => { if (e.key === "Enter") handleCopy(e as unknown as React.MouseEvent, acc.email, acc.email); }}
-                  className="p-0.5 text-gray-300 hover:text-gray-500 cursor-pointer shrink-0"
-                >
-                  {copied === acc.email ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span style={{ fontSize: "0.68rem" }} className="text-gray-400 font-mono">••••••••</span>
-                <span style={{ fontSize: "0.62rem" }} className="text-gray-400">{acc.password}</span>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ─── Login form ───────────────────────────────────────────────────────────────
 interface LoginData { email: string; password: string; remember: boolean; }
 
@@ -228,22 +119,16 @@ function LoginForm({ onSwitch }: { onSwitch: () => void }) {
   const [showPw, setShowPw] = useState(false);
   const [loginError, setLoginError] = useState("");
   const navigate = useNavigate();
-  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<LoginData>();
-
-  const fillDemo = (email: string, password: string) => {
-    setValue("email", email);
-    setValue("password", password);
-    setLoginError("");
-  };
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginData>();
 
   const onSubmit = async (data: LoginData) => {
     setLoginError("");
-    await new Promise(r => setTimeout(r, 900));
-    const match = DEMO_ACCOUNTS.find(a => a.email === data.email && a.password === data.password);
-    if (match) {
-      navigate(match.redirect);
-    } else {
-      setLoginError("Email hoặc mật khẩu không đúng. Hãy thử tài khoản demo bên dưới!");
+    try {
+      const auth = await login(data.email.trim(), data.password);
+      saveAuthSession(auth, data.remember);
+      navigate(getDashboardPath(auth.role));
+    } catch (error) {
+      setLoginError(error instanceof Error ? error.message : "Đăng nhập không thành công. Vui lòng thử lại.");
     }
   };
 
@@ -253,9 +138,6 @@ function LoginForm({ onSwitch }: { onSwitch: () => void }) {
         <h1 style={{ fontSize: "1.75rem", fontWeight: 800 }} className="text-gray-900 mb-1">Đăng nhập</h1>
         <p style={{ fontSize: "0.9rem" }} className="text-gray-500">Chào mừng trở lại! Vui lòng nhập thông tin của bạn.</p>
       </div>
-
-      {/* Demo panel */}
-      <DemoPanel onFill={fillDemo} />
 
       {/* Social login */}
       <div className="grid grid-cols-2 gap-3 mb-5">
@@ -355,13 +237,31 @@ function RolePicker({ onSelect }: { onSelect: (r: Role) => void }) {
 }
 
 // ─── Learner register ─────────────────────────────────────────────────────────
-interface LearnerData { name: string; email: string; phone: string; password: string; confirmPassword: string; terms: boolean; }
+interface LearnerData { username: string; name: string; email: string; phone: string; password: string; confirmPassword: string; terms: boolean; }
 
 function LearnerForm({ onBack, onSwitch }: { onBack: () => void; onSwitch: () => void }) {
   const [showPw, setShowPw] = useState(false);
   const [showCp, setShowCp] = useState(false);
+  const [registerError, setRegisterError] = useState("");
+  const navigate = useNavigate();
   const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<LearnerData>();
-  const onSubmit = async (d: LearnerData) => { await new Promise(r => setTimeout(r, 1200)); console.log(d); };
+  const onSubmit = async (data: LearnerData) => {
+    setRegisterError("");
+    try {
+      const auth = await registerAccount({
+        username: data.username.trim(),
+        fullName: data.name.trim(),
+        email: data.email.trim(),
+        phone: data.phone.trim(),
+        password: data.password,
+        role: "TRAINEES",
+      });
+      saveAuthSession(auth);
+      navigate(getDashboardPath(auth.role));
+    } catch (error) {
+      setRegisterError(error instanceof Error ? error.message : "Đăng ký không thành công. Vui lòng thử lại.");
+    }
+  };
 
   return (
     <div className="w-full max-w-md mx-auto">
@@ -379,6 +279,7 @@ function LearnerForm({ onBack, onSwitch }: { onBack: () => void; onSwitch: () =>
       </div>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
         <FormInput label="Họ và tên" icon={User} error={errors.name?.message} placeholder="Nguyễn Văn A" registration={register("name", { required: "Bắt buộc" })} />
+        <FormInput label="Tên đăng nhập" icon={User} error={errors.username?.message} placeholder="nguyenvana" registration={register("username", { required: "Bắt buộc", minLength: { value: 3, message: "Tối thiểu 3 ký tự" }, maxLength: { value: 50, message: "Tối đa 50 ký tự" } })} />
         <FormInput label="Email" icon={Mail} error={errors.email?.message} placeholder="ban@email.com" registration={register("email", { required: "Bắt buộc", pattern: { value: /^\S+@\S+\.\S+$/, message: "Email không hợp lệ" } })} />
         <FormInput label="Số điện thoại" icon={Phone} error={errors.phone?.message} placeholder="0901 234 567" type="tel" registration={register("phone", { required: "Bắt buộc", pattern: { value: /^[0-9]{10,11}$/, message: "Không hợp lệ" } })} />
         <FormInput label="Mật khẩu" icon={Lock} error={errors.password?.message}>
@@ -394,6 +295,12 @@ function LearnerForm({ onBack, onSwitch }: { onBack: () => void; onSwitch: () =>
           <span style={{ fontSize: "0.8rem", lineHeight: 1.6 }} className="text-gray-500">Tôi đồng ý với <a href="#" className="text-orange-500 hover:underline">Điều khoản dịch vụ</a> và <a href="#" className="text-orange-500 hover:underline">Chính sách bảo mật</a></span>
         </label>
         {errors.terms && <p className="text-red-500" style={{ fontSize: "0.78rem" }}>Vui lòng đồng ý với điều khoản</p>}
+        {registerError && (
+          <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3">
+            <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+            <span style={{ fontSize: "0.82rem" }} className="text-red-600">{registerError}</span>
+          </div>
+        )}
         <button type="submit" disabled={isSubmitting} className="w-full py-3.5 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-200 disabled:opacity-70 flex items-center justify-center gap-2" style={{ fontWeight: 700, fontSize: "0.95rem" }}>
           {isSubmitting ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Đang tạo...</> : "Tạo tài khoản miễn phí 🎉"}
         </button>
@@ -404,13 +311,31 @@ function LearnerForm({ onBack, onSwitch }: { onBack: () => void; onSwitch: () =>
 }
 
 // ─── Coach register ───────────────────────────────────────────────────────────
-interface CoachData { name: string; email: string; phone: string; password: string; confirmPassword: string; sport: string; experience: string; bio: string; terms: boolean; }
+interface CoachData { username: string; name: string; email: string; phone: string; password: string; confirmPassword: string; terms: boolean; }
 
 function CoachForm({ onBack, onSwitch }: { onBack: () => void; onSwitch: () => void }) {
   const [showPw, setShowPw] = useState(false);
   const [showCp, setShowCp] = useState(false);
+  const [registerError, setRegisterError] = useState("");
+  const navigate = useNavigate();
   const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<CoachData>();
-  const onSubmit = async (d: CoachData) => { await new Promise(r => setTimeout(r, 1200)); console.log(d); };
+  const onSubmit = async (data: CoachData) => {
+    setRegisterError("");
+    try {
+      const auth = await registerAccount({
+        username: data.username.trim(),
+        fullName: data.name.trim(),
+        email: data.email.trim(),
+        phone: data.phone.trim(),
+        password: data.password,
+        role: "COACHES",
+      });
+      saveAuthSession(auth);
+      navigate("/coach/profile/setup");
+    } catch (error) {
+      setRegisterError(error instanceof Error ? error.message : "Đăng ký không thành công. Vui lòng thử lại.");
+    }
+  };
 
   return (
     <div className="w-full max-w-md mx-auto">
@@ -418,7 +343,7 @@ function CoachForm({ onBack, onSwitch }: { onBack: () => void; onSwitch: () => v
         <button onClick={onBack} className="flex items-center gap-1.5 text-gray-400 hover:text-gray-600 mb-4"><ArrowLeft className="w-4 h-4" /><span style={{ fontSize: "0.85rem" }}>Quay lại</span></button>
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center"><Dumbbell className="w-5 h-5 text-blue-500" /></div>
-          <div><h1 style={{ fontSize: "1.5rem", fontWeight: 800 }} className="text-gray-900">Đăng ký HLV</h1><p style={{ fontSize: "0.8rem" }} className="text-gray-400">Xây dựng profile & bắt đầu nhận học viên</p></div>
+          <div><h1 style={{ fontSize: "1.5rem", fontWeight: 800 }} className="text-gray-900">Đăng ký HLV</h1><p style={{ fontSize: "0.8rem" }} className="text-gray-400">Tạo tài khoản để thiết lập hồ sơ HLV</p></div>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5"><div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center"><Check className="w-3.5 h-3.5 text-white" /></div><span style={{ fontSize: "0.75rem", fontWeight: 600 }} className="text-blue-500">Chọn vai trò</span></div>
@@ -427,42 +352,10 @@ function CoachForm({ onBack, onSwitch }: { onBack: () => void; onSwitch: () => v
         </div>
       </div>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
-        <div className="grid grid-cols-2 gap-3">
-          <FormInput label="Họ và tên" icon={User} error={errors.name?.message} placeholder="Nguyễn Văn A" focusColor="blue" registration={register("name", { required: "Bắt buộc" })} />
-          <FormInput label="Số điện thoại" icon={Phone} error={errors.phone?.message} placeholder="0901 234 567" type="tel" focusColor="blue" registration={register("phone", { required: "Bắt buộc", pattern: { value: /^[0-9]{10,11}$/, message: "Không hợp lệ" } })} />
-        </div>
+        <FormInput label="Họ và tên" icon={User} error={errors.name?.message} placeholder="Nguyễn Văn A" focusColor="blue" registration={register("name", { required: "Bắt buộc" })} />
+        <FormInput label="Tên đăng nhập" icon={User} error={errors.username?.message} placeholder="huanluyenvien" focusColor="blue" registration={register("username", { required: "Bắt buộc", minLength: { value: 3, message: "Tối thiểu 3 ký tự" }, maxLength: { value: 50, message: "Tối đa 50 ký tự" } })} />
         <FormInput label="Email" icon={Mail} error={errors.email?.message} placeholder="hlv@email.com" focusColor="blue" registration={register("email", { required: "Bắt buộc", pattern: { value: /^\S+@\S+\.\S+$/, message: "Email không hợp lệ" } })} />
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-gray-700 mb-1.5" style={{ fontSize: "0.85rem", fontWeight: 600 }}>Chuyên môn *</label>
-            <div className={`relative rounded-xl border-2 bg-gray-50 focus-within:bg-white focus-within:border-blue-400 ${errors.sport ? "border-red-300" : "border-gray-200"}`}>
-              <Award className="absolute left-3.5 top-3 w-4 h-4 text-gray-400" />
-              <select className="w-full bg-transparent pl-9 pr-3 py-3 outline-none text-gray-800 appearance-none cursor-pointer" style={{ fontSize: "0.85rem" }} {...register("sport", { required: "Bắt buộc" })}>
-                <option value="">Chọn môn</option>
-                {sports.map(s => <option key={s}>{s}</option>)}
-              </select>
-            </div>
-            {errors.sport && <p className="text-red-500 mt-1" style={{ fontSize: "0.72rem" }}>{errors.sport.message}</p>}
-          </div>
-          <div>
-            <label className="block text-gray-700 mb-1.5" style={{ fontSize: "0.85rem", fontWeight: 600 }}>Kinh nghiệm *</label>
-            <div className={`relative rounded-xl border-2 bg-gray-50 focus-within:bg-white focus-within:border-blue-400 ${errors.experience ? "border-red-300" : "border-gray-200"}`}>
-              <Clock className="absolute left-3.5 top-3 w-4 h-4 text-gray-400" />
-              <select className="w-full bg-transparent pl-9 pr-3 py-3 outline-none text-gray-800 appearance-none cursor-pointer" style={{ fontSize: "0.85rem" }} {...register("experience", { required: "Bắt buộc" })}>
-                <option value="">Chọn</option>
-                <option>Dưới 1 năm</option><option>1 – 3 năm</option><option>3 – 5 năm</option><option>5 – 10 năm</option><option>Trên 10 năm</option>
-              </select>
-            </div>
-            {errors.experience && <p className="text-red-500 mt-1" style={{ fontSize: "0.72rem" }}>{errors.experience.message}</p>}
-          </div>
-        </div>
-        <div>
-          <label className="block text-gray-700 mb-1.5" style={{ fontSize: "0.85rem", fontWeight: 600 }}>Giới thiệu ngắn <span className="text-gray-400 font-normal">(tuỳ chọn)</span></label>
-          <div className="relative rounded-xl border-2 border-gray-200 bg-gray-50 focus-within:bg-white focus-within:border-blue-400">
-            <FileText className="absolute left-3.5 top-3 w-4 h-4 text-gray-400" />
-            <textarea rows={2} placeholder="Ví dụ: HLV thể hình 5 năm, chứng chỉ ACE..." className="w-full bg-transparent pl-10 pr-4 py-3 outline-none text-gray-800 placeholder-gray-400 resize-none" style={{ fontSize: "0.85rem" }} {...register("bio")} />
-          </div>
-        </div>
+        <FormInput label="Số điện thoại" icon={Phone} error={errors.phone?.message} placeholder="0901 234 567" type="tel" focusColor="blue" registration={register("phone", { required: "Bắt buộc", pattern: { value: /^[0-9]{10,11}$/, message: "Không hợp lệ" } })} />
         <FormInput label="Mật khẩu" icon={Lock} error={errors.password?.message} focusColor="blue">
           <input type={showPw ? "text" : "password"} placeholder="Tối thiểu 8 ký tự" className="w-full bg-transparent pl-10 pr-10 py-3 outline-none text-gray-800 placeholder-gray-400" style={{ fontSize: "0.9rem" }} {...register("password", { required: "Bắt buộc", minLength: { value: 8, message: "Tối thiểu 8 ký tự" } })} />
           <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3.5 text-gray-400 hover:text-gray-600">{showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
@@ -476,6 +369,12 @@ function CoachForm({ onBack, onSwitch }: { onBack: () => void; onSwitch: () => v
           <span style={{ fontSize: "0.8rem", lineHeight: 1.6 }} className="text-gray-500">Tôi đồng ý với <a href="#" className="text-blue-500 hover:underline">Điều khoản HLV</a> và <a href="#" className="text-blue-500 hover:underline">Chính sách hoa hồng</a></span>
         </label>
         {errors.terms && <p className="text-red-500" style={{ fontSize: "0.78rem" }}>Vui lòng đồng ý với điều khoản</p>}
+        {registerError && (
+          <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3">
+            <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+            <span style={{ fontSize: "0.82rem" }} className="text-red-600">{registerError}</span>
+          </div>
+        )}
         <button type="submit" disabled={isSubmitting} className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:from-blue-600 hover:to-indigo-600 transition-all shadow-lg shadow-blue-200 disabled:opacity-70 flex items-center justify-center gap-2" style={{ fontWeight: 700, fontSize: "0.95rem" }}>
           {isSubmitting ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Đang tạo...</> : "Tạo tài khoản HLV 🏋️"}
         </button>

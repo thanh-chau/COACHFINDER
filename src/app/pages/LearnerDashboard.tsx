@@ -14,8 +14,8 @@ import { AIAnalysis } from "../components/AIAnalysis";
 import { ProgressTracking } from "../components/ProgressTracking";
 import { VideoLibrary } from "../components/VideoLibrary";
 import { Messaging } from "../components/Messaging";
+import { clearAuthSession, getAuthSession } from "../utils/authSession";
 
-const LEARNER_AVATAR = "https://images.unsplash.com/photo-1607286908165-b8b6a2874fc4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200";
 const COACH_AVATAR_1 = "https://images.unsplash.com/photo-1758875568932-0eefd3e60090?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200";
 const COACH_AVATAR_2 = "https://images.unsplash.com/photo-1755549476788-efd8bf819561?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200";
 const COACH_AVATAR_3 = "https://images.unsplash.com/photo-1660463527860-b66aebd362c9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200";
@@ -66,7 +66,6 @@ const bottomNav = [
 ];
 
 const HEADER_TITLES: Record<string, { title: string; sub: string }> = {
-  overview:     { title: "Xin chào, Minh Anh 👋",      sub: "Thứ Năm, 5 tháng 3, 2026" },
   find:         { title: "Tìm huấn luyện viên 🔍",     sub: "Khám phá HLV phù hợp với bạn" },
   subscription: { title: "Gói dịch vụ của tôi 💎",     sub: "Quản lý & nâng cấp gói học viên" },
   ai:           { title: "AI Phân tích động tác 🤖",   sub: "Phân tích kỹ thuật với trí tuệ nhân tạo" },
@@ -80,8 +79,22 @@ export function LearnerDashboard() {
   const [activeNav, setActiveNav] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
+  const session = getAuthSession();
+  const learnerName = session?.fullName?.trim() || session?.username || "Học viên";
+  const learnerInitials = learnerName
+    .split(/\s+/)
+    .slice(-2)
+    .map(part => part.charAt(0))
+    .join("")
+    .toUpperCase();
 
-  const header = HEADER_TITLES[activeNav] ?? { title: "Dashboard", sub: "" };
+  const header = activeNav === "overview"
+    ? { title: `Xin chào, ${learnerName} 👋`, sub: session?.email || "Tổng quan luyện tập của bạn" }
+    : HEADER_TITLES[activeNav] ?? { title: "Dashboard", sub: "" };
+  const logout = () => {
+    clearAuthSession();
+    navigate("/auth");
+  };
 
   return (
     <div className="flex h-screen bg-gray-50/80 overflow-hidden">
@@ -113,9 +126,11 @@ export function LearnerDashboard() {
         {/* User card */}
         <div className="px-4 py-4 border-b border-white/[0.06]">
           <div className="flex items-center gap-3 bg-white/[0.04] rounded-xl px-3.5 py-3 border border-white/[0.06]">
-            <img src={LEARNER_AVATAR} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0 ring-2 ring-orange-500/30" />
+            <div className="w-10 h-10 rounded-xl bg-orange-500/20 text-orange-300 flex items-center justify-center shrink-0 ring-2 ring-orange-500/30" style={{ fontSize: "0.76rem", fontWeight: 800 }}>
+              {learnerInitials}
+            </div>
             <div className="min-w-0">
-              <div style={{ fontWeight: 700, fontSize: "0.85rem" }} className="text-white truncate">Nguyễn Minh Anh</div>
+              <div style={{ fontWeight: 700, fontSize: "0.85rem" }} className="text-white truncate">{learnerName}</div>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 animate-pulse" />
                 <span style={{ fontSize: "0.7rem" }} className="text-gray-400">Học viên · Gói Free</span>
@@ -157,7 +172,7 @@ export function LearnerDashboard() {
           {bottomNav.map(({ icon: Icon, label, id }) => (
             <button
               key={id}
-              onClick={() => { if (id === "logout") navigate("/"); }}
+              onClick={() => { if (id === "logout") logout(); }}
               className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-gray-400 hover:bg-white/[0.06] hover:text-gray-200 transition-all duration-200"
             >
               <Icon className="w-[18px] h-[18px] shrink-0" />
@@ -188,7 +203,9 @@ export function LearnerDashboard() {
               <Bell className="w-[18px] h-[18px] text-gray-500" />
               <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
             </button>
-            <img src={LEARNER_AVATAR} alt="" className="w-9 h-9 rounded-xl object-cover border-2 border-orange-200 cursor-pointer hover:border-orange-300 transition-colors" />
+            <div className="w-9 h-9 rounded-xl bg-orange-100 text-orange-600 border-2 border-orange-200 flex items-center justify-center" style={{ fontSize: "0.72rem", fontWeight: 800 }}>
+              {learnerInitials}
+            </div>
           </div>
         </header>
 

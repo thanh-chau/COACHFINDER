@@ -4,6 +4,7 @@ import { AuthPage } from "./pages/AuthPage";
 import { LearnerDashboard } from "./pages/LearnerDashboard";
 import { CoachDashboard } from "./pages/CoachDashboard";
 import { AdminDashboard } from "./pages/AdminDashboard";
+import { CoachProfileSetupPage } from "./pages/CoachProfileSetupPage";
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/dashboard/learner" element={<LearnerDashboard />} />
         <Route path="/dashboard/coach" element={<CoachDashboard />} />
+        <Route path="/coach/profile/setup" element={<CoachProfileSetupPage />} />
         <Route path="/dashboard/admin" element={<AdminDashboard />} />
       </Routes>
     </BrowserRouter>

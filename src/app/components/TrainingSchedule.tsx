@@ -1,13 +1,25 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ChevronLeft, ChevronRight, Plus, Clock, MapPin, Video,
   CheckCircle2, X, AlertCircle, Star, List, LayoutGrid,
   CalendarDays, MessageCircle, Zap, Globe, ArrowRight,
   Dumbbell, Users, TrendingUp, Flame, Search
 } from "lucide-react";
+import { getMyBookings } from "../api/bookings";
+import type { BookingListItem } from "../types/booking";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const TODAY = "2026-03-05";
+function formatLocalDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+const TODAY_DATE = new Date();
+const TODAY = formatLocalDate(TODAY_DATE);
+const THIS_MONTH_KEY = `${TODAY_DATE.getFullYear()}-${String(TODAY_DATE.getMonth() + 1).padStart(2, "0")}`;
+const THIS_MONTH_LABEL = `Tháng ${TODAY_DATE.getMonth() + 1}/${TODAY_DATE.getFullYear()}`;
 const DAYS_SHORT = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 const MONTHS_VI = ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6",
   "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"];
@@ -50,31 +62,16 @@ interface Session {
   rating?: number;
 }
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
-const INITIAL_SESSIONS: Session[] = [
-  // Past (completed)
-  { id: 1,  date: "2026-02-24", startTime: "14:00", endTime: "15:30", coach: "Trần Văn Đức",    coachAvatar: AVATAR_1, sport: "Thể hình", emoji: "💪", mode: "Online",  location: "Google Meet",       status: "completed", price: 250000, note: "Tập Squat & Deadlift cơ bản", rating: 5 },
-  { id: 2,  date: "2026-02-26", startTime: "08:00", endTime: "09:00", coach: "Lê Thị Mai",      coachAvatar: AVATAR_2, sport: "Yoga",     emoji: "🧘", mode: "Offline", location: "27 Nguyễn Đình Chiểu, Q1", status: "completed", price: 180000, note: "Yoga buổi sáng – căng cơ toàn thân", rating: 5 },
-  { id: 3,  date: "2026-02-28", startTime: "17:00", endTime: "18:30", coach: "Trần Văn Đức",    coachAvatar: AVATAR_1, sport: "Thể hình", emoji: "💪", mode: "Online",  location: "Google Meet",       status: "completed", price: 250000, note: "Bench Press + Shoulder Press", rating: 4 },
-  { id: 4,  date: "2026-03-02", startTime: "08:00", endTime: "09:00", coach: "Lê Thị Mai",      coachAvatar: AVATAR_2, sport: "Yoga",     emoji: "🧘", mode: "Offline", location: "27 Nguyễn Đình Chiểu, Q1", status: "completed", price: 180000, note: "Vinyasa flow nhẹ nhàng", rating: 5 },
-  { id: 5,  date: "2026-03-03", startTime: "14:00", endTime: "15:30", coach: "Trần Văn Đức",    coachAvatar: AVATAR_1, sport: "Thể hình", emoji: "💪", mode: "Online",  location: "Google Meet",       status: "completed", price: 250000, note: "Leg day: Squat + Lunge + RDL", rating: 5 },
-  { id: 6,  date: "2026-03-04", startTime: "18:00", endTime: "19:30", coach: "Phạm Thị Linh",   coachAvatar: AVATAR_4, sport: "Boxing",   emoji: "🥊", mode: "Offline", location: "98 Lê Lợi, Q1",    status: "completed", price: 220000, note: "Kỹ thuật đấm cơ bản + combo", rating: 5 },
-  // Today & upcoming
-  { id: 7,  date: "2026-03-05", startTime: "14:00", endTime: "15:30", coach: "Trần Văn Đức",    coachAvatar: AVATAR_1, sport: "Thể hình", emoji: "💪", mode: "Online",  location: "Google Meet",       status: "upcoming",  price: 250000, note: "Upper body: Chest + Back", meetLink: "https://meet.google.com/abc-defg-hij" },
-  { id: 8,  date: "2026-03-06", startTime: "08:00", endTime: "09:00", coach: "Lê Thị Mai",      coachAvatar: AVATAR_2, sport: "Yoga",     emoji: "🧘", mode: "Offline", location: "27 Nguyễn Đình Chiểu, Q1", status: "upcoming", price: 180000, note: "Hatha Yoga + Thiền 15 phút" },
-  { id: 9,  date: "2026-03-07", startTime: "16:00", endTime: "17:30", coach: "Nguyễn Hoàng Minh", coachAvatar: AVATAR_3, sport: "Tennis",   emoji: "🎾", mode: "Offline", location: "Sân Tennis Tao Đàn, Q3", status: "pending",   price: 350000, note: "Kỹ thuật serve + forehand" },
-  { id: 10, date: "2026-03-09", startTime: "14:00", endTime: "15:30", coach: "Trần Văn Đức",    coachAvatar: AVATAR_1, sport: "Thể hình", emoji: "💪", mode: "Online",  location: "Google Meet",       status: "upcoming",  price: 250000, note: "Pull day: Pull-up + Row" },
-  { id: 11, date: "2026-03-10", startTime: "18:30", endTime: "20:00", coach: "Đỗ Minh Khoa",    coachAvatar: AVATAR_5, sport: "CrossFit", emoji: "🏋️", mode: "Offline", location: "CrossFit HCM, Q7",  status: "upcoming",  price: 400000, note: "WOD: AMRAP 20 phút" },
-  { id: 12, date: "2026-03-12", startTime: "08:00", endTime: "09:00", coach: "Lê Thị Mai",      coachAvatar: AVATAR_2, sport: "Yoga",     emoji: "🧘", mode: "Online",  location: "Google Meet",       status: "upcoming",  price: 180000, note: "Yin Yoga – giãn cơ sâu", meetLink: "https://meet.google.com/xyz-uvwx-yz1" },
-  { id: 13, date: "2026-03-14", startTime: "10:00", endTime: "11:30", coach: "Nguyễn Hoàng Minh", coachAvatar: AVATAR_3, sport: "Tennis",   emoji: "🎾", mode: "Offline", location: "Sân Tennis Tao Đàn, Q3", status: "upcoming",  price: 350000, note: "Chiến thuật thi đấu đơn" },
-  { id: 14, date: "2026-03-16", startTime: "14:00", endTime: "15:30", coach: "Trần Văn Đức",    coachAvatar: AVATAR_1, sport: "Thể hình", emoji: "💪", mode: "Online",  location: "Google Meet",       status: "upcoming",  price: 250000, note: "Push day: Chest Press + Dips", meetLink: "https://meet.google.com/def-ghij-klm" },
-  { id: 15, date: "2026-03-17", startTime: "08:00", endTime: "09:00", coach: "Lê Thị Mai",      coachAvatar: AVATAR_2, sport: "Yoga",     emoji: "🧘", mode: "Offline", location: "27 Nguyễn Đình Chiểu, Q1", status: "upcoming", price: 180000, note: "Vinyasa Flow nâng cao" },
-  { id: 16, date: "2026-03-19", startTime: "18:30", endTime: "20:00", coach: "Đỗ Minh Khoa",    coachAvatar: AVATAR_5, sport: "CrossFit", emoji: "🏋️", mode: "Offline", location: "CrossFit HCM, Q7",  status: "upcoming",  price: 400000, note: "Olympic Lifting: Clean & Jerk" },
-  { id: 17, date: "2026-03-21", startTime: "14:00", endTime: "15:30", coach: "Trần Văn Đức",    coachAvatar: AVATAR_1, sport: "Thể hình", emoji: "💪", mode: "Online",  location: "Google Meet",       status: "upcoming",  price: 250000, note: "Leg day nâng cao", meetLink: "https://meet.google.com/nop-qrst-uvw" },
-  { id: 18, date: "2026-03-23", startTime: "08:00", endTime: "09:00", coach: "Lê Thị Mai",      coachAvatar: AVATAR_2, sport: "Yoga",     emoji: "🧘", mode: "Offline", location: "27 Nguyễn Đình Chiểu, Q1", status: "upcoming", price: 180000, note: "Restorative Yoga" },
-  { id: 19, date: "2026-03-25", startTime: "16:00", endTime: "17:30", coach: "Nguyễn Hoàng Minh", coachAvatar: AVATAR_3, sport: "Tennis",   emoji: "🎾", mode: "Offline", location: "Sân Tennis Tao Đàn, Q3", status: "upcoming",  price: 350000, note: "Backhand + Volley" },
-  { id: 20, date: "2026-03-28", startTime: "10:00", endTime: "11:30", coach: "Trần Văn Đức",    coachAvatar: AVATAR_1, sport: "Thể hình", emoji: "💪", mode: "Online",  location: "Google Meet",       status: "upcoming",  price: 250000, note: "Full body review", meetLink: "https://meet.google.com/xyz-1234-abc" },
-];
+const SPORT_EMOJIS: Record<string, string> = {
+  "Thể hình": "💪",
+  "Yoga": "🧘",
+  "Tennis": "🎾",
+  "Boxing": "🥊",
+  "CrossFit": "🏋️",
+  "Pilates": "🤸",
+};
+
+const COACH_AVATARS = [AVATAR_1, AVATAR_2, AVATAR_3, AVATAR_4, AVATAR_5];
 
 const STATUS_CFG: Record<SessionStatus, { label: string; cls: string; dot: string }> = {
   upcoming:  { label: "Sắp tới",         cls: "bg-blue-100 text-blue-600 border-blue-200",    dot: "bg-blue-500"   },
@@ -99,6 +96,44 @@ function buildMonthGrid(year: number, month: number) {
   for (let d = 1; d <= daysInMonth; d++) cells.push({ date: new Date(year, month, d), isCurrentMonth: true });
   while (cells.length % 7 !== 0) cells.push({ date: addDays(new Date(year, month + 1, 1), cells.length - daysInMonth - startOffset), isCurrentMonth: false });
   return cells;
+}
+
+function pickCoachAvatar(name: string) {
+  if (!name) return COACH_AVATARS[0];
+  const sum = name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return COACH_AVATARS[sum % COACH_AVATARS.length];
+}
+
+function bookingToSession(item: BookingListItem): Session {
+  const statusMap: Record<string, SessionStatus> = {
+    PENDING: "pending",
+    CONFIRMED: "upcoming",
+    COMPLETED: "completed",
+    CANCELLED: "cancelled",
+  };
+  const date = (item as { date?: string; startDate?: string }).date
+    || (item as { startDate?: string }).startDate
+    || TODAY;
+  const sport = item.sport || "Buổi tập";
+  const coachName = item.coachName || "Huấn luyện viên";
+  const mode = item.type === "OFFLINE" ? "Offline" : "Online";
+  const location = mode === "Offline" ? "Trực tiếp" : "Online";
+
+  return {
+    id: item.id,
+    date,
+    startTime: item.startTime,
+    endTime: item.endTime,
+    coach: coachName,
+    coachAvatar: pickCoachAvatar(coachName),
+    sport,
+    emoji: SPORT_EMOJIS[sport] || "🏋️",
+    mode,
+    location,
+    status: statusMap[item.status || "PENDING"] || "pending",
+    price: item.price || 0,
+    note: item.status === "COMPLETED" ? "Buổi học đã hoàn thành" : "",
+  };
 }
 
 // ─── Session detail modal ─────────────────────────────────────────────────────
@@ -561,12 +596,43 @@ interface TrainingScheduleProps {
 }
 
 export function TrainingSchedule({ onNavigate }: TrainingScheduleProps) {
-  const [sessions, setSessions] = useState<Session[]>(INITIAL_SESSIONS);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [view, setView] = useState<"month" | "week" | "list">("month");
-  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 2, 1));
+  const [currentMonth, setCurrentMonth] = useState(new Date(TODAY_DATE.getFullYear(), TODAY_DATE.getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState(TODAY);
   const [sessionModal, setSessionModal] = useState<Session | null>(null);
   const [filterStatus, setFilterStatus] = useState<SessionStatus | "all">("all");
+
+  const loadBookings = () => {
+    let active = true;
+    setLoading(true);
+    setLoadError("");
+
+    getMyBookings()
+      .then(items => {
+        if (!active) return;
+        setSessions(items.map(bookingToSession));
+      })
+      .catch(reason => {
+        if (!active) return;
+        setSessions([]);
+        setLoadError(reason instanceof Error ? reason.message : "Không thể tải lịch tập.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  };
+
+  useEffect(() => {
+    const cleanup = loadBookings();
+    return cleanup;
+  }, []);
 
   const activeSessions = useMemo(() =>
     sessions.filter(s => s.status !== "cancelled"),
@@ -574,7 +640,7 @@ export function TrainingSchedule({ onNavigate }: TrainingScheduleProps) {
   );
 
   // Stats
-  const thisMonthSessions = activeSessions.filter(s => s.date.startsWith("2026-03"));
+  const thisMonthSessions = activeSessions.filter(s => s.date.startsWith(THIS_MONTH_KEY));
   const completedThisMonth = thisMonthSessions.filter(s => s.status === "completed");
   const upcomingCount = activeSessions.filter(s => s.status === "upcoming" || s.status === "pending").length;
   const totalSpent = completedThisMonth.reduce((acc, s) => acc + s.price, 0);
@@ -625,7 +691,7 @@ export function TrainingSchedule({ onNavigate }: TrainingScheduleProps) {
       {/* ── STATS ─────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { icon: CalendarDays, label: "Buổi tháng này",   value: thisMonthSessions.length.toString(), sub: "Tháng 3/2026",          color: "text-blue-500",    bg: "bg-blue-50" },
+          { icon: CalendarDays, label: "Buổi tháng này",   value: thisMonthSessions.length.toString(), sub: THIS_MONTH_LABEL,          color: "text-blue-500",    bg: "bg-blue-50" },
           { icon: CheckCircle2, label: "Đã hoàn thành",    value: completedThisMonth.length.toString(), sub: "+3 so với tháng trước", color: "text-emerald-500", bg: "bg-emerald-50" },
           { icon: Zap,          label: "Sắp diễn ra",      value: upcomingCount.toString(),              sub: "Buổi chờ bạn",          color: "text-orange-500",  bg: "bg-orange-50" },
           { icon: TrendingUp,   label: "Chi tiêu tháng",   value: `${(totalSpent / 1000).toFixed(0)}K`, sub: "đồng đã đầu tư",        color: "text-purple-500",  bg: "bg-purple-50" },
@@ -640,6 +706,24 @@ export function TrainingSchedule({ onNavigate }: TrainingScheduleProps) {
           </div>
         ))}
       </div>
+
+      {loading && (
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 text-gray-500">
+          Đang tải lịch tập từ hệ thống...
+        </div>
+      )}
+      {loadError && !loading && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-600 flex items-center justify-between">
+          <span>{loadError}</span>
+          <button
+            onClick={() => loadBookings()}
+            className="px-3 py-1.5 rounded-xl bg-red-500 text-white hover:bg-red-600 transition-colors"
+            style={{ fontSize: "0.78rem", fontWeight: 700 }}
+          >
+            Tải lại
+          </button>
+        </div>
+      )}
 
       {/* ── VIEW CONTROLS + MONTH NAV ─────────────────────── */}
       <div className="flex items-center gap-3 flex-wrap">

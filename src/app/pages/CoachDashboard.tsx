@@ -18,8 +18,8 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, LineChart, Line
 } from "recharts";
+import { clearAuthSession, getAuthSession } from "../utils/authSession";
 
-const COACH_AVATAR = "https://images.unsplash.com/photo-1758875568932-0eefd3e60090?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200";
 const STUDENT_1 = "https://images.unsplash.com/photo-1607286908165-b8b6a2874fc4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=100";
 const STUDENT_2 = "https://images.unsplash.com/photo-1755549476788-efd8bf819561?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=100";
 const STUDENT_3 = "https://images.unsplash.com/photo-1660463527860-b66aebd362c9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=100";
@@ -66,6 +66,18 @@ export function CoachDashboard() {
   const [activeNav, setActiveNav] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
+  const session = getAuthSession();
+  const coachName = session?.fullName?.trim() || session?.username || "Huấn luyện viên";
+  const coachInitials = coachName
+    .split(/\s+/)
+    .slice(-2)
+    .map(part => part.charAt(0))
+    .join("")
+    .toUpperCase();
+  const logout = () => {
+    clearAuthSession();
+    navigate("/auth");
+  };
 
   const formatM = (n: number) => {
     if (n >= 1000000) return (n / 1000000).toFixed(1) + "M";
@@ -103,16 +115,22 @@ export function CoachDashboard() {
         <div className="px-4 py-4 border-b border-white/[0.06]">
           <div className="flex items-center gap-3 bg-white/[0.04] rounded-xl px-3.5 py-3 border border-white/[0.06]">
             <div className="relative shrink-0">
-              <img src={COACH_AVATAR} alt="" className="w-10 h-10 rounded-xl object-cover ring-2 ring-blue-500/30" />
+              {session?.avatar ? (
+                <img src={session.avatar} alt={coachName} className="w-10 h-10 rounded-xl object-cover ring-2 ring-blue-500/30" />
+              ) : (
+                <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-300 flex items-center justify-center ring-2 ring-blue-500/30" style={{ fontSize: "0.76rem", fontWeight: 800 }}>
+                  {coachInitials}
+                </div>
+              )}
               <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-blue-500 rounded-full border-2 border-gray-950 flex items-center justify-center">
                 <CheckCircle2 className="w-2 h-2 text-white" />
               </span>
             </div>
             <div className="min-w-0">
-              <div style={{ fontWeight: 700, fontSize: "0.85rem" }} className="text-white truncate">Trần Văn Đức</div>
+              <div style={{ fontWeight: 700, fontSize: "0.85rem" }} className="text-white truncate">{coachName}</div>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0 animate-pulse" />
-                <span style={{ fontSize: "0.7rem" }} className="text-gray-400">Pro Coach · Thể hình</span>
+                <span style={{ fontSize: "0.7rem" }} className="text-gray-400">HLV · {session?.category || "Đã đăng nhập"}</span>
               </div>
             </div>
           </div>
@@ -163,7 +181,7 @@ export function CoachDashboard() {
           {[{ icon: Settings, label: "Cài đặt", id: "settings" }, { icon: LogOut, label: "Đăng xuất", id: "logout" }].map(({ icon: Icon, label, id }) => (
             <button
               key={label}
-              onClick={() => { if (id === "logout") navigate("/"); }}
+              onClick={() => { if (id === "logout") logout(); }}
               className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-gray-400 hover:bg-white/[0.06] hover:text-gray-200 transition-all duration-200"
             >
               <Icon className="w-[18px] h-[18px] shrink-0" />
@@ -182,7 +200,7 @@ export function CoachDashboard() {
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex-1 min-w-0">
-            <div style={{ fontWeight: 700, fontSize: "1.05rem", letterSpacing: "-0.01em" }} className="text-gray-900 truncate">Xin chào, HLV Đức 👊</div>
+            <div style={{ fontWeight: 700, fontSize: "1.05rem", letterSpacing: "-0.01em" }} className="text-gray-900 truncate">Xin chào, {coachName} 👊</div>
             <div style={{ fontSize: "0.78rem" }} className="text-gray-400 truncate">Thứ Tư, 4 tháng 3, 2026 · 3 buổi dạy hôm nay</div>
           </div>
           <div className="flex items-center gap-2.5">
@@ -193,7 +211,13 @@ export function CoachDashboard() {
               <Bell className="w-[18px] h-[18px] text-gray-500" />
               <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
             </button>
-            <img src={COACH_AVATAR} alt="" className="w-9 h-9 rounded-xl object-cover border-2 border-blue-200 cursor-pointer hover:border-blue-300 transition-colors" />
+            {session?.avatar ? (
+              <img src={session.avatar} alt={coachName} className="w-9 h-9 rounded-xl object-cover border-2 border-blue-200 cursor-pointer hover:border-blue-300 transition-colors" />
+            ) : (
+              <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 border-2 border-blue-200 flex items-center justify-center" style={{ fontSize: "0.72rem", fontWeight: 800 }}>
+                {coachInitials}
+              </div>
+            )}
           </div>
         </header>
 

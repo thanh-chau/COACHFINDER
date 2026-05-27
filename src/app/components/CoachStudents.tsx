@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Search, Filter, Grid3X3, List, ChevronRight, Star,
   MessageCircle, Calendar, BarChart2, X, Plus, TrendingUp,
@@ -12,6 +12,10 @@ import {
   CartesianGrid, XAxis, YAxis, Tooltip, RadarChart,
   Radar, PolarGrid, PolarAngleAxis
 } from "recharts";
+import { getCoachCalendarBookings } from "../api/bookings";
+import { searchMyTrainees } from "../api/trainees";
+import type { BookingListItem } from "../types/booking";
+import type { Trainee } from "../types/trainee";
 
 // ─── Avatars ──────────────────────────────────────────────────────────────────
 const AVT = [
@@ -31,7 +35,7 @@ interface SessionRecord {
   type: string;
   duration: string;
   note: string;
-  score: number;
+  score: number | null;
   status: "done" | "cancelled";
 }
 
@@ -54,17 +58,17 @@ interface CoachNote {
 interface Student {
   id: string;
   name: string;
-  gender: "male" | "female";
-  age: number;
-  avatar: string;
-  plan: "Free" | "Pro" | "Premium";
+  gender?: "male" | "female";
+  age?: number;
+  avatar?: string;
+  plan: "Free" | "Pro" | "Premium" | "Chưa có dữ liệu";
   status: "active" | "pending" | "inactive";
   goal: string;
   sessions: number;
   revenue: string;
   revenueNum: number;
-  aiScore: number;
-  aiScorePrev: number;
+  aiScore: number | null;
+  aiScorePrev: number | null;
   joinDate: string;
   lastSession: string;
   nextSession: string | null;
@@ -315,9 +319,11 @@ const PLAN_CFG = {
   Free:    { bg: "bg-gray-100",    text: "text-gray-600" },
   Pro:     { bg: "bg-blue-100",    text: "text-blue-700" },
   Premium: { bg: "bg-purple-100",  text: "text-purple-700" },
+  "Chưa có dữ liệu": { bg: "bg-gray-100", text: "text-gray-500" },
 };
 
-function ScoreBadge({ score, prev }: { score: number; prev: number }) {
+function ScoreBadge({ score, prev }: { score: number | null; prev: number | null }) {
+  if (score === null || prev === null) return <span className="text-gray-400">--</span>;
   const diff = score - prev;
   return (
     <div className="flex items-center gap-1">
@@ -328,6 +334,80 @@ function ScoreBadge({ score, prev }: { score: number; prev: number }) {
       </span>
     </div>
   );
+}
+
+function StudentAvatar({ s, className }: { s: Student; className: string }) {
+  if (s.avatar) return <img src={s.avatar} alt={s.name} className={`${className} object-cover`} />;
+  return (
+    <div className={`${className} bg-blue-100 text-blue-600 flex items-center justify-center`} style={{ fontSize: "0.75rem", fontWeight: 800 }}>
+      {s.name.split(/\s+/).slice(-2).map(part => part.charAt(0)).join("").toUpperCase()}
+    </div>
+  );
+}
+
+function normalizeName(name: string) {
+  return name.trim().toLocaleLowerCase();
+}
+
+function compactCurrency(amount: number) {
+  return new Intl.NumberFormat("vi-VN").format(amount) + "đ";
+}
+
+function displayBookingDate(date?: string) {
+  return date ? new Date(`${date}T00:00:00`).toLocaleDateString("vi-VN") : "Chưa có";
+}
+
+function durationBetween(start: string, end: string) {
+  const [startHour, startMinute] = start.split(":").map(Number);
+  const [endHour, endMinute] = end.split(":").map(Number);
+  return `${endHour * 60 + endMinute - startHour * 60 - startMinute} phút`;
+}
+
+function buildStudents(trainees: Trainee[], bookings: BookingListItem[]) {
+  return trainees.map((trainee): Student => {
+    const traineeBookings = bookings
+      .filter(item => normalizeName(item.traineeName || "") === normalizeName(trainee.fullName))
+      .sort((left, right) => right.date.localeCompare(left.date));
+    const completed = traineeBookings.filter(item => item.status === "COMPLETED");
+    const pending = traineeBookings.filter(item => item.status === "PENDING");
+    const upcoming = traineeBookings
+      .filter(item => item.status === "PENDING" || item.status === "CONFIRMED")
+      .sort((left, right) => left.date.localeCompare(right.date))[0];
+    const revenueNum = completed.reduce((sum, item) => sum + (item.price || 0), 0);
+
+    return {
+      id: String(trainee.id),
+      name: trainee.fullName,
+      age: trainee.age,
+      avatar: trainee.avatar,
+      plan: "Chưa có dữ liệu",
+      status: pending.length ? "pending" : traineeBookings.some(item => item.status !== "CANCELLED") ? "active" : "inactive",
+      goal: trainee.goal || "Chưa cập nhật mục tiêu",
+      sessions: completed.length,
+      revenue: compactCurrency(revenueNum),
+      revenueNum,
+      aiScore: null,
+      aiScorePrev: null,
+      joinDate: "Chưa có dữ liệu",
+      lastSession: completed[0] ? displayBookingDate(completed[0].date) : "Chưa có buổi hoàn thành",
+      nextSession: upcoming ? `${displayBookingDate(upcoming.date)}, ${upcoming.startTime}` : null,
+      phone: trainee.phone || "Chưa cập nhật",
+      weight: trainee.weight !== undefined ? `${trainee.weight}kg` : "Chưa cập nhật",
+      height: trainee.height !== undefined ? `${trainee.height}cm` : "Chưa cập nhật",
+      progressHistory: [],
+      sessionHistory: traineeBookings.map(item => ({
+        date: displayBookingDate(item.date),
+        type: item.type === "ONLINE" ? "Online" : "Trực tiếp",
+        duration: durationBetween(item.startTime, item.endTime),
+        note: item.status === "COMPLETED" ? "Buổi học đã hoàn thành" : `Trạng thái: ${item.status || "Đang xử lý"}`,
+        score: null,
+        status: item.status === "CANCELLED" ? "cancelled" : "done",
+      })),
+      tasks: [],
+      notes: [],
+      radarData: [],
+    };
+  });
 }
 
 // ─── Student Card (grid view) ─────────────────────────────────────────────────
@@ -343,7 +423,7 @@ function StudentCard({ s, onSelect }: { s: Student; onSelect: () => void }) {
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <img src={s.avatar} alt="" className="w-12 h-12 rounded-xl object-cover" />
+            <StudentAvatar s={s} className="w-12 h-12 rounded-xl" />
             <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${st.dot}`} />
           </div>
           <div>
@@ -358,7 +438,7 @@ function StudentCard({ s, onSelect }: { s: Student; onSelect: () => void }) {
       <div className="grid grid-cols-3 gap-2 mb-3">
         {[
           { label: "Buổi học", value: s.sessions },
-          { label: "AI Score", value: s.aiScore },
+          { label: "AI Score", value: s.aiScore ?? "--" },
           { label: "Doanh thu", value: s.revenue.replace(",000đ", "K").replace("đ", "") },
         ].map(({ label, value }) => (
           <div key={label} className="bg-gray-50 rounded-xl p-2 text-center">
@@ -372,10 +452,10 @@ function StudentCard({ s, onSelect }: { s: Student; onSelect: () => void }) {
       <div className="mb-3">
         <div className="flex justify-between mb-1">
           <span style={{ fontSize: "0.7rem" }} className="text-gray-400">Tiến độ AI</span>
-          <span style={{ fontSize: "0.7rem", fontWeight: 600 }} className="text-gray-600">{s.aiScore}/100</span>
+          <span style={{ fontSize: "0.7rem", fontWeight: 600 }} className="text-gray-600">{s.aiScore === null ? "--" : `${s.aiScore}/100`}</span>
         </div>
         <div className="w-full bg-gray-100 rounded-full h-1.5">
-          <div className="h-1.5 rounded-full bg-gradient-to-r from-blue-400 to-indigo-500 transition-all duration-500" style={{ width: `${s.aiScore}%` }} />
+          <div className="h-1.5 rounded-full bg-gradient-to-r from-blue-400 to-indigo-500 transition-all duration-500" style={{ width: `${s.aiScore ?? 0}%` }} />
         </div>
       </div>
 
@@ -401,19 +481,19 @@ function StudentRow({ s, onSelect }: { s: Student; onSelect: () => void }) {
       className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50/40 transition-colors text-left border-b border-gray-50 last:border-0 group"
     >
       <div className="relative shrink-0">
-        <img src={s.avatar} alt="" className="w-10 h-10 rounded-xl object-cover" />
+        <StudentAvatar s={s} className="w-10 h-10 rounded-xl" />
         <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white ${st.dot}`} />
       </div>
       <div className="flex-1 min-w-0">
         <div style={{ fontWeight: 600, fontSize: "0.88rem" }} className="text-gray-900 group-hover:text-blue-600 transition-colors truncate">{s.name}</div>
-        <div style={{ fontSize: "0.72rem" }} className="text-gray-400 truncate">{s.goal} · {s.age} tuổi</div>
+        <div style={{ fontSize: "0.72rem" }} className="text-gray-400 truncate">{s.goal}{s.age !== undefined ? ` · ${s.age} tuổi` : ""}</div>
       </div>
       <span className={`hidden sm:block shrink-0 px-2 py-0.5 rounded-full ${pl.bg} ${pl.text}`} style={{ fontSize: "0.65rem", fontWeight: 700 }}>{s.plan}</span>
       <div className="hidden md:flex items-center gap-2 shrink-0 w-32">
         <div className="flex-1 bg-gray-100 rounded-full h-1.5">
-          <div className="h-1.5 rounded-full bg-blue-500" style={{ width: `${s.aiScore}%` }} />
+          <div className="h-1.5 rounded-full bg-blue-500" style={{ width: `${s.aiScore ?? 0}%` }} />
         </div>
-        <span style={{ fontSize: "0.75rem", fontWeight: 700 }} className="text-gray-700 w-6">{s.aiScore}</span>
+        <span style={{ fontSize: "0.75rem", fontWeight: 700 }} className="text-gray-700 w-6">{s.aiScore ?? "--"}</span>
       </div>
       <div className="hidden lg:block text-right shrink-0 w-24">
         <div style={{ fontSize: "0.82rem", fontWeight: 700 }} className="text-emerald-600">{s.revenue.replace(",000đ", "K")}</div>
@@ -449,7 +529,7 @@ function StudentDetail({ s, onClose, onNavigate }: { s: Student; onClose: () => 
       <div className="shrink-0 px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-900 to-slate-800">
         <div className="flex items-center gap-3 mb-3">
           <div className="relative shrink-0">
-            <img src={s.avatar} alt="" className="w-14 h-14 rounded-2xl object-cover border-2 border-white/20" />
+            <StudentAvatar s={s} className="w-14 h-14 rounded-2xl border-2 border-white/20" />
             <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-slate-800 ${st.dot}`} />
           </div>
           <div className="flex-1 min-w-0">
@@ -457,7 +537,7 @@ function StudentDetail({ s, onClose, onNavigate }: { s: Student; onClose: () => 
               <span style={{ fontWeight: 700, fontSize: "1rem" }} className="text-white">{s.name}</span>
               <span className={`px-2 py-0.5 rounded-full ${pl.bg} ${pl.text}`} style={{ fontSize: "0.65rem", fontWeight: 700 }}>{s.plan}</span>
             </div>
-            <div style={{ fontSize: "0.75rem" }} className="text-gray-400 mt-0.5">{s.goal} · {s.age} tuổi · {s.weight} · {s.height}</div>
+            <div style={{ fontSize: "0.75rem" }} className="text-gray-400 mt-0.5">{[s.goal, s.age !== undefined ? `${s.age} tuổi` : null, s.weight, s.height].filter(Boolean).join(" · ")}</div>
             <div className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full ${st.bg}`}>
               <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
               <span style={{ fontSize: "0.65rem", fontWeight: 600 }} className={st.text}>{st.label}</span>
@@ -508,7 +588,7 @@ function StudentDetail({ s, onClose, onNavigate }: { s: Student; onClose: () => 
             <div className="grid grid-cols-2 gap-3">
               {[
                 { icon: Dumbbell,  label: "Buổi đã học",  value: `${s.sessions} buổi`,  color: "text-blue-500",    bg: "bg-blue-50" },
-                { icon: Award,     label: "AI Score",     value: `${s.aiScore}/100`,    color: "text-purple-500",  bg: "bg-purple-50" },
+                { icon: Award,     label: "AI Score",     value: s.aiScore === null ? "--" : `${s.aiScore}/100`,    color: "text-purple-500",  bg: "bg-purple-50" },
                 { icon: DollarSign2, label: "Doanh thu",  value: s.revenue.replace(",000đ","K"), color: "text-emerald-500", bg: "bg-emerald-50" },
                 { icon: Calendar,  label: "Buổi tiếp",   value: s.nextSession ?? "Chưa đặt", color: "text-orange-500",  bg: "bg-orange-50" },
               ].map(({ icon: Icon, label, value, color, bg }) => (
@@ -732,30 +812,72 @@ export function CoachStudents({ onNavigate }: CoachStudentsProps) {
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const [filterPlan, setFilterPlan] = useState<"all" | "Free" | "Pro" | "Premium">("all");
   const [sortBy, setSortBy] = useState<SortKey>("lastSession");
-  const [selectedId, setSelectedId] = useState<string | null>("s1");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showFilter, setShowFilter] = useState(false);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
-  const selected = STUDENTS.find(s => s.id === selectedId) ?? null;
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setLoadError("");
+
+    Promise.all([
+      searchMyTrainees("").catch(() => []),
+      getCoachCalendarBookings().catch(() => []),
+    ])
+      .then(([trainees, bookings]) => {
+        if (!active) return;
+        const nextStudents = buildStudents(trainees, bookings);
+        setStudents(nextStudents);
+        if (nextStudents.length && !selectedId) {
+          setSelectedId(nextStudents[0].id);
+        }
+      })
+      .catch(reason => {
+        if (!active) return;
+        setStudents([]);
+        setLoadError(reason instanceof Error ? reason.message : "Không thể tải danh sách học viên.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!students.length) return;
+    if (!selectedId || !students.some(s => s.id === selectedId)) {
+      setSelectedId(students[0].id);
+    }
+  }, [students, selectedId]);
+
+  const selected = students.find(s => s.id === selectedId) ?? null;
 
   const filtered = useMemo(() => {
-    let list = [...STUDENTS];
+    let list = [...students];
     if (search) list = list.filter(s => s.name.toLowerCase().includes(search.toLowerCase()) || s.goal.toLowerCase().includes(search.toLowerCase()));
     if (filterStatus !== "all") list = list.filter(s => s.status === filterStatus);
     if (filterPlan !== "all") list = list.filter(s => s.plan === filterPlan);
     list.sort((a, b) => {
       if (sortBy === "name") return a.name.localeCompare(b.name);
       if (sortBy === "sessions") return b.sessions - a.sessions;
-      if (sortBy === "aiScore") return b.aiScore - a.aiScore;
+      if (sortBy === "aiScore") return (b.aiScore ?? -1) - (a.aiScore ?? -1);
       if (sortBy === "revenue") return b.revenueNum - a.revenueNum;
       return 0;
     });
     return list;
-  }, [search, filterStatus, filterPlan, sortBy]);
+  }, [search, filterStatus, filterPlan, sortBy, students]);
 
   // ── Summary stats ──────────────────────────────────────────────────────────
-  const totalRevenue = STUDENTS.reduce((s, x) => s + x.revenueNum, 0);
-  const avgScore = Math.round(STUDENTS.reduce((s, x) => s + x.aiScore, 0) / STUDENTS.length);
-  const activeCount = STUDENTS.filter(s => s.status === "active").length;
+  const totalRevenue = students.reduce((s, x) => s + x.revenueNum, 0);
+  const scoreItems = students.filter(s => s.aiScore !== null).map(s => s.aiScore as number);
+  const avgScore = scoreItems.length ? Math.round(scoreItems.reduce((s, x) => s + x, 0) / scoreItems.length) : null;
+  const activeCount = students.filter(s => s.status === "active").length;
 
   return (
     <div className="flex h-[calc(100vh-130px)] gap-0 rounded-2xl overflow-hidden border border-gray-100 shadow-sm bg-white">
@@ -768,7 +890,7 @@ export function CoachStudents({ onNavigate }: CoachStudentsProps) {
           <div className="flex items-center justify-between mb-3">
             <div>
               <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-white">Quản lý học viên</div>
-              <div style={{ fontSize: "0.72rem" }} className="text-gray-400">{STUDENTS.length} học viên · {activeCount} đang học</div>
+              <div style={{ fontSize: "0.72rem" }} className="text-gray-400">{students.length} học viên · {activeCount} đang học</div>
             </div>
             <button className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors" style={{ fontSize: "0.75rem", fontWeight: 700 }}>
               <Plus className="w-3.5 h-3.5" /> Thêm
@@ -777,7 +899,7 @@ export function CoachStudents({ onNavigate }: CoachStudentsProps) {
           <div className="grid grid-cols-3 gap-2">
             {[
               { label: "Đang học", value: activeCount, color: "text-emerald-400" },
-              { label: "AI TB", value: avgScore, color: "text-blue-400" },
+              { label: "AI TB", value: avgScore ?? "--", color: "text-blue-400" },
               { label: "Doanh thu", value: (totalRevenue / 1000000).toFixed(1) + "M", color: "text-amber-400" },
             ].map(({ label, value, color }) => (
               <div key={label} className="bg-white/5 rounded-xl px-3 py-2 text-center">
@@ -871,7 +993,17 @@ export function CoachStudents({ onNavigate }: CoachStudentsProps) {
 
         {/* List / Grid */}
         <div className="flex-1 overflow-y-auto">
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div className="flex flex-col items-center justify-center h-40 text-gray-400">
+              <Users className="w-8 h-8 mb-2 opacity-30" />
+              <span style={{ fontSize: "0.82rem" }}>Đang tải học viên...</span>
+            </div>
+          ) : loadError ? (
+            <div className="flex flex-col items-center justify-center h-40 text-red-500 text-center px-6">
+              <AlertCircle className="w-8 h-8 mb-2" />
+              <span style={{ fontSize: "0.82rem" }}>{loadError}</span>
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-40 text-gray-400">
               <Users className="w-8 h-8 mb-2 opacity-30" />
               <span style={{ fontSize: "0.82rem" }}>Không tìm thấy học viên</span>

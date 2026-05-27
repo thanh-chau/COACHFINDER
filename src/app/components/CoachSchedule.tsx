@@ -7,6 +7,11 @@ import {
   Check, Search, MoreHorizontal, Globe, PhoneCall, Repeat,
   Filter, CalendarDays
 } from "lucide-react";
+import { getCoachCalendarBookings } from "../api/bookings";
+import { createCoachSchedule, getCoachSchedule, searchCoaches } from "../api/coaches";
+import type { BookingListItem } from "../types/booking";
+import type { CoachSchedule as PublishedCoachSchedule } from "../types/coach";
+import { getAuthSession, updateAuthSession } from "../utils/authSession";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const TODAY_STR = "2026-03-05";
@@ -116,6 +121,11 @@ function timeToMin(t: string) {
 }
 function fmtCurrency(n: number) {
   return n >= 1000000 ? (n/1000000).toFixed(1)+"M" : (n/1000).toFixed(0)+"K";
+}
+
+function toLocalTimePayload(value: string) {
+  if (!value) return value;
+  return value.length === 5 ? `${value}:00` : value;
 }
 
 // ─── Session Detail Panel ─────────────────────────────────────────────────────
@@ -719,205 +729,213 @@ function ListView({ sessions, todayStr, onSelect }: {
 type ViewMode = "week" | "month" | "list";
 
 export function CoachSchedule({ onNavigate }: { onNavigate?: (v: string) => void }) {
-  const [sessions, setSessions] = useState<CoachSession[]>(INITIAL_SESSIONS);
-  const [view, setView] = useState<ViewMode>("week");
-  const [weekStart, setWeekStart] = useState(() => getMonday(TODAY));
-  const [calMonth, setCalMonth] = useState({ year: 2026, month: 2 }); // 0-indexed
-  const [selectedSession, setSelectedSession] = useState<CoachSession | null>(null);
-  const [editSession, setEditSession] = useState<CoachSession | null>(null);
-  const [showModal, setShowModal] = useState(false);
-  const [addDate, setAddDate] = useState<string | null>(null);
-  const [addTime, setAddTime] = useState<string>("09:00");
-  const [filterStatus, setFilterStatus] = useState<"all" | SessionStatus>("all");
+  const session = getAuthSession();
+  const [coachId, setCoachId] = useState<number | undefined>(session?.coachId);
+  const [slots, setSlots] = useState<PublishedCoachSchedule[]>([]);
+  const [bookings, setBookings] = useState<BookingListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [created, setCreated] = useState("");
+  const [form, setForm] = useState({
+    date: new Date().toISOString().slice(0, 10),
+    startTime: "09:00",
+    endTime: "10:00",
+  });
 
-  // Filtered sessions
-  const visibleSessions = useMemo(() => {
-    let list = sessions;
-    if (filterStatus !== "all") list = list.filter(s => s.status === filterStatus);
-    return list;
-  }, [sessions, filterStatus]);
+  useEffect(() => {
+    if (coachId) return;
+    if (!session) {
+      setLoading(false);
+      setError("Vui lòng đăng nhập tài khoản huấn luyện viên để quản lý lịch.");
+      return;
+    }
+    const name = session.fullName?.trim() || session.username;
+    searchCoaches({ name, page: 0, size: 20 })
+      .then(result => {
+        const match = result.content.find(coach => coach.fullName.trim().toLocaleLowerCase() === name.toLocaleLowerCase())
+          || result.content[0];
+        if (match) {
+          setCoachId(match.id);
+          updateAuthSession({ coachId: match.id });
+        } else {
+          setLoading(false);
+          setError("Không tìm thấy hồ sơ HLV của tài khoản này. Vui lòng hoàn thiện hồ sơ trước khi tạo lịch.");
+        }
+      })
+      .catch(reason => {
+        setLoading(false);
+        setError(reason instanceof Error ? reason.message : "Không thể xác định hồ sơ huấn luyện viên.");
+      });
+  }, [coachId, session]);
 
-  // Week sessions for week view
-  const weekEnd = addDays(weekStart, 6);
-  const weekSessions = visibleSessions.filter(s => s.date >= fmtDate(weekStart) && s.date <= fmtDate(weekEnd));
-
-  // Stats
-  const todaySessions  = sessions.filter(s => s.date === TODAY_STR);
-  const weekAllSessions= sessions.filter(s => s.date >= fmtDate(weekStart) && s.date <= fmtDate(weekEnd));
-  const weekRevenue    = weekAllSessions.filter(s => s.status !== "cancelled").reduce((sum, s) => sum + s.fee, 0);
-  const upcomingToday  = todaySessions.filter(s => s.status === "upcoming").length;
-
-  const handleSave = (s: CoachSession) => {
-    setSessions(prev => {
-      const idx = prev.findIndex(x => x.id === s.id);
-      if (idx >= 0) { const n = [...prev]; n[idx] = s; return n; }
-      return [...prev, s];
-    });
+  const loadCalendar = async (id: number) => {
+    setLoading(true);
+    setError("");
+    try {
+      const [publishedSlots, bookedSessions] = await Promise.all([
+        getCoachSchedule(id),
+        getCoachCalendarBookings(),
+      ]);
+      setSlots(publishedSlots);
+      setBookings(bookedSessions);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Không thể tải lịch dạy.");
+    } finally {
+      setLoading(false);
+    }
   };
-  const handleDelete = (id: string) => setSessions(prev => prev.filter(s => s.id !== id));
-  const handleStatusChange = (id: string, status: SessionStatus) => {
-    setSessions(prev => prev.map(s => s.id === id ? { ...s, status } : s));
-    setSelectedSession(prev => prev?.id === id ? { ...prev, status } : prev);
+
+  useEffect(() => {
+    if (coachId) void loadCalendar(coachId);
+  }, [coachId]);
+
+  const submitSchedule = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSaveError("");
+    setCreated("");
+    if (!coachId) {
+      setSaveError("Chưa xác định được hồ sơ HLV để tạo lịch.");
+      return;
+    }
+    if (form.endTime <= form.startTime) {
+      setSaveError("Giờ kết thúc phải sau giờ bắt đầu.");
+      return;
+    }
+
+    const date = new Date(`${form.date}T00:00:00`);
+    const days = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+    setSaving(true);
+    try {
+      const result = await createCoachSchedule({
+        coachId,
+        dayOfWeek: days[date.getDay()],
+        startDate: form.date,
+        endDate: form.date,
+        startTime: toLocalTimePayload(form.startTime),
+        endTime: toLocalTimePayload(form.endTime),
+      });
+      setSlots(current => [...current, { ...result, startDate: form.date, endDate: form.date }]);
+      setCreated("Đã mở lịch tập. Học viên có thể chọn slot này trong hồ sơ của bạn.");
+    } catch (reason) {
+      setSaveError(reason instanceof Error ? reason.message : "Không thể tạo lịch tập.");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  // Month navigation title
-  const weekLabel = (() => {
-    const ms = weekStart, me = addDays(weekStart, 6);
-    if (ms.getMonth() === me.getMonth()) return `${MONTHS_VI[ms.getMonth()]} ${ms.getFullYear()}`;
-    return `${ms.getDate()} ${MONTHS_VI[ms.getMonth()]} – ${me.getDate()} ${MONTHS_VI[me.getMonth()]} ${me.getFullYear()}`;
-  })();
+  const dayNames: Record<string, string> = {
+    MONDAY: "Thứ Hai", TUESDAY: "Thứ Ba", WEDNESDAY: "Thứ Tư",
+    THURSDAY: "Thứ Năm", FRIDAY: "Thứ Sáu", SATURDAY: "Thứ Bảy", SUNDAY: "Chủ Nhật",
+  };
+  const statusStyle: Record<string, string> = {
+    PENDING: "bg-amber-50 text-amber-600",
+    CONFIRMED: "bg-blue-50 text-blue-600",
+    COMPLETED: "bg-emerald-50 text-emerald-600",
+    CANCELLED: "bg-red-50 text-red-600",
+  };
+  const statusText: Record<string, string> = {
+    PENDING: "Chờ xác nhận",
+    CONFIRMED: "Đã đăng ký",
+    COMPLETED: "Hoàn thành",
+    CANCELLED: "Đã hủy",
+  };
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-130px)]">
-      {/* ── Main area ── */}
-      <div className="flex-1 min-w-0 flex flex-col gap-4 overflow-hidden">
+    <div className="space-y-5 pb-8">
+      <header className="rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 p-5 text-white">
+        <h2 style={{ fontSize: "1.15rem", fontWeight: 800 }}>Quản lý lịch cho học viên đăng ký</h2>
+        <p className="text-blue-100 mt-1" style={{ fontSize: "0.82rem" }}>Tạo từng lịch trống. Khi học viên đặt thành công, booking xuất hiện trong danh sách đã đăng ký.</p>
+      </header>
 
-        {/* ── Stats bar ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0">
-          {[
-            { icon: CalendarDays, label:"Hôm nay",        value: todaySessions.filter(s=>s.status!=="cancelled").length+" buổi", sub:`${upcomingToday} sắp tới`,      color:"text-blue-500",   bg:"bg-blue-50"   },
-            { icon: Users,        label:"Tuần này",        value: weekAllSessions.filter(s=>s.status!=="cancelled").length+" buổi", sub:`${weekAllSessions.filter(s=>s.status==="completed").length} đã xong`, color:"text-purple-500", bg:"bg-purple-50" },
-            { icon: DollarSign,   label:"Doanh thu tuần",  value: fmtCurrency(weekRevenue)+"đ",                                    sub:"Chưa trừ hoa hồng",            color:"text-emerald-500",bg:"bg-emerald-50" },
-            { icon: Zap,          label:"Pending",         value: sessions.filter(s=>s.status==="pending").length+" buổi",         sub:"Cần xác nhận",                  color:"text-amber-500",  bg:"bg-amber-50"  },
-          ].map(({ icon: Icon, label, value, sub, color, bg }) => (
-            <div key={label} className="bg-white rounded-2xl px-4 py-3 border border-gray-100 shadow-sm flex items-center gap-3">
-              <div className={`w-9 h-9 rounded-xl ${bg} flex items-center justify-center shrink-0`}>
-                <Icon className={`w-4.5 h-4.5 ${color}`} />
+      <div className="grid grid-cols-1 xl:grid-cols-[360px_1fr] gap-5">
+        <form onSubmit={submitSchedule} className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm h-fit">
+          <div className="flex items-center gap-2 mb-5">
+            <Plus className="w-4 h-4 text-blue-500" />
+            <h3 className="text-gray-900" style={{ fontSize: "0.92rem", fontWeight: 700 }}>Mở lịch tập mới</h3>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-gray-600 mb-1.5" style={{ fontSize: "0.8rem", fontWeight: 600 }}>Ngày tập</label>
+              <input type="date" min={new Date().toISOString().slice(0, 10)} value={form.date} onChange={event => setForm(current => ({ ...current, date: event.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 outline-none focus:border-blue-400 text-gray-700" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-gray-600 mb-1.5" style={{ fontSize: "0.8rem", fontWeight: 600 }}>Bắt đầu</label>
+                <input type="time" value={form.startTime} onChange={event => setForm(current => ({ ...current, startTime: event.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 outline-none focus:border-blue-400 text-gray-700" />
               </div>
               <div>
-                <div style={{ fontWeight:800, fontSize:"1rem" }} className="text-gray-900">{value}</div>
-                <div style={{ fontSize:"0.7rem" }} className="text-gray-400">{label} · {sub}</div>
+                <label className="block text-gray-600 mb-1.5" style={{ fontSize: "0.8rem", fontWeight: 600 }}>Kết thúc</label>
+                <input type="time" value={form.endTime} onChange={event => setForm(current => ({ ...current, endTime: event.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 outline-none focus:border-blue-400 text-gray-700" />
               </div>
             </div>
-          ))}
-        </div>
-
-        {/* ── Toolbar ── */}
-        <div className="shrink-0 flex items-center gap-3 flex-wrap">
-          {/* Nav arrows */}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => {
-                if (view === "week") setWeekStart(d => addDays(d, -7));
-                else setCalMonth(m => { const d = new Date(m.year, m.month - 1); return { year: d.getFullYear(), month: d.getMonth() }; });
-              }}
-              className="p-2 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 text-gray-500 hover:text-gray-700 transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => { setWeekStart(getMonday(TODAY)); setCalMonth({ year: 2026, month: 2 }); }}
-              className="px-3 py-2 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 transition-colors"
-              style={{ fontSize:"0.8rem", fontWeight:600 }}
-            >
-              Hôm nay
-            </button>
-            <button
-              onClick={() => {
-                if (view === "week") setWeekStart(d => addDays(d, 7));
-                else setCalMonth(m => { const d = new Date(m.year, m.month + 1); return { year: d.getFullYear(), month: d.getMonth() }; });
-              }}
-              className="p-2 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 text-gray-500 hover:text-gray-700 transition-colors"
-            >
-              <ChevronRight className="w-4 h-4" />
+            {saveError && <p className="rounded-xl bg-red-50 border border-red-100 p-3 text-red-600" style={{ fontSize: "0.78rem" }}>{saveError}</p>}
+            {created && <p className="rounded-xl bg-emerald-50 border border-emerald-100 p-3 text-emerald-600" style={{ fontSize: "0.78rem" }}>{created}</p>}
+            <button disabled={saving || !coachId} type="submit" className="w-full rounded-xl bg-blue-500 py-3 text-white hover:bg-blue-600 disabled:opacity-60 flex items-center justify-center gap-2" style={{ fontSize: "0.85rem", fontWeight: 700 }}>
+              {saving ? "Đang tạo lịch..." : <><Plus className="w-4 h-4" /> Tạo lịch cho học viên chọn</>}
             </button>
           </div>
+        </form>
 
-          {/* Date label */}
-          <div style={{ fontWeight:700, fontSize:"0.95rem" }} className="text-gray-900">
-            {view === "week" ? weekLabel : `${MONTHS_VI[calMonth.month]} ${calMonth.year}`}
-          </div>
+        <div className="space-y-5">
+          {loading ? (
+            <div className="rounded-2xl bg-white border border-gray-100 p-10 text-center text-gray-500">Đang tải lịch từ hệ thống...</div>
+          ) : error ? (
+            <div className="rounded-2xl bg-red-50 border border-red-100 p-5 text-red-600">{error}</div>
+          ) : (
+            <>
+              <section className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-gray-900" style={{ fontSize: "0.92rem", fontWeight: 700 }}>Lịch đang mở cho đăng ký</h3>
+                  <span className="rounded-full bg-blue-50 text-blue-600 px-3 py-1" style={{ fontSize: "0.74rem", fontWeight: 700 }}>{slots.length} slot</span>
+                </div>
+                {slots.length === 0 ? (
+                  <p className="text-gray-400 py-5 text-center" style={{ fontSize: "0.82rem" }}>Bạn chưa mở lịch tập nào.</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {slots.map((slot, index) => (
+                      <div key={`${slot.dayOfWeek}-${slot.startTime}-${index}`} className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3.5 flex items-center justify-between">
+                        <div>
+                          <div className="text-gray-900" style={{ fontSize: "0.83rem", fontWeight: 700 }}>{dayNames[slot.dayOfWeek || ""] || slot.dayOfWeek}</div>
+                          <div className="text-gray-500 mt-0.5" style={{ fontSize: "0.76rem" }}>{slot.startTime} - {slot.endTime}</div>
+                        </div>
+                        <span className="rounded-full bg-emerald-100 text-emerald-600 px-2.5 py-1" style={{ fontSize: "0.68rem", fontWeight: 700 }}>Đang mở</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
 
-          {/* Spacer */}
-          <div className="flex-1" />
-
-          {/* Filter */}
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)}
-            className="px-3 py-2 bg-white border border-gray-200 rounded-xl text-gray-600 focus:outline-none" style={{ fontSize:"0.8rem" }}>
-            <option value="all">Tất cả trạng thái</option>
-            <option value="upcoming">Sắp tới</option>
-            <option value="completed">Hoàn thành</option>
-            <option value="pending">Chờ xác nhận</option>
-            <option value="cancelled">Đã huỷ</option>
-          </select>
-
-          {/* View toggle */}
-          <div className="flex bg-white border border-gray-200 rounded-xl overflow-hidden">
-            {([["week","Tuần",Calendar],["month","Tháng",LayoutGrid],["list","DS",List]] as [ViewMode,string,any][]).map(([v,label,Icon]) => (
-              <button key={v} onClick={() => setView(v)}
-                className={`flex items-center gap-1.5 px-3 py-2 transition-colors ${view === v ? "bg-blue-500 text-white" : "text-gray-500 hover:bg-gray-50"}`}
-                style={{ fontSize:"0.78rem", fontWeight: view === v ? 700 : 500 }}>
-                <Icon className="w-3.5 h-3.5" /><span className="hidden sm:inline">{label}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Add button */}
-          <button
-            onClick={() => { setEditSession(null); setAddDate(TODAY_STR); setShowModal(true); }}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:from-blue-600 hover:to-indigo-600 transition-all shadow-md shadow-blue-200"
-            style={{ fontSize:"0.82rem", fontWeight:700 }}
-          >
-            <Plus className="w-4 h-4" /> Thêm buổi
-          </button>
-        </div>
-
-        {/* ── Views ── */}
-        <div className="flex-1 min-h-0 overflow-hidden">
-          {view === "week" && (
-            <WeekView
-              weekStart={weekStart}
-              sessions={weekSessions}
-              todayStr={TODAY_STR}
-              onSelect={s => setSelectedSession(s)}
-              onAddAt={(date, time) => { setAddDate(date); setAddTime(time); setEditSession(null); setShowModal(true); }}
-            />
-          )}
-          {view === "month" && (
-            <div className="overflow-y-auto h-full">
-              <MonthView
-                year={calMonth.year}
-                month={calMonth.month}
-                sessions={visibleSessions}
-                todayStr={TODAY_STR}
-                onDaySelect={date => {
-                  setWeekStart(getMonday(toDate(date)));
-                  setView("week");
-                }}
-              />
-            </div>
-          )}
-          {view === "list" && (
-            <div className="overflow-y-auto h-full pr-1">
-              <ListView sessions={visibleSessions} todayStr={TODAY_STR} onSelect={s => setSelectedSession(s)} />
-            </div>
+              <section className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-gray-900" style={{ fontSize: "0.92rem", fontWeight: 700 }}>Lịch đã có học viên đăng ký</h3>
+                  <button type="button" onClick={() => coachId && void loadCalendar(coachId)} className="text-blue-500" style={{ fontSize: "0.76rem", fontWeight: 700 }}>Tải lại</button>
+                </div>
+                {bookings.length === 0 ? (
+                  <p className="text-gray-400 py-5 text-center" style={{ fontSize: "0.82rem" }}>Chưa có booking nào.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {bookings.map(item => (
+                      <div key={item.id} className="rounded-xl border border-gray-100 p-3.5 flex flex-wrap items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center"><Users className="w-4 h-4" /></div>
+                        <div className="flex-1 min-w-[180px]">
+                          <div className="text-gray-900" style={{ fontSize: "0.84rem", fontWeight: 700 }}>{item.traineeName || "Học viên"}</div>
+                          <div className="text-gray-500" style={{ fontSize: "0.75rem" }}>{item.date} · {item.startTime} - {item.endTime} · {item.type === "ONLINE" ? "Online" : "Trực tiếp"}</div>
+                        </div>
+                        <span className={`rounded-full px-2.5 py-1 ${statusStyle[item.status || "PENDING"] || "bg-gray-50 text-gray-500"}`} style={{ fontSize: "0.7rem", fontWeight: 700 }}>
+                          {statusText[item.status || "PENDING"] || item.status}
+                        </span>
+                        <button type="button" onClick={() => onNavigate?.("msg")} className="p-2 rounded-lg text-gray-400 hover:bg-gray-50"><MessageCircle className="w-4 h-4" /></button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            </>
           )}
         </div>
       </div>
-
-      {/* ── Detail Panel (right) ── */}
-      {selectedSession && (
-        <div className="w-72 xl:w-80 shrink-0 rounded-2xl border border-gray-100 shadow-sm overflow-hidden hidden md:flex flex-col">
-          <SessionDetail
-            session={selectedSession}
-            onClose={() => setSelectedSession(null)}
-            onEdit={() => { setEditSession(selectedSession); setShowModal(true); }}
-            onDelete={handleDelete}
-            onStatusChange={handleStatusChange}
-            onMessage={() => onNavigate?.("msg")}
-          />
-        </div>
-      )}
-
-      {/* ── Modal ── */}
-      {showModal && (
-        <SessionModal
-          onClose={() => { setShowModal(false); setEditSession(null); }}
-          onSave={handleSave}
-          initial={editSession}
-          defaultDate={addDate ?? TODAY_STR}
-        />
-      )}
     </div>
   );
 }

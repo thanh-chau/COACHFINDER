@@ -25,6 +25,7 @@ import { AdminTransactions } from "../components/AdminTransactions";
 import { AdminSubscriptions } from "../components/AdminSubscriptions";
 import { AdminUsers } from "../components/AdminUsers";
 import { AdminFinance } from "../components/AdminFinance";
+import { clearAuthSession, getAuthSession } from "../utils/authSession";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Tổng quan", id: "overview" },
@@ -77,6 +78,18 @@ export function AdminDashboard() {
   const [activeNav, setActiveNav] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
+  const session = getAuthSession();
+  const adminName = session?.fullName?.trim() || session?.username || "Quản trị viên";
+  const adminInitials = adminName
+    .split(/\s+/)
+    .slice(-2)
+    .map(part => part.charAt(0))
+    .join("")
+    .toUpperCase();
+  const logout = () => {
+    clearAuthSession();
+    navigate("/auth");
+  };
 
   const pageTitles: Record<
     string,
@@ -171,14 +184,14 @@ export function AdminDashboard() {
               className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-red-600 flex items-center justify-center text-white shrink-0"
               style={{ fontSize: "0.75rem", fontWeight: 800 }}
             >
-              AD
+              {adminInitials}
             </div>
             <div className="min-w-0">
               <div
                 style={{ fontWeight: 700, fontSize: "0.85rem" }}
                 className="text-white truncate"
               >
-                Super Admin
+                {adminName}
               </div>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0 animate-pulse" />
@@ -186,7 +199,7 @@ export function AdminDashboard() {
                   style={{ fontSize: "0.68rem" }}
                   className="text-rose-300"
                 >
-                  admin@coachfinder.vn
+                  {session?.email || "Tài khoản quản trị"}
                 </span>
               </div>
             </div>
@@ -305,7 +318,7 @@ export function AdminDashboard() {
         {/* Logout */}
         <div className="px-3 py-3 border-t border-white/[0.06]">
           <button
-            onClick={() => navigate("/")}
+            onClick={logout}
             className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-gray-400 hover:bg-white/[0.06] hover:text-gray-200 transition-all duration-200"
           >
             <LogOut className="w-[18px] h-[18px] shrink-0" />
