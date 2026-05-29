@@ -20,7 +20,7 @@ export interface VideoCallSignal {
   payload?: any;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+const API_BASE_URL = "https://www.minhthien.io.vn";
 
 class ChatWebSocketService {
   private client: Client | null = null;

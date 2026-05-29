@@ -12,7 +12,7 @@ interface ApiRequestOptions extends RequestInit {
   allowEmptyData?: boolean;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+const API_BASE_URL = "https://www.minhthien.io.vn";
 
 export async function apiRequest<T>(
   path: string,
