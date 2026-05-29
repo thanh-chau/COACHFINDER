@@ -1146,16 +1146,7 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
           allVideos={videos}
           onClose={() => setSelectedVideo(null)}
           onVideoSelect={v => void openVideoDetail(v)}
-              </div>
-              <button onClick={() => setShowUploadModal(false)} className="p-2 rounded-xl hover:bg-white/10 transition-colors">
-                <X className="w-5 h-5 text-gray-300" />
-              </button>
-            </div>
-            <div className="p-5">
-              <Video360Player />
-            </div>
-          </div>
-        </div>
+        />
       )}
     </div>
   );
