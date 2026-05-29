@@ -38,8 +38,11 @@ export function createBooking(request: CreateBookingRequest) {
 }
 
 export function getCoachCalendarBookings() {
-  return rawApiRequest<BookingListItem[]>("/api/coach/calendar/list")
-    .then(items => items.map(item => normalizeBookingResponse(item)));
+  return rawApiRequest<any>("/api/coach/calendar/list")
+    .then(payload => {
+      const items = Array.isArray(payload) ? payload : (payload?.data ?? []);
+      return items.map((item: any) => normalizeBookingResponse(item));
+    });
 }
 
 export function confirmBooking(bookingId: number) {

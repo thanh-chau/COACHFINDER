@@ -140,11 +140,14 @@ function scheduleMatchesBooking(schedule: CoachSchedule, booking: BookingListIte
 }
 
 function blockedScheduleIndexes(schedules?: CoachSchedule[]) {
-  return new Set((schedules || []).flatMap((schedule, index) => (
-    schedule.available === false || schedule.bookingStatus === "PENDING" || schedule.bookingStatus === "CONFIRMED"
+  const minDate = todayInputValue();
+  return new Set((schedules || []).flatMap((schedule, index) => {
+    const fixedDate = scheduleDate(schedule);
+    const isPast = fixedDate ? fixedDate < minDate : false;
+    return schedule.available === false || schedule.bookingStatus === "PENDING" || schedule.bookingStatus === "CONFIRMED" || isPast
       ? [index]
-      : []
-  )));
+      : [];
+  }));
 }
 
 function CoachAvatar({ coach, className }: { coach: Pick<Coach, "avatar" | "fullName">; className: string }) {

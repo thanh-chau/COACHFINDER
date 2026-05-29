@@ -15,11 +15,11 @@ export function getVideos(params: { keyword?: string; type?: string; coachId?: n
   if (params.type) query.append("type", params.type);
   if (params.coachId !== undefined) query.append("coachId", String(params.coachId));
   const suffix = query.toString() ? `?${query.toString()}` : "";
-  return apiRequest<VideoItem[]>(`/api/v1/videos${suffix}`);
+  return apiRequest<any>(`/api/v1/videos${suffix}`).then(res => res.data || res);
 }
 
 export function getVideo(id: number) {
-  return apiRequest<VideoItem>(`/api/v1/videos/${id}`);
+  return apiRequest<any>(`/api/v1/videos/${id}`).then(res => res.data || res);
 }
 
 export function likeVideo(id: number) {
@@ -39,7 +39,7 @@ export function unsaveVideo(id: number) {
 }
 
 export function getSavedVideos() {
-  return apiRequest<VideoItem[]>("/api/v1/videos/saved");
+  return apiRequest<any>("/api/v1/videos/saved").then(res => res.data || res);
 }
 
 export function updateCoachVideo(id: number, request: UpdateCoachVideoRequest) {

@@ -112,7 +112,29 @@ function mapApiVideo(video: ApiVideoItem, index: number): VideoItem {
   };
 }
 
-const VIDEOS: VideoItem[] = [];
+const VIDEOS: VideoItem[] = [
+  {
+    id: 1,
+    title: "Khởi Động & Giãn Cơ Toàn Diện",
+    coachName: "Coach Anna",
+    coachAvatar: IMG.coach1,
+    coachVerified: true,
+    sport: "Thể thao",
+    sportEmoji: "🎬",
+    category: "sports",
+    thumbnail: IMG.gym,
+    duration: "10:00",
+    views: "5.4K",
+    likes: 342,
+    rating: 4.9,
+    level: "Cơ bản",
+    is360: true,
+    isFeatured: true,
+    tags: ["warmup", "stretching"],
+    description: "Bài tập khởi động và giãn cơ toàn diện giúp cơ thể chuẩn bị tốt nhất trước khi tập luyện cường độ cao.",
+    uploadedAt: "01/01/2024",
+  }
+];
 
 // ─── Panoramic 360° Viewer (CSS-based mock) ─────────────────────────────────
 function PanoramicViewer({ thumbnail, title }: { thumbnail: string; title: string }) {
@@ -834,6 +856,15 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
   });
 
   const featured = videos.find(v => v.isFeatured) || videos[0] || VIDEOS[0];
+
+  if (!featured) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <div className="animate-spin w-8 h-8 border-4 border-violet-500 border-t-transparent rounded-full mb-4"></div>
+        <div className="text-gray-500 font-medium">Đang tải dữ liệu video...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">

@@ -58,7 +58,7 @@ export function AdminFinance() {
     try {
       const [walletResult, withdrawResult] = await Promise.all([
         fetchAdminWalletOverview(),
-        fetchAdminWalletWithdrawRequests("PENDING"),
+        fetchAdminWalletWithdrawRequests(),
       ]);
       setWalletOverview(walletResult);
       setWithdrawRequests(withdrawResult || []);

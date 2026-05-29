@@ -458,19 +458,16 @@ export function AdminDashboard() {
           </div>
         </header>
 
+
         {/* Content area */}
         <div className="flex-1 overflow-y-auto">
           <div className="p-5 lg:p-6 max-w-[1440px] mx-auto w-full">
             {activeNav === "overview" && <AdminOverview />}
             {activeNav === "users" && <AdminUsers />}
-            {activeNav === "transactions" && (
-              <AdminTransactions />
-            )}
-            {activeNav === "subscriptions" && (
-              <AdminSubscriptions />
-            )}
+            {activeNav === "transactions" && <AdminTransactions />}
+            {activeNav === "subscriptions" && <AdminSubscriptions />}
             {activeNav === "finance" && <AdminFinance />}
-            {activeNav === "settings" && <AdminSettings />}
+            {activeNav === "settings" && <AdminSettingsPlaceholder />}
           </div>
         </div>
       </div>
