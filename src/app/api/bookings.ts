@@ -42,6 +42,43 @@ export function getCoachCalendarBookings() {
     .then(items => items.map(item => normalizeBookingResponse(item)));
 }
 
+export function confirmBooking(bookingId: number) {
+  return apiRequest<BookingResponse>(`/api/bookings/${bookingId}/confirm`, {
+    method: "PUT",
+    acceptDataWhenSuccessFalse: true,
+  }).then(result => normalizeBookingResponse(result));
+}
+
+export function rejectBooking(bookingId: number) {
+  return apiRequest<BookingResponse>(`/api/bookings/${bookingId}/reject`, {
+    method: "PUT",
+    acceptDataWhenSuccessFalse: true,
+  }).then(result => normalizeBookingResponse(result));
+}
+
+export function cancelBookingByCoach(bookingId: number, reason?: string) {
+  return apiRequest<BookingResponse>(`/api/bookings/${bookingId}/cancel-by-coach`, {
+    method: "PUT",
+    body: JSON.stringify({ reason }),
+    acceptDataWhenSuccessFalse: true,
+  }).then(result => normalizeBookingResponse(result));
+}
+
+export function completeBooking(bookingId: number) {
+  return apiRequest<BookingResponse>(`/api/bookings/${bookingId}/complete`, {
+    method: "PUT",
+    acceptDataWhenSuccessFalse: true,
+  }).then(result => normalizeBookingResponse(result));
+}
+
+export function cancelBooking(bookingId: number, reason: string) {
+  return apiRequest<string>(`/api/bookings/${bookingId}/cancel`, {
+    method: "PUT",
+    body: JSON.stringify({ reason }),
+    acceptDataWhenSuccessFalse: true,
+  });
+}
+
 export function getMyBookings() {
   return rawApiRequest<BookingListItem[] | { data?: BookingListItem[] }>("/api/bookings/my")
     .then(payload => {

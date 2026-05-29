@@ -7,7 +7,7 @@ import {
   Check, Search, MoreHorizontal, Globe, PhoneCall, Repeat,
   Filter, CalendarDays
 } from "lucide-react";
-import { getCoachCalendarBookings } from "../api/bookings";
+import { cancelBookingByCoach, completeBooking, confirmBooking, getCoachCalendarBookings, rejectBooking } from "../api/bookings";
 import { createCoachSchedule, getCoachSchedule, searchCoaches } from "../api/coaches";
 import type { BookingListItem } from "../types/booking";
 import type { CoachSchedule as PublishedCoachSchedule } from "../types/coach";
@@ -57,37 +57,6 @@ interface CoachSession {
   meetLink?: string;
   repeat?: boolean;
 }
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const INITIAL_SESSIONS: CoachSession[] = [
-  // ── Completed ──
-  { id:"s1",  date:"2026-03-02", startTime:"09:00", endTime:"10:30", student:"Trần Bảo Long",  plan:"Pro",     mode:"Online",  location:"Google Meet",         status:"completed", fee:400000, note:"Kéo lưng + Vai, form cải thiện tốt", meetLink:"https://meet.google.com/abc-def-xyz" },
-  { id:"s2",  date:"2026-03-02", startTime:"17:00", endTime:"18:30", student:"Nguyễn Minh Anh",plan:"Free",    mode:"Online",  location:"Google Meet",         status:"completed", fee:400000, note:"Squat & Deadlift – kỹ thuật tốt lên rõ" },
-  { id:"s3",  date:"2026-03-03", startTime:"07:00", endTime:"09:00", student:"Lê Thúy Nga",    plan:"Premium", mode:"Offline", location:"Gym Gold's, Q3",     status:"completed", fee:600000, note:"Posing practice + cardio", repeat: true },
-  { id:"s4",  date:"2026-03-04", startTime:"14:00", endTime:"15:30", student:"Võ Thị Hoa",     plan:"Premium", mode:"Offline", location:"Fitness Center Q1",  status:"completed", fee:500000, note:"Full body – kết quả ấn tượng" },
-
-  // ── Today (2026-03-05) ──
-  { id:"s5",  date:"2026-03-05", startTime:"09:00", endTime:"10:30", student:"Trần Bảo Long",  plan:"Pro",     mode:"Online",  location:"Google Meet",         status:"completed", fee:400000, note:"Pull day – lưng & bicep", meetLink:"https://meet.google.com/abc-def-xyz" },
-  { id:"s6",  date:"2026-03-05", startTime:"14:00", endTime:"15:30", student:"Võ Thị Hoa",     plan:"Premium", mode:"Offline", location:"Fitness Center Q1",  status:"upcoming",  fee:500000, note:"Legs & glutes chuyên sâu" },
-  { id:"s7",  date:"2026-03-05", startTime:"17:00", endTime:"18:30", student:"Nguyễn Minh Anh",plan:"Free",    mode:"Online",  location:"Google Meet",         status:"upcoming",  fee:400000, note:"Push day – ngực, vai, tricep", meetLink:"https://meet.google.com/xyz-abc-def" },
-
-  // ── Upcoming ──
-  { id:"s8",  date:"2026-03-06", startTime:"10:00", endTime:"12:00", student:"Đặng Quốc Tuấn", plan:"Pro",     mode:"Offline", location:"Powerhouse Gym Q7",  status:"upcoming",  fee:500000, note:"Squat 1RM test", repeat: true },
-  { id:"s9",  date:"2026-03-07", startTime:"08:00", endTime:"09:30", student:"Bùi Văn Nam",    plan:"Free",    mode:"Online",  location:"Zoom",                status:"upcoming",  fee:350000, note:"Full body routine A", meetLink:"https://zoom.us/j/123456789" },
-  { id:"s10", date:"2026-03-07", startTime:"10:00", endTime:"12:00", student:"Đặng Quốc Tuấn", plan:"Pro",     mode:"Offline", location:"Powerhouse Gym Q7",  status:"upcoming",  fee:500000, note:"Bench Press tháng 3" },
-  { id:"s11", date:"2026-03-09", startTime:"09:00", endTime:"10:30", student:"Trần Bảo Long",  plan:"Pro",     mode:"Online",  location:"Google Meet",         status:"upcoming",  fee:400000, note:"Upper body – chest & back", meetLink:"https://meet.google.com/abc-def-xyz", repeat:true },
-  { id:"s12", date:"2026-03-10", startTime:"07:00", endTime:"09:00", student:"Lê Thúy Nga",    plan:"Premium", mode:"Offline", location:"Gym Gold's, Q3",     status:"upcoming",  fee:600000, note:"Pre-competition posing", repeat:true },
-  { id:"s13", date:"2026-03-11", startTime:"14:00", endTime:"15:30", student:"Võ Thị Hoa",     plan:"Premium", mode:"Offline", location:"Fitness Center Q1",  status:"upcoming",  fee:500000, note:"Cardio & core", repeat:true },
-  { id:"s14", date:"2026-03-12", startTime:"09:00", endTime:"10:30", student:"Nguyễn Minh Anh",plan:"Free",    mode:"Online",  location:"Google Meet",         status:"upcoming",  fee:400000, note:"Review tháng – check tiến độ" },
-  { id:"s15", date:"2026-03-12", startTime:"17:00", endTime:"18:30", student:"Phạm Đức Hải",   plan:"Free",    mode:"Online",  location:"Google Meet",         status:"pending",   fee:400000, note:"Buổi thử – chưa xác nhận" },
-  { id:"s16", date:"2026-03-13", startTime:"10:00", endTime:"12:00", student:"Đặng Quốc Tuấn", plan:"Pro",     mode:"Offline", location:"Powerhouse Gym Q7",  status:"upcoming",  fee:500000, note:"Deadlift tháng 3", repeat:true },
-  { id:"s17", date:"2026-03-14", startTime:"08:00", endTime:"09:30", student:"Bùi Văn Nam",    plan:"Free",    mode:"Online",  location:"Zoom",                status:"upcoming",  fee:350000, note:"Full body routine B", meetLink:"https://zoom.us/j/123456789" },
-  { id:"s18", date:"2026-03-14", startTime:"16:00", endTime:"17:30", student:"Võ Thị Hoa",     plan:"Premium", mode:"Offline", location:"Fitness Center Q1",  status:"upcoming",  fee:500000, note:"Upper body tăng cường" },
-  { id:"s19", date:"2026-03-15", startTime:"07:00", endTime:"09:00", student:"Lê Thúy Nga",    plan:"Premium", mode:"Offline", location:"Gym Gold's, Q3",     status:"upcoming",  fee:600000, note:"Final prep trước thi", repeat:true },
-  { id:"s20", date:"2026-03-04", startTime:"11:00", endTime:"12:00", student:"Phạm Đức Hải",   plan:"Free",    mode:"Online",  location:"Google Meet",         status:"cancelled", fee:400000, note:"Học viên huỷ bệnh" },
-];
-
-const STUDENTS_LIST = ["Nguyễn Minh Anh","Trần Bảo Long","Lê Thúy Nga","Phạm Đức Hải","Võ Thị Hoa","Đặng Quốc Tuấn","Bùi Văn Nam"];
 
 // ─── Color Config ─────────────────────────────────────────────────────────────
 const STATUS_COLOR: Record<SessionStatus, { bg: string; border: string; text: string; dot: string; label: string; hex: string }> = {
@@ -312,7 +281,7 @@ function SessionModal({
     date: defaultDate ?? TODAY_STR,
     startTime: "09:00",
     endTime: "10:30",
-    student: STUDENTS_LIST[0],
+    student: "",
     plan: "Pro",
     mode: "Online",
     location: "Google Meet",
@@ -340,9 +309,7 @@ function SessionModal({
           {/* Student */}
           <div>
             <label style={{ fontSize:"0.78rem", fontWeight:600 }} className="block text-gray-600 mb-1.5">Học viên</label>
-            <select value={form.student} onChange={e => set("student", e.target.value)} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-200" style={{ fontSize:"0.85rem" }}>
-              {STUDENTS_LIST.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
+            <input value={form.student ?? ""} onChange={e => set("student", e.target.value)} placeholder="Tên học viên từ booking" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-200" style={{ fontSize:"0.85rem" }} />
           </div>
           {/* Date */}
           <div>
@@ -737,6 +704,7 @@ export function CoachSchedule({ onNavigate }: { onNavigate?: (v: string) => void
   const [error, setError] = useState("");
   const [saveError, setSaveError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [actionBookingId, setActionBookingId] = useState<number | null>(null);
   const [created, setCreated] = useState("");
   const [form, setForm] = useState({
     date: new Date().toISOString().slice(0, 10),
@@ -804,11 +772,17 @@ export function CoachSchedule({ onNavigate }: { onNavigate?: (v: string) => void
       return;
     }
 
+    const scheduleStart = new Date(`${form.date}T${form.startTime}:00`);
+    if (scheduleStart.getTime() <= Date.now()) {
+      setSaveError("Không thể tạo lịch tập nhỏ hơn hoặc bằng thời điểm hiện tại.");
+      return;
+    }
+
     const date = new Date(`${form.date}T00:00:00`);
     const days = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
     setSaving(true);
     try {
-      const result = await createCoachSchedule({
+      await createCoachSchedule({
         coachId,
         dayOfWeek: days[date.getDay()],
         startDate: form.date,
@@ -816,7 +790,7 @@ export function CoachSchedule({ onNavigate }: { onNavigate?: (v: string) => void
         startTime: toLocalTimePayload(form.startTime),
         endTime: toLocalTimePayload(form.endTime),
       });
-      setSlots(current => [...current, { ...result, startDate: form.date, endDate: form.date }]);
+      await loadCalendar(coachId);
       setCreated("Đã mở lịch tập. Học viên có thể chọn slot này trong hồ sơ của bạn.");
     } catch (reason) {
       setSaveError(reason instanceof Error ? reason.message : "Không thể tạo lịch tập.");
@@ -834,12 +808,51 @@ export function CoachSchedule({ onNavigate }: { onNavigate?: (v: string) => void
     CONFIRMED: "bg-blue-50 text-blue-600",
     COMPLETED: "bg-emerald-50 text-emerald-600",
     CANCELLED: "bg-red-50 text-red-600",
+    REJECTED: "bg-red-50 text-red-600",
   };
   const statusText: Record<string, string> = {
     PENDING: "Chờ xác nhận",
     CONFIRMED: "Đã đăng ký",
     COMPLETED: "Hoàn thành",
     CANCELLED: "Đã hủy",
+    REJECTED: "Đã từ chối",
+  };
+
+  const activeSlots = slots.filter(slot => slot.available !== false);
+  const slotBadge = (slot: PublishedCoachSchedule) => {
+    if (slot.bookingStatus === "PENDING") return { text: "Chờ xác nhận", className: "bg-amber-100 text-amber-700" };
+    if (slot.bookingStatus === "CONFIRMED") return { text: "Đã xác nhận", className: "bg-blue-100 text-blue-700" };
+    if (slot.available === false) return { text: "Đã có đăng ký", className: "bg-gray-200 text-gray-600" };
+    return { text: "Đang mở", className: "bg-emerald-100 text-emerald-600" };
+  };
+  const slotContainerClass = (slot: PublishedCoachSchedule) => {
+    if (slot.bookingStatus === "PENDING") return "border-amber-100 bg-amber-50/60";
+    if (slot.bookingStatus === "CONFIRMED") return "border-blue-100 bg-blue-50/60";
+    if (slot.available === false) return "border-gray-200 bg-gray-50";
+    return "border-emerald-100 bg-emerald-50/50";
+  };
+  const handleBookingAction = async (bookingId: number, action: "confirm" | "reject" | "complete" | "cancel-by-coach") => {
+    if (!coachId) return;
+    const reason = action === "cancel-by-coach" ? prompt("Nhap ly do huy booking") : undefined;
+    if (action === "cancel-by-coach" && reason === null) return;
+    setActionBookingId(bookingId);
+    setError("");
+    try {
+      if (action === "confirm") {
+        await confirmBooking(bookingId);
+      } else if (action === "reject") {
+        await rejectBooking(bookingId);
+      } else if (action === "complete") {
+        await completeBooking(bookingId);
+      } else {
+        await cancelBookingByCoach(bookingId, reason?.trim() || undefined);
+      }
+      await loadCalendar(coachId);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Không thể cập nhật booking.");
+    } finally {
+      setActionBookingId(null);
+    }
   };
 
   return (
@@ -888,21 +901,23 @@ export function CoachSchedule({ onNavigate }: { onNavigate?: (v: string) => void
               <section className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-gray-900" style={{ fontSize: "0.92rem", fontWeight: 700 }}>Lịch đang mở cho đăng ký</h3>
-                  <span className="rounded-full bg-blue-50 text-blue-600 px-3 py-1" style={{ fontSize: "0.74rem", fontWeight: 700 }}>{slots.length} slot</span>
+                  <span className="rounded-full bg-blue-50 text-blue-600 px-3 py-1" style={{ fontSize: "0.74rem", fontWeight: 700 }}>{activeSlots.length}/{slots.length} slot trống</span>
                 </div>
                 {slots.length === 0 ? (
                   <p className="text-gray-400 py-5 text-center" style={{ fontSize: "0.82rem" }}>Bạn chưa mở lịch tập nào.</p>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {slots.map((slot, index) => (
-                      <div key={`${slot.dayOfWeek}-${slot.startTime}-${index}`} className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3.5 flex items-center justify-between">
+                    {slots.map((slot, index) => {
+                      const badge = slotBadge(slot);
+                      return (
+                      <div key={`${slot.dayOfWeek}-${slot.startTime}-${index}`} className={`rounded-xl border p-3.5 flex items-center justify-between ${slotContainerClass(slot)}`}>
                         <div>
                           <div className="text-gray-900" style={{ fontSize: "0.83rem", fontWeight: 700 }}>{dayNames[slot.dayOfWeek || ""] || slot.dayOfWeek}</div>
-                          <div className="text-gray-500 mt-0.5" style={{ fontSize: "0.76rem" }}>{slot.startTime} - {slot.endTime}</div>
+                          <div className="text-gray-500 mt-0.5" style={{ fontSize: "0.76rem" }}>{slot.startDate ? `${slot.startDate} · ` : ""}{slot.startTime} - {slot.endTime}</div>
                         </div>
-                        <span className="rounded-full bg-emerald-100 text-emerald-600 px-2.5 py-1" style={{ fontSize: "0.68rem", fontWeight: 700 }}>Đang mở</span>
+                        <span className={`rounded-full px-2.5 py-1 ${badge.className}`} style={{ fontSize: "0.68rem", fontWeight: 700 }}>{badge.text}</span>
                       </div>
-                    ))}
+                    );})}
                   </div>
                 )}
               </section>
@@ -922,10 +937,57 @@ export function CoachSchedule({ onNavigate }: { onNavigate?: (v: string) => void
                         <div className="flex-1 min-w-[180px]">
                           <div className="text-gray-900" style={{ fontSize: "0.84rem", fontWeight: 700 }}>{item.traineeName || "Học viên"}</div>
                           <div className="text-gray-500" style={{ fontSize: "0.75rem" }}>{item.date} · {item.startTime} - {item.endTime} · {item.type === "ONLINE" ? "Online" : "Trực tiếp"}</div>
+                          {item.status === "CANCELLED" && item.cancellationReason && (
+                            <div className="text-red-500 mt-1" style={{ fontSize: "0.72rem", fontWeight: 600 }}>Lý do hủy: {item.cancellationReason}</div>
+                          )}
                         </div>
                         <span className={`rounded-full px-2.5 py-1 ${statusStyle[item.status || "PENDING"] || "bg-gray-50 text-gray-500"}`} style={{ fontSize: "0.7rem", fontWeight: 700 }}>
                           {statusText[item.status || "PENDING"] || item.status}
                         </span>
+                        {item.status === "PENDING" && (
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              disabled={actionBookingId === item.id}
+                              onClick={() => void handleBookingAction(item.id, "confirm")}
+                              className="rounded-lg bg-emerald-500 px-3 py-2 text-white hover:bg-emerald-600 disabled:opacity-60"
+                              style={{ fontSize: "0.72rem", fontWeight: 700 }}
+                            >
+                              Xác nhận
+                            </button>
+                            <button
+                              type="button"
+                              disabled={actionBookingId === item.id}
+                              onClick={() => void handleBookingAction(item.id, "reject")}
+                              className="rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100 disabled:opacity-60"
+                              style={{ fontSize: "0.72rem", fontWeight: 700 }}
+                            >
+                              Từ chối
+                            </button>
+                          </div>
+                        )}
+                        {item.status === "CONFIRMED" && (
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              disabled={actionBookingId === item.id}
+                              onClick={() => void handleBookingAction(item.id, "complete")}
+                              className="rounded-lg bg-blue-500 px-3 py-2 text-white hover:bg-blue-600 disabled:opacity-60"
+                              style={{ fontSize: "0.72rem", fontWeight: 700 }}
+                            >
+                              HoÃ n thÃ nh
+                            </button>
+                            <button
+                              type="button"
+                              disabled={actionBookingId === item.id}
+                              onClick={() => void handleBookingAction(item.id, "cancel-by-coach")}
+                              className="rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100 disabled:opacity-60"
+                              style={{ fontSize: "0.72rem", fontWeight: 700 }}
+                            >
+                              HLV há»§y
+                            </button>
+                          </div>
+                        )}
                         <button type="button" onClick={() => onNavigate?.("msg")} className="p-2 rounded-lg text-gray-400 hover:bg-gray-50"><MessageCircle className="w-4 h-4" /></button>
                       </div>
                     ))}

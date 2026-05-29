@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Check, X, Zap, Crown, Star, Award, ArrowRight,
   Users, Video, BarChart2, MessageCircle,
   Shield, Headphones, Globe, ChevronDown, ChevronUp,
   CheckCircle2, Sparkles, Gift
 } from "lucide-react";
+import { changeCoachSubscription, getCoachSubscriptionCatalog } from "../api/subscriptions";
+import type { SubscriptionBillingCycle, SubscriptionCatalog, SubscriptionPlanCard, SubscriptionPlanCode } from "../types/subscription";
 
 const plans = [
   {
@@ -117,10 +119,101 @@ const faqs = [
   },
 ];
 
+type LocalPlan = typeof plans[number];
+
+function normalizePlanId(planCode: SubscriptionPlanCode) {
+  if (planCode === "FREE") return "starter";
+  if (planCode === "PRO") return "pro";
+  return "elite";
+}
+
+function planCodeFromId(planId: string): SubscriptionPlanCode {
+  if (planId === "starter") return "FREE";
+  if (planId === "pro") return "PRO";
+  return "PREMIUM";
+}
+
+function mapCatalogPlan(plan: SubscriptionPlanCard, fallback: LocalPlan): LocalPlan {
+  const id = normalizePlanId(plan.planCode);
+  return {
+    ...fallback,
+    id,
+    name: plan.displayName || fallback.name,
+    tagline: plan.description || fallback.tagline,
+    price: plan.monthlyPrice,
+    yearlyPrice: plan.billingLabel === "YEARLY" ? Math.round(plan.billingPrice / 12) : fallback.yearlyPrice,
+    priceNote: plan.billingLabel === "YEARLY" ? "/ tháng khi thanh toán năm" : "/ tháng",
+    badge: plan.current ? "Đang dùng" : plan.ribbonText,
+    features: plan.features.map(feature => ({
+      label: feature.text,
+      included: feature.included,
+    })),
+  };
+}
+
+function mergeCatalogPlans(catalog: SubscriptionCatalog | null) {
+  if (!catalog) return plans;
+  const byCode = new Map(catalog.plans.map(plan => [plan.planCode, plan]));
+  return plans.map(fallback => {
+    const catalogPlan = byCode.get(planCodeFromId(fallback.id));
+    return catalogPlan ? mapCatalogPlan(catalogPlan, fallback) : fallback;
+  });
+}
+
 export function CoachSubscription() {
-  const currentPlan = "pro";
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [yearly, setYearly] = useState(false);
+  const [catalog, setCatalog] = useState<SubscriptionCatalog | null>(null);
+  const [plansView, setPlansView] = useState<LocalPlan[]>(plans);
+  const [currentPlan, setCurrentPlan] = useState("pro");
+  const [actionMessage, setActionMessage] = useState("");
+  const [changingPlan, setChangingPlan] = useState<string | null>(null);
+  const billingCycle: SubscriptionBillingCycle = yearly ? "YEARLY" : "MONTHLY";
+
+  useEffect(() => {
+    let active = true;
+    getCoachSubscriptionCatalog(billingCycle)
+      .then(nextCatalog => {
+        if (!active) return;
+        setCatalog(nextCatalog);
+        setPlansView(mergeCatalogPlans(nextCatalog));
+        setCurrentPlan(normalizePlanId(nextCatalog.currentSubscription.planCode));
+      })
+      .catch(() => {
+        if (!active) return;
+        setCatalog(null);
+        setPlansView(plans);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [billingCycle]);
+
+  const currentSubscription = catalog?.currentSubscription;
+
+  const handlePlanChange = async (planId: string) => {
+    if (planId === currentPlan || changingPlan) return;
+    setChangingPlan(planId);
+    setActionMessage("");
+    try {
+      const result = await changeCoachSubscription({
+        planCode: planCodeFromId(planId),
+        billingCycle,
+      });
+      setCurrentPlan(normalizePlanId(result.subscription.planCode));
+      setActionMessage(result.message || "Đã cập nhật gói đăng ký.");
+      const nextCatalog = await getCoachSubscriptionCatalog(billingCycle).catch(() => null);
+      if (nextCatalog) {
+        setCatalog(nextCatalog);
+        setPlansView(mergeCatalogPlans(nextCatalog));
+      }
+    } catch (error) {
+      setActionMessage(error instanceof Error ? error.message : "Không thể cập nhật gói đăng ký.");
+    } finally {
+      setChangingPlan(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -150,12 +243,18 @@ export function CoachSubscription() {
           <div className="bg-blue-500/20 border border-blue-400/30 rounded-2xl px-5 py-4 shrink-0">
             <div style={{ fontSize: "0.72rem" }} className="text-blue-300 mb-1">Gói hiện tại</div>
             <div style={{ fontWeight: 800, fontSize: "1.1rem" }} className="text-white flex items-center gap-2">
-              <Zap className="w-4 h-4 text-blue-400" /> Gói Pro
+              <Zap className="w-4 h-4 text-blue-400" /> {currentSubscription?.displayName || "Gói Pro"}
             </div>
-            <div style={{ fontSize: "0.75rem" }} className="text-blue-200 mt-1">{yearly ? "160.000đ / tháng" : "200.000đ / tháng"}</div>
+            <div style={{ fontSize: "0.75rem" }} className="text-blue-200 mt-1">{currentSubscription?.displayPrice || (yearly ? "160.000đ / tháng" : "200.000đ / tháng")}</div>
           </div>
         </div>
       </div>
+
+      {actionMessage && (
+        <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-blue-700" style={{ fontSize: "0.84rem", fontWeight: 600 }}>
+          {actionMessage}
+        </div>
+      )}
 
       {/* Yearly toggle */}
       <div className="flex items-center justify-center gap-3">
@@ -180,7 +279,7 @@ export function CoachSubscription() {
 
       {/* Plans grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {plans.map((plan) => {
+        {plansView.map((plan) => {
           const isCurrent = plan.id === currentPlan;
           const isElite = plan.id === "elite";
           const displayPrice = yearly ? plan.yearlyPrice : plan.price;
@@ -263,15 +362,21 @@ export function CoachSubscription() {
                     ✓ Gói hiện tại
                   </button>
                 ) : plan.id === "starter" ? (
-                  <button className="w-full py-3 rounded-xl border-2 border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50 transition-all"
+                  <button
+                    onClick={() => handlePlanChange(plan.id)}
+                    disabled={changingPlan !== null}
+                    className="w-full py-3 rounded-xl border-2 border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50 transition-all disabled:opacity-60"
                     style={{ fontSize: "0.85rem", fontWeight: 600 }}>
-                    Hạ cấp
+                    {changingPlan === plan.id ? "Đang xử lý..." : "Hạ cấp"}
                   </button>
                 ) : (
-                  <button className={`w-full py-3 rounded-xl transition-all flex items-center justify-center gap-2 ${plan.btnClass}`}
+                  <button
+                    onClick={() => handlePlanChange(plan.id)}
+                    disabled={changingPlan !== null}
+                    className={`w-full py-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${plan.btnClass}`}
                     style={{ fontSize: "0.85rem", fontWeight: 700 }}>
                     {isElite ? <Crown className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
-                    {isElite ? "Nâng lên Premium" : "Nâng cấp"}
+                    {changingPlan === plan.id ? "Đang xử lý..." : isElite ? "Nâng lên Premium" : "Nâng cấp"}
                   </button>
                 )}
               </div>
@@ -306,7 +411,7 @@ export function CoachSubscription() {
             <thead>
               <tr>
                 <th className="py-2 text-left" style={{ fontSize: "0.78rem", fontWeight: 600, color: "#6b7280", minWidth: 180 }}>Tính năng</th>
-                {plans.map(p => (
+                {plansView.map(p => (
                   <th key={p.id} className="py-2 text-center px-3" style={{ fontSize: "0.78rem", fontWeight: 700 }}>
                     <span className={p.accentColor}>{p.name}</span>
                   </th>

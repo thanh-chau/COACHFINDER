@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import {
   LayoutDashboard, Search, Calendar, Brain, BarChart2, Video,
@@ -14,7 +14,19 @@ import { AIAnalysis } from "../components/AIAnalysis";
 import { ProgressTracking } from "../components/ProgressTracking";
 import { VideoLibrary } from "../components/VideoLibrary";
 import { Messaging } from "../components/Messaging";
+import { NotificationBell } from "../components/NotificationBell";
 import { clearAuthSession, getAuthSession } from "../utils/authSession";
+import { logoutAccount } from "../api/auth";
+import { getMyBookings } from "../api/bookings";
+import { getChatUnreadCount } from "../api/chat";
+import { searchCoaches } from "../api/coaches";
+import { getNotificationUnreadCount } from "../api/notifications";
+import { getAchievements, getProgressHeatmap, getProgressOverview } from "../api/progress";
+import { getCurrentSubscription } from "../api/subscriptions";
+import type { BookingListItem } from "../types/booking";
+import type { Coach } from "../types/coach";
+import type { Achievement, ProgressOverview } from "../types/progress";
+import type { CurrentSubscription } from "../types/subscription";
 
 const COACH_AVATAR_1 = "https://images.unsplash.com/photo-1758875568932-0eefd3e60090?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200";
 const COACH_AVATAR_2 = "https://images.unsplash.com/photo-1755549476788-efd8bf819561?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200";
@@ -24,12 +36,6 @@ const progressData = [
   { week: "T2", hours: 3 }, { week: "T3", hours: 5 }, { week: "T4", hours: 4 },
   { week: "T5", hours: 6 }, { week: "T6", hours: 5 }, { week: "T7", hours: 7 },
   { week: "CN", hours: 4 },
-];
-
-const aiScores = [
-  { name: "🏸 Smash",      score: 76, color: "#10b981", bg: "bg-emerald-50", text: "text-emerald-600", border: "border-emerald-200", feedback: "Cổ tay snap chưa đủ, cần vươn cao hơn khi đập" },
-  { name: "🎾 Serve",      score: 79, color: "#f59e0b", bg: "bg-amber-50",   text: "text-amber-600",   border: "border-amber-200",   feedback: "Ball toss hơi lệch, trophy position cần cải thiện" },
-  { name: "🥊 Jab",        score: 82, color: "#3b82f6", bg: "bg-blue-50",    text: "text-blue-600",    border: "border-blue-200",    feedback: "Xoay nắm đấm tốt, retract nhanh" },
 ];
 
 const myCoaches = [
@@ -75,9 +81,103 @@ const HEADER_TITLES: Record<string, { title: string; sub: string }> = {
   msg:          { title: "Tin nhắn 💬",                sub: "Trò chuyện với HLV của bạn" },
 };
 
+type ProgressChartRow = { week: string; hours: number };
+type MyCoachRow = { name: string; sport: string; rating: number; avatar: string; sessions: number; nextSession: string };
+type UpcomingSessionRow = { coach: string; sport: string; time: string; type: string; avatar: string; status: "confirmed" | "pending" };
+type SuggestedCoachRow = { name: string; sport: string; price: string; avatar: string; tag: string };
+
+const DEFAULT_OVERVIEW: ProgressOverview = {
+  totalSessions: 24,
+  trainingHours: 48,
+  averageAiScore: 87,
+  activeCoaches: 2,
+  streakDays: 14,
+};
+
+function formatRelativeDateTime(value?: string | null) {
+  if (!value) return "Chưa có";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Chưa có";
+  return date.toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit" });
+}
+
+function mapProgressChart(rows: Array<{ date: string; value: number }>): ProgressChartRow[] {
+  return rows.slice(-7).map(row => ({
+    week: new Date(row.date).toLocaleDateString("vi-VN", { weekday: "short" }),
+    hours: row.value,
+  }));
+}
+
+function mapUpcomingSessions(bookings: BookingListItem[]): UpcomingSessionRow[] {
+  const avatars = [COACH_AVATAR_1, COACH_AVATAR_2, COACH_AVATAR_3];
+  return bookings
+    .filter(item => item.status === "PENDING" || item.status === "CONFIRMED")
+    .sort((a, b) => `${a.date}T${a.startTime}`.localeCompare(`${b.date}T${b.startTime}`))
+    .slice(0, 3)
+    .map((booking, index) => ({
+      coach: booking.coachName || "Huấn luyện viên",
+      sport: booking.sport || "Buổi tập",
+      time: `${formatRelativeDateTime(booking.date)}, ${booking.startTime.slice(0, 5)} - ${booking.endTime.slice(0, 5)}`,
+      type: booking.type === "ONLINE" ? "Online" : "Offline",
+      avatar: booking.coachAvatar || avatars[index % avatars.length],
+      status: booking.status === "CONFIRMED" ? "confirmed" : "pending",
+    }));
+}
+
+function mapMyCoaches(bookings: BookingListItem[]): MyCoachRow[] {
+  const avatars = [COACH_AVATAR_1, COACH_AVATAR_2, COACH_AVATAR_3];
+  const byCoach = new Map<string, BookingListItem[]>();
+  bookings.forEach(booking => {
+    const key = booking.coachName || "Huấn luyện viên";
+    byCoach.set(key, [...(byCoach.get(key) || []), booking]);
+  });
+
+  return Array.from(byCoach.entries()).slice(0, 3).map(([name, coachBookings], index) => {
+    const next = coachBookings
+      .filter(item => item.status === "PENDING" || item.status === "CONFIRMED")
+      .sort((a, b) => `${a.date}T${a.startTime}`.localeCompare(`${b.date}T${b.startTime}`))[0];
+    return {
+      name,
+      sport: coachBookings[0]?.sport || "Huấn luyện",
+      rating: 4.8,
+      avatar: coachBookings[0]?.coachAvatar || avatars[index % avatars.length],
+      sessions: coachBookings.filter(item => item.status === "COMPLETED").length,
+      nextSession: next ? `${formatRelativeDateTime(next.date)}, ${next.startTime.slice(0, 5)}` : "Chưa có lịch",
+    };
+  });
+}
+
+function mapSuggestedCoaches(coaches: Coach[]): SuggestedCoachRow[] {
+  const avatars = [COACH_AVATAR_1, COACH_AVATAR_2, COACH_AVATAR_3];
+  return coaches.slice(0, 3).map((coach, index) => ({
+    name: coach.fullName,
+    sport: coach.category || "Huấn luyện",
+    price: coach.price ? `${Math.round(coach.price / 1000)}K/buổi` : "Liên hệ",
+    avatar: coach.avatar || avatars[index % avatars.length],
+    tag: coach.rating && coach.rating >= 4.8 ? "Top" : "Gợi ý",
+  }));
+}
+
+function mapAchievements(rows: Achievement[]) {
+  return rows.slice(0, 3).map(row => ({
+    badge: "🏆",
+    label: row.title,
+    date: row.achievedAt ? new Date(row.achievedAt).toLocaleDateString("vi-VN") : "Gần đây",
+  }));
+}
+
 export function LearnerDashboard() {
   const [activeNav, setActiveNav] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [chatCount, setChatCount] = useState(0);
+  const [overview, setOverview] = useState(DEFAULT_OVERVIEW);
+  const [subscription, setSubscription] = useState<CurrentSubscription | null>(null);
+  const [progressRows, setProgressRows] = useState<ProgressChartRow[]>([]);
+  const [coachRows, setCoachRows] = useState<MyCoachRow[]>([]);
+  const [sessionRows, setSessionRows] = useState<UpcomingSessionRow[]>([]);
+  const [suggestedRows, setSuggestedRows] = useState<SuggestedCoachRow[]>([]);
+  const [achievementRows, setAchievementRows] = useState<Array<{ badge: string; label: string; date: string }>>([]);
   const navigate = useNavigate();
   const session = getAuthSession();
   const learnerName = session?.fullName?.trim() || session?.username || "Học viên";
@@ -91,10 +191,50 @@ export function LearnerDashboard() {
   const header = activeNav === "overview"
     ? { title: `Xin chào, ${learnerName} 👋`, sub: session?.email || "Tổng quan luyện tập của bạn" }
     : HEADER_TITLES[activeNav] ?? { title: "Dashboard", sub: "" };
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await logoutAccount();
+    } catch {
+      // Keep logout reliable even if the API call cannot complete.
+    }
     clearAuthSession();
     navigate("/auth");
   };
+
+  useEffect(() => {
+    getNotificationUnreadCount()
+      .then((result) => setNotificationCount(result.unreadCount))
+      .catch(() => setNotificationCount(0));
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    Promise.all([
+      getProgressOverview().catch(() => null),
+      getProgressHeatmap().catch(() => []),
+      getMyBookings().catch(() => []),
+      searchCoaches({ page: 0, size: 3, sort: "RATING_HIGHEST" }).catch(() => null),
+      getAchievements().catch(() => []),
+      getCurrentSubscription().catch(() => null),
+      getChatUnreadCount().catch(() => ({ unreadCount: 0 })),
+    ]).then(([progressOverview, heatmap, bookings, coachPage, achievements, currentSubscription, unread]) => {
+      if (!active) return;
+      if (progressOverview) setOverview(progressOverview);
+      
+      setProgressRows(mapProgressChart(heatmap));
+      setSessionRows(mapUpcomingSessions(bookings));
+      setCoachRows(mapMyCoaches(bookings));
+      setSuggestedRows(mapSuggestedCoaches(coachPage?.content ?? []));
+      setAchievementRows(mapAchievements(achievements));
+      setSubscription(currentSubscription);
+      setChatCount(unread.unreadCount);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <div className="flex h-screen bg-gray-50/80 overflow-hidden">
@@ -133,7 +273,7 @@ export function LearnerDashboard() {
               <div style={{ fontWeight: 700, fontSize: "0.85rem" }} className="text-white truncate">{learnerName}</div>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 animate-pulse" />
-                <span style={{ fontSize: "0.7rem" }} className="text-gray-400">Học viên · Gói Free</span>
+                <span style={{ fontSize: "0.7rem" }} className="text-gray-400">Học viên · {subscription?.displayName || "Gói Free"}</span>
               </div>
             </div>
           </div>
@@ -141,7 +281,9 @@ export function LearnerDashboard() {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
-          {navItems.map(({ icon: Icon, label, id, badge }) => (
+          {navItems.map(({ icon: Icon, label, id, badge }) => {
+            const dynamicBadge = id === "msg" ? (chatCount ? String(chatCount) : undefined) : badge;
+            return (
             <button
               key={id}
               onClick={() => { setActiveNav(id); setSidebarOpen(false); }}
@@ -153,18 +295,19 @@ export function LearnerDashboard() {
             >
               <Icon className="w-[18px] h-[18px] shrink-0" />
               <span style={{ fontSize: "0.84rem", fontWeight: activeNav === id ? 600 : 500 }}>{label}</span>
-              {badge && (
+              {dynamicBadge && (
                 <span
                   className={`ml-auto rounded-full px-2 py-0.5 ${
                     activeNav === id ? "bg-white/25" : "bg-orange-500/90"
                   } text-white`}
                   style={{ fontSize: "0.65rem", fontWeight: 700, minWidth: 20, textAlign: "center" }}
                 >
-                  {badge}
+                  {dynamicBadge}
                 </span>
               )}
             </button>
-          ))}
+          );
+          })}
         </nav>
 
         {/* Bottom nav */}
@@ -197,12 +340,9 @@ export function LearnerDashboard() {
           <div className="flex items-center gap-2.5">
             <div className="hidden sm:flex items-center gap-1.5 bg-orange-50 border border-orange-100 px-3 py-1.5 rounded-xl">
               <Flame className="w-3.5 h-3.5 text-orange-500" />
-              <span style={{ fontSize: "0.78rem", fontWeight: 700 }} className="text-orange-600">14 ngày liên tiếp</span>
+              <span style={{ fontSize: "0.78rem", fontWeight: 700 }} className="text-orange-600">{overview.streakDays} ngày liên tiếp</span>
             </div>
-            <button className="relative p-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-100 transition-colors">
-              <Bell className="w-[18px] h-[18px] text-gray-500" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
-            </button>
+            <NotificationBell />
             <div className="w-9 h-9 rounded-xl bg-orange-100 text-orange-600 border-2 border-orange-200 flex items-center justify-center" style={{ fontSize: "0.72rem", fontWeight: 800 }}>
               {learnerInitials}
             </div>
@@ -240,10 +380,10 @@ export function LearnerDashboard() {
                 {/* Stats row */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   {[
-                    { icon: CheckCircle2, label: "Buổi đã tập",  value: "24",   sub: "+3 tuần này",       color: "text-emerald-500", bg: "bg-emerald-50", border: "border-emerald-100" },
-                    { icon: Clock,        label: "Giờ tập",       value: "48h",  sub: "Tháng 3/2026",      color: "text-blue-500",    bg: "bg-blue-50",    border: "border-blue-100" },
-                    { icon: Trophy,       label: "Điểm AI TB",    value: "87",   sub: "Top 15% học viên",  color: "text-amber-500",   bg: "bg-amber-50",   border: "border-amber-100" },
-                    { icon: Users,        label: "HLV đang học",  value: "2",    sub: "Gói Free: tối đa 1", color: "text-purple-500",  bg: "bg-purple-50",  border: "border-purple-100" },
+                    { icon: CheckCircle2, label: "Buổi đã tập",  value: String(overview.totalSessions),   sub: "Theo lịch đã hoàn thành",       color: "text-emerald-500", bg: "bg-emerald-50", border: "border-emerald-100" },
+                    { icon: Clock,        label: "Giờ tập",       value: `${overview.trainingHours}h`,  sub: "Tổng thời lượng",      color: "text-blue-500",    bg: "bg-blue-50",    border: "border-blue-100" },
+                    { icon: Trophy,       label: "Điểm AI TB",    value: String(overview.averageAiScore),   sub: "Từ phân tích gần đây",  color: "text-amber-500",   bg: "bg-amber-50",   border: "border-amber-100" },
+                    { icon: Users,        label: "HLV đang học",  value: String(overview.activeCoaches),    sub: subscription?.displayName || "Gói hiện tại", color: "text-purple-500",  bg: "bg-purple-50",  border: "border-purple-100" },
                   ].map(({ icon: Icon, label, value, sub, color, bg, border }) => (
                     <div key={label} className={`bg-white rounded-2xl p-5 border ${border} hover:shadow-md transition-all duration-200 group`}>
                       <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center mb-3 group-hover:scale-105 transition-transform`}>
@@ -275,7 +415,7 @@ export function LearnerDashboard() {
                         </div>
                       </div>
                       <ResponsiveContainer width="100%" height={180}>
-                        <AreaChart data={progressData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                        <AreaChart data={progressRows} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                           <defs key="defs">
                             <linearGradient id="learnerColorHours" x1="0" y1="0" x2="0" y2="1">
                               <stop offset="5%" stopColor="#f97316" stopOpacity={0.15} />
@@ -300,51 +440,22 @@ export function LearnerDashboard() {
                         </button>
                       </div>
                       <div className="space-y-2.5">
-                        {upcomingSessions.map((s, i) => (
-                          <div key={i} className="flex items-center gap-3.5 p-3.5 rounded-xl border border-gray-100 hover:border-orange-200 hover:bg-orange-50/30 transition-all duration-200 cursor-pointer group">
-                            <img src={s.avatar} alt="" className="w-11 h-11 rounded-xl object-cover shrink-0 group-hover:scale-105 transition-transform" />
+                        {sessionRows.map((s, i) => (
+                          <div key={i} className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100 cursor-pointer" onClick={() => setActiveNav("schedule")}>
+                            <img src={s.avatar} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <div style={{ fontWeight: 600, fontSize: "0.88rem" }} className="text-gray-900">{s.sport}</div>
-                              <div style={{ fontSize: "0.75rem" }} className="text-gray-500 truncate mt-0.5">với {s.coach} · {s.time}</div>
-                            </div>
-                            <div className="flex flex-col items-end gap-1.5 shrink-0">
-                              <span className={`px-2.5 py-0.5 rounded-full text-white ${s.type.includes("Online") ? "bg-blue-500" : "bg-emerald-500"}`} style={{ fontSize: "0.65rem", fontWeight: 700 }}>
-                                {s.type.split("·")[0].trim()}
-                              </span>
-                              <span className={`px-2.5 py-0.5 rounded-full ${s.status === "confirmed" ? "bg-green-100 text-green-600" : "bg-amber-100 text-amber-600"}`} style={{ fontSize: "0.65rem", fontWeight: 600 }}>
-                                {s.status === "confirmed" ? "Đã xác nhận" : "Chờ xác nhận"}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* AI analysis */}
-                    <div className="bg-white rounded-2xl p-5 lg:p-6 border border-gray-100 shadow-sm">
-                      <div className="flex items-center justify-between mb-5">
-                        <div>
-                          <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900">Kết quả AI Phân tích</div>
-                          <div style={{ fontSize: "0.75rem" }} className="text-gray-400 mt-0.5">3 lần phân tích gần nhất</div>
-                        </div>
-                        <div className="flex items-center gap-1.5 bg-purple-50 px-3 py-1.5 rounded-xl border border-purple-100">
-                          <Brain className="w-3.5 h-3.5 text-purple-500" />
-                          <span style={{ fontSize: "0.78rem", fontWeight: 700 }} className="text-purple-600">AI Powered</span>
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        {aiScores.map((s) => (
-                          <div key={s.name} className={`p-4 rounded-xl border ${s.border} ${s.bg} hover:shadow-sm transition-shadow`}>
-                            <div className="flex items-center justify-between mb-2.5">
-                              <div className="flex-1 min-w-0">
-                                <span style={{ fontWeight: 700, fontSize: "0.9rem" }} className="text-gray-900">{s.name}</span>
-                                <span style={{ fontSize: "0.75rem" }} className="text-gray-500 ml-2 hidden sm:inline">· {s.feedback}</span>
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                <span style={{ fontWeight: 600, fontSize: "0.85rem" }} className="text-gray-900 truncate">{s.coach}</span>
+                                <span className={`px-1.5 py-0.5 rounded text-[0.65rem] font-bold ${s.status === 'confirmed' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                                  {s.status === 'confirmed' ? 'Đã xác nhận' : 'Chờ xác nhận'}
+                                </span>
                               </div>
-                              <span style={{ fontWeight: 800, fontSize: "1.1rem", letterSpacing: "-0.02em" }} className={s.text}>{s.score}/100</span>
+                              <div style={{ fontSize: "0.72rem" }} className="text-gray-500">{s.time}</div>
+                              <div style={{ fontSize: "0.72rem" }} className="text-gray-400 mt-0.5">{s.sport} · {s.type}</div>
                             </div>
-                            <div className="w-full bg-white/70 rounded-full h-2">
-                              <div className="h-2 rounded-full transition-all duration-700" style={{ width: `${s.score}%`, backgroundColor: s.color }} />
-                            </div>
+                            <button className="shrink-0 w-8 h-8 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center hover:bg-orange-100 hover:text-orange-600 transition-colors">
+                              <Video className="w-4 h-4" />
+                            </button>
                           </div>
                         ))}
                       </div>
@@ -396,10 +507,10 @@ export function LearnerDashboard() {
                     <div className="bg-white rounded-2xl p-5 lg:p-6 border border-gray-100 shadow-sm">
                       <div className="flex items-center justify-between mb-4">
                         <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900">HLV của tôi</div>
-                        <span className="bg-orange-50 text-orange-500 px-2.5 py-0.5 rounded-full border border-orange-100" style={{ fontSize: "0.7rem", fontWeight: 700 }}>{myCoaches.length} HLV</span>
+                        <span className="bg-orange-50 text-orange-500 px-2.5 py-0.5 rounded-full border border-orange-100" style={{ fontSize: "0.7rem", fontWeight: 700 }}>{coachRows.length} HLV</span>
                       </div>
                       <div className="space-y-3">
-                        {myCoaches.map((c) => (
+                        {coachRows.map((c) => (
                           <div key={c.name} className="p-3.5 rounded-xl border border-gray-100 hover:border-orange-200 hover:shadow-sm transition-all duration-200 cursor-pointer">
                             <div className="flex items-center gap-3 mb-2.5">
                               <img src={c.avatar} alt="" className="w-11 h-11 rounded-xl object-cover" />
@@ -430,7 +541,7 @@ export function LearnerDashboard() {
                         <span className="bg-orange-100 text-orange-600 px-2.5 py-0.5 rounded-full" style={{ fontSize: "0.7rem", fontWeight: 700 }}>AI đề xuất</span>
                       </div>
                       <div className="space-y-3">
-                        {suggestedCoaches.map((c) => (
+                        {suggestedRows.map((c) => (
                           <div key={c.name} className="flex items-center gap-3 group">
                             <img src={c.avatar} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0 group-hover:scale-105 transition-transform" />
                             <div className="flex-1 min-w-0">
@@ -455,11 +566,11 @@ export function LearnerDashboard() {
                         <span style={{ fontWeight: 700, fontSize: "0.9rem" }} className="text-gray-900">Thành tích gần đây</span>
                       </div>
                       <div className="space-y-3">
-                        {[
+                        {(achievementRows || [
                           { badge: "🔥", label: "Streak 14 ngày",        date: "Hôm nay" },
                           { badge: "🏆", label: "Hoàn thành 20 buổi",    date: "3 ngày trước" },
                           { badge: "💪", label: "Squat đạt 90+ điểm AI", date: "Tuần trước" },
-                        ].map((a) => (
+                        ]).map((a) => (
                           <div key={a.label} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/60 transition-colors">
                             <span style={{ fontSize: "1.2rem" }} className="shrink-0">{a.badge}</span>
                             <div className="flex-1 min-w-0">

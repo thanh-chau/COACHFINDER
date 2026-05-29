@@ -5,7 +5,7 @@ import {
   Search, SlidersHorizontal, Star, Users, X
 } from "lucide-react";
 import { createBooking, getMyBookings } from "../api/bookings";
-import { getCategories, getCoachDetail, getCoachSchedule, searchCoaches } from "../api/coaches";
+import { getCategories, getCoachDetail, getCoachSchedule, getCoachScheduleWithAvailability, searchCoaches } from "../api/coaches";
 import type { BookingDay, BookingListItem, BookingResponse, BookingType, CreateBookingRequest } from "../types/booking";
 import type { Category, Coach, CoachDetail, CoachSchedule, CoachSearchSort, TeachingType } from "../types/coach";
 
@@ -140,7 +140,11 @@ function scheduleMatchesBooking(schedule: CoachSchedule, booking: BookingListIte
 }
 
 function blockedScheduleIndexes(schedules?: CoachSchedule[]) {
-  return new Set((schedules || []).flatMap((schedule, index) => schedule.available === false ? [index] : []));
+  return new Set((schedules || []).flatMap((schedule, index) => (
+    schedule.available === false || schedule.bookingStatus === "PENDING" || schedule.bookingStatus === "CONFIRMED"
+      ? [index]
+      : []
+  )));
 }
 
 function CoachAvatar({ coach, className }: { coach: Pick<Coach, "avatar" | "fullName">; className: string }) {
@@ -267,7 +271,7 @@ function CoachDetailModal({ coachId, onClose }: { coachId: number; onClose: () =
 
     Promise.all([
       getCoachDetail(coachId),
-      getCoachSchedule(coachId).catch(() => []),
+      getCoachScheduleWithAvailability(coachId).catch(() => getCoachSchedule(coachId).catch(() => [])),
     ])
       .then(([result, schedules]) => {
         if (active) setCoach({ ...result, schedules: schedules.length ? schedules : result.schedules });
@@ -457,6 +461,7 @@ function BookingPanel({
           }
         });
 
+        setRejectedSlots(blockedScheduleIndexes(coach.schedules));
         setUnavailableSlots(next);
       })
       .catch(() => {
@@ -533,7 +538,7 @@ function BookingPanel({
         setSelectedSlot(null);
         setForm(current => ({ ...current, date: "" }));
       }
-      if (/trùng|đã.*đặt|đăng ký|book|available|exist|reserved|occupied|slot|schedule|không.*trống|không.*khả dụng/i.test(message)) {
+      if (/trùng|đã.*đặt|đăng ký|book|open|available|exist|reserved|occupied|slot|schedule|không.*trống|không.*khả dụng/i.test(message)) {
         setSubmitError("Lịch tập này không còn khả dụng. Học viên khác có thể đã đăng ký trước bạn.");
       } else {
         setSubmitError(`Không thể đặt lịch này lúc này. ${message}`);
@@ -614,7 +619,7 @@ function BookingPanel({
                       ? "bg-gray-200 text-gray-500"
                       : "bg-blue-50 text-blue-600"
                   }`}>
-                    {checkingAvailability ? "Đang tải" : unavailableSlots.has(index) ? "Bạn đã đăng ký" : rejectedSlots.has(index) ? "Không khả dụng" : "Chọn lịch"}
+                    {checkingAvailability ? "Đang tải" : unavailableSlots.has(index) ? "Bạn đã đăng ký" : rejectedSlots.has(index) ? "Đã có người đăng ký" : "Chọn lịch"}
                   </span>
                 </button>
               ))}

@@ -106,12 +106,9 @@ export function AIVideoAnalysis() {
   const [activeTab, setActiveTab] = useState<"analysis" | "feedback">("analysis");
 
   const handleAnalyze = () => {
-    setDone(false);
-    setAnalyzing(true);
-    setTimeout(() => {
-      setAnalyzing(false);
-      setDone(true);
-    }, 2000);
+    setAnalyzing(false);
+    setDone(true);
+    setActiveTab("analysis");
   };
 
   return (
@@ -147,6 +144,13 @@ export function AIVideoAnalysis() {
           <p className="text-gray-400 max-w-2xl mx-auto" style={{ fontSize: "1rem", lineHeight: 1.75 }}>
             Upload video luyện tập, AI sẽ phân tích toàn bộ động tác, phát hiện lỗi kỹ thuật và đưa ra
             phản hồi chi tiết chỉ trong 30 giây — như có HLV bên cạnh 24/7.
+          </p>
+        </div>
+
+        <div className="mb-8 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-left text-amber-100">
+          <div style={{ fontWeight: 800, fontSize: "0.88rem" }}>Marketing demo - backend AI analysis chua san sang</div>
+          <p className="mt-1 text-amber-100/80" style={{ fontSize: "0.78rem", lineHeight: 1.6 }}>
+            Phase 7 da dinh nghia API upload/analyze, history, detail va feedback. Noi dung ben duoi la preview tinh cho landing page.
           </p>
         </div>
 

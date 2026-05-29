@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   TrendingUp, TrendingDown, Users, DollarSign, Calendar,
   Video, Star, Eye, Clock, Award, Zap, Target,
@@ -11,6 +11,8 @@ import {
   LineChart, Line, RadarChart, Radar, PolarGrid,
   PolarAngleAxis, PolarRadiusAxis, ComposedChart, Scatter,
 } from "recharts";
+import { coachWorkspaceApi } from "../api/coachWorkspace";
+import type { CoachChartPoint, CoachStudentProgress } from "../types/coachWorkspace";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 const MONTHS_12 = [
@@ -27,6 +29,47 @@ const MONTHS_12 = [
   { m:"T2/26", gross:13800000, net:12144000, students:15, sessions:30, newHV:3, retainHV:12 },
   { m:"T3/26", gross:17727273, net:15600000, students:17, sessions:35, newHV:4, retainHV:13 },
 ];
+
+type AnalyticsMonthRow = typeof MONTHS_12[number];
+type StudentProgressRow = typeof STUDENTS_PROGRESS[number];
+type VideoTrendRow = typeof VIEWS_TREND[number];
+
+function mapChartPointToMonth(point: CoachChartPoint): AnalyticsMonthRow {
+  return {
+    m: point.period,
+    gross: point.value,
+    net: Math.round(point.value * 0.88),
+    students: point.count,
+    sessions: point.count,
+    newHV: 0,
+    retainHV: point.count,
+  };
+}
+
+function mapStudentProgress(item: CoachStudentProgress): StudentProgressRow {
+  const progress = item.averageSubmissionScore == null
+    ? Math.min(100, item.completedSessions * 10)
+    : Math.round(item.averageSubmissionScore);
+  const retention = item.totalSessions > 0
+    ? Math.round((item.completedSessions / item.totalSessions) * 100)
+    : 0;
+  return {
+    name: `HV #${item.traineeId}`,
+    progress,
+    sessions: item.totalSessions,
+    retention,
+    sport: "Training",
+    nps: Math.max(1, Math.round(progress / 10)),
+    paid: 0,
+  };
+}
+
+function mapVideoTrend(point: CoachChartPoint): VideoTrendRow {
+  return {
+    m: point.period,
+    views: point.value,
+  };
+}
 
 const SOURCE_PIE = [
   { name:"Buổi lẻ",     value:36, color:"#3b82f6" },
@@ -153,9 +196,9 @@ function KPI({ icon:Icon, label, value, sub, trend, trendUp, bg, color }:any) {
 }
 
 // ─── REVENUE TAB ─────────────────────────────────────────────────────────────
-function RevenueTab() {
-  const cur  = MONTHS_12[11];
-  const prev = MONTHS_12[10];
+function RevenueTab({ months = MONTHS_12 }: { months?: AnalyticsMonthRow[] }) {
+  const cur  = months[months.length - 1] ?? MONTHS_12[11];
+  const prev = months[months.length - 2] ?? cur;
   const growG = ((cur.gross-prev.gross)/prev.gross*100).toFixed(1);
   const growN = ((cur.net-prev.net)/prev.net*100).toFixed(1);
   const avgPerSession = Math.round(cur.net/cur.sessions);
@@ -184,7 +227,7 @@ function RevenueTab() {
           </div>
         </div>
         <ResponsiveContainer width="100%" height={220}>
-          <AreaChart data={MONTHS_12} margin={{top:5,right:5,left:-10,bottom:0}}>
+          <AreaChart data={months} margin={{top:5,right:5,left:-10,bottom:0}}>
             <defs key="ca-defs1">
               <linearGradient id="gG" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.12}/><stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/></linearGradient>
               <linearGradient id="gN" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.18}/><stop offset="95%" stopColor="#10b981" stopOpacity={0}/></linearGradient>
@@ -229,9 +272,9 @@ function RevenueTab() {
           <div style={{fontWeight:700,fontSize:"0.95rem"}} className="text-gray-900 mb-1">Tăng trưởng theo tháng</div>
           <div style={{fontSize:"0.75rem"}} className="text-gray-400 mb-3">MoM % thay đổi doanh thu gộp</div>
           <ResponsiveContainer width="100%" height={150}>
-            <BarChart data={MONTHS_12.slice(1).map((m,i)=>({
+            <BarChart data={months.slice(1).map((m,i)=>({
               m:m.m,
-              growth:Number(((m.gross-MONTHS_12[i].gross)/MONTHS_12[i].gross*100).toFixed(1))
+              growth:Number(((m.gross-months[i].gross)/Math.max(months[i].gross, 1)*100).toFixed(1))
             }))} margin={{top:5,right:5,left:-20,bottom:0}}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false}/>
               <XAxis dataKey="m" tick={{fontSize:9,fill:"#9ca3af"}} axisLine={false} tickLine={false}/>
@@ -240,8 +283,8 @@ function RevenueTab() {
               <Bar dataKey="growth" name="Tăng trưởng" radius={[4,4,0,0]}
                 fill="#3b82f6"
                 label={false}>
-                {MONTHS_12.slice(1).map((_,i)=>{
-                  const g=(MONTHS_12[i+1].gross-MONTHS_12[i].gross)/MONTHS_12[i].gross*100;
+                {months.slice(1).map((_,i)=>{
+                  const g=(months[i+1].gross-months[i].gross)/Math.max(months[i].gross, 1)*100;
                   return <Cell key={i} fill={g>=0?"#10b981":"#ef4444"}/>;
                 })}
               </Bar>
@@ -254,11 +297,11 @@ function RevenueTab() {
 }
 
 // ─── STUDENTS TAB ─────────────────────────────────────────────────────────────
-function StudentsTab() {
-  const active   = STUDENTS_PROGRESS.filter(s=>s.retention>=80).length;
-  const avgRetain= Math.round(STUDENTS_PROGRESS.reduce((a,s)=>a+s.retention,0)/STUDENTS_PROGRESS.length);
-  const avgProg  = Math.round(STUDENTS_PROGRESS.reduce((a,s)=>a+s.progress,0)/STUDENTS_PROGRESS.length);
-  const avgNPS   = (STUDENTS_PROGRESS.reduce((a,s)=>a+s.nps,0)/STUDENTS_PROGRESS.length).toFixed(1);
+function StudentsTab({ students = STUDENTS_PROGRESS, months = MONTHS_12 }: { students?: StudentProgressRow[]; months?: AnalyticsMonthRow[] }) {
+  const active   = students.filter(s=>s.retention>=80).length;
+  const avgRetain= Math.round(students.reduce((a,s)=>a+s.retention,0)/Math.max(students.length, 1));
+  const avgProg  = Math.round(students.reduce((a,s)=>a+s.progress,0)/Math.max(students.length, 1));
+  const avgNPS   = (students.reduce((a,s)=>a+s.nps,0)/Math.max(students.length, 1)).toFixed(1);
 
   return (
     <div className="space-y-4">
@@ -274,7 +317,7 @@ function StudentsTab() {
         <div style={{fontWeight:700,fontSize:"0.95rem"}} className="text-gray-900 mb-1">Học viên mới vs Quay lại</div>
         <div style={{fontSize:"0.75rem"}} className="text-gray-400 mb-4">Phân tích acquisition & retention theo tháng</div>
         <ResponsiveContainer width="100%" height={200}>
-          <ComposedChart data={MONTHS_12} margin={{top:5,right:5,left:-15,bottom:0}}>
+          <ComposedChart data={months} margin={{top:5,right:5,left:-15,bottom:0}}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false}/>
             <XAxis dataKey="m" tick={{fontSize:10,fill:"#9ca3af"}} axisLine={false} tickLine={false}/>
             <YAxis tick={{fontSize:10,fill:"#9ca3af"}} axisLine={false} tickLine={false}/>
@@ -307,7 +350,7 @@ function StudentsTab() {
           <div style={{fontWeight:700,fontSize:"0.95rem"}} className="text-gray-900 mb-1">Tiến độ học viên</div>
           <div style={{fontSize:"0.75rem"}} className="text-gray-400 mb-3">Điểm AI & retention rate</div>
           <div className="space-y-2">
-            {STUDENTS_PROGRESS.sort((a,b)=>b.progress-a.progress).map(s=>(
+            {[...students].sort((a,b)=>b.progress-a.progress).map(s=>(
               <div key={s.name} className="flex items-center gap-2.5 py-1">
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between mb-0.5">
@@ -349,7 +392,7 @@ function StudentsTab() {
 }
 
 // ─── VIDEO TAB ────────────────────────────────────────────────────────────────
-function VideoTab() {
+function VideoTab({ videoTrend = VIEWS_TREND }: { videoTrend?: VideoTrendRow[] }) {
   const totalViews  = VIDEOS_PERF.reduce((a,v)=>a+v.views,0);
   const totalLikes  = VIDEOS_PERF.reduce((a,v)=>a+v.likes,0);
   const avgComplete = Math.round(VIDEOS_PERF.reduce((a,v)=>a+v.completion,0)/VIDEOS_PERF.length);
@@ -369,7 +412,7 @@ function VideoTab() {
         <div style={{fontWeight:700,fontSize:"0.95rem"}} className="text-gray-900 mb-1">Xu hướng lượt xem</div>
         <div style={{fontSize:"0.75rem"}} className="text-gray-400 mb-4">Tổng lượt xem toàn kênh theo tháng</div>
         <ResponsiveContainer width="100%" height={180}>
-          <AreaChart data={VIEWS_TREND} margin={{top:5,right:5,left:-15,bottom:0}}>
+          <AreaChart data={videoTrend} margin={{top:5,right:5,left:-15,bottom:0}}>
             <defs><linearGradient id="gV" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.15}/><stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/></linearGradient></defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false}/>
             <XAxis dataKey="m" tick={{fontSize:10,fill:"#9ca3af"}} axisLine={false} tickLine={false}/>
@@ -528,6 +571,36 @@ type ATab = "revenue"|"students"|"video"|"schedule";
 
 export function CoachAnalytics() {
   const [tab,setTab] = useState<ATab>("revenue");
+  const [months, setMonths] = useState<AnalyticsMonthRow[]>(MONTHS_12);
+  const [students, setStudents] = useState<StudentProgressRow[]>(STUDENTS_PROGRESS);
+  const [videoTrend, setVideoTrend] = useState<VideoTrendRow[]>(VIEWS_TREND);
+  const [usingFallback, setUsingFallback] = useState(false);
+
+  useEffect(() => {
+    Promise.all([
+      coachWorkspaceApi.getRevenueAnalytics(),
+      coachWorkspaceApi.getStudentsProgress(),
+      coachWorkspaceApi.getVideoAnalytics(),
+    ])
+      .then(([revenueData, studentData, videoData]) => {
+        if (revenueData.length > 0) {
+          setMonths(revenueData.map(mapChartPointToMonth));
+        }
+        if (studentData.length > 0) {
+          setStudents(studentData.map(mapStudentProgress));
+        }
+        if (videoData.length > 0) {
+          setVideoTrend(videoData.map(mapVideoTrend));
+        }
+        setUsingFallback(false);
+      })
+      .catch(() => {
+        setMonths(MONTHS_12);
+        setStudents(STUDENTS_PROGRESS);
+        setVideoTrend(VIEWS_TREND);
+        setUsingFallback(true);
+      });
+  }, []);
 
   const TABS: {id:ATab;emoji:string;label:string}[] = [
     {id:"revenue",  emoji:"💰", label:"Doanh thu"},
@@ -549,6 +622,11 @@ export function CoachAnalytics() {
           <RefreshCw className="w-3.5 h-3.5"/> Cập nhật
         </button>
       </div>
+      {usingFallback && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-amber-700" style={{ fontSize: "0.78rem", fontWeight: 600 }}>
+          Dang hien thi du lieu mau cho cac widget can aggregate backend: revenue analytics, student progress, video analytics.
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm w-fit">
@@ -561,9 +639,9 @@ export function CoachAnalytics() {
         ))}
       </div>
 
-      {tab==="revenue"  && <RevenueTab/>}
-      {tab==="students" && <StudentsTab/>}
-      {tab==="video"    && <VideoTab/>}
+      {tab==="revenue"  && <RevenueTab months={months}/>}
+      {tab==="students" && <StudentsTab students={students} months={months}/>}
+      {tab==="video"    && <VideoTab videoTrend={videoTrend}/>}
       {tab==="schedule" && <ScheduleTab/>}
     </div>
   );

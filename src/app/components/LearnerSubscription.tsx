@@ -1,15 +1,38 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Check, X, Zap, Sparkles, ChevronRight,
   CreditCard, Smartphone, Building2, Shield,
   ArrowLeft, CheckCircle2, Star, Brain,
   Gift, Clock, AlertCircle, Lock, Flame
 } from "lucide-react";
+import {
+  getTraineeSubscriptionCatalog,
+  purchaseSubscription,
+} from "../api/subscriptions";
+import type { SubscriptionBillingCycle, SubscriptionPlanCard } from "../types/subscription";
+import { WalletPanel } from "./WalletPanel";
+
+type LearnerPlan = {
+  id: string;
+  planCode: "FREE" | "PRO" | "PREMIUM";
+  name: string;
+  icon: typeof Sparkles;
+  color: string;
+  accent: string;
+  monthlyPrice: number;
+  yearlyPrice: number;
+  desc: string;
+  badge: string | null;
+  cta: string;
+  current: boolean;
+  features: string[];
+};
 
 // ─── Plan data ────────────────────────────────────────────────────────────────
-const PLANS = [
+const PLANS: LearnerPlan[] = [
   {
     id: "free",
+    planCode: "FREE",
     name: "Gói Thường",
     icon: Sparkles,
     color: "gray",
@@ -32,6 +55,7 @@ const PLANS = [
   },
   {
     id: "pro",
+    planCode: "PRO",
     name: "Gói Pro",
     icon: Zap,
     color: "orange",
@@ -54,6 +78,27 @@ const PLANS = [
     ],
   },
 ];
+
+function mapCatalogPlan(plan: SubscriptionPlanCard): LearnerPlan {
+  const code = plan.planCode;
+  const isFree = code === "FREE";
+  const isPremium = code === "PREMIUM";
+  return {
+    id: code.toLowerCase(),
+    planCode: code,
+    name: plan.displayName,
+    icon: isFree ? Sparkles : isPremium ? Brain : Zap,
+    color: isFree ? "gray" : isPremium ? "purple" : "orange",
+    accent: isFree ? "#6b7280" : isPremium ? "#8b5cf6" : "#f97316",
+    monthlyPrice: plan.monthlyPrice,
+    yearlyPrice: plan.billingPrice,
+    desc: plan.description,
+    badge: plan.ribbonText,
+    cta: plan.actionLabel,
+    current: plan.current,
+    features: plan.features.map(feature => feature.text),
+  };
+}
 
 const PAYMENT_METHODS = [
   { id: "card", label: "Thẻ tín dụng / ghi nợ", icon: CreditCard, brands: ["Visa", "MC", "JCB"] },
@@ -84,14 +129,17 @@ function PaymentModal({
   plan,
   yearly,
   onClose,
+  onPurchased,
 }: {
-  plan: typeof PLANS[0];
+  plan: LearnerPlan;
   yearly: boolean;
   onClose: () => void;
+  onPurchased: () => void;
 }) {
   const [step, setStep] = useState<ModalStep>("method");
   const [method, setMethod] = useState("card");
   const [loading, setLoading] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
   const [card, setCard] = useState({ number: "", name: "", expiry: "", cvv: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -115,9 +163,19 @@ function PaymentModal({
   const handlePay = async () => {
     if (!validate()) return;
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1800));
-    setLoading(false);
-    setStep("success");
+    setPaymentError(null);
+    try {
+      await purchaseSubscription({
+        planCode: plan.planCode,
+        billingCycle: yearly ? "YEARLY" : "MONTHLY",
+      });
+      onPurchased();
+      setStep("success");
+    } catch (err) {
+      setPaymentError(err instanceof Error ? err.message : "Thanh toan that bai.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatCard = (val: string) =>
@@ -177,6 +235,11 @@ function PaymentModal({
                   <span className="text-emerald-300" style={{ fontSize: "0.72rem", fontWeight: 700 }}>
                     Tiết kiệm {formatPrice(saving)} so với tháng
                   </span>
+                </div>
+              )}
+              {paymentError && (
+                <div className="mt-3 bg-red-500/15 border border-red-400/30 text-red-100 rounded-xl px-3 py-2" style={{ fontSize: "0.78rem", fontWeight: 600 }}>
+                  {paymentError}
                 </div>
               )}
             </div>
@@ -398,7 +461,29 @@ function PaymentModal({
 // ─── Main LearnerSubscription ─────────────────────────────────────────────────
 export function LearnerSubscription() {
   const [yearly, setYearly] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<typeof PLANS[0] | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<LearnerPlan | null>(null);
+  const [plans, setPlans] = useState<LearnerPlan[]>(PLANS);
+  const [loadingPlans, setLoadingPlans] = useState(true);
+  const [plansError, setPlansError] = useState<string | null>(null);
+
+  const loadCatalog = () => {
+    const billingCycle: SubscriptionBillingCycle = yearly ? "YEARLY" : "MONTHLY";
+    setLoadingPlans(true);
+    getTraineeSubscriptionCatalog(billingCycle)
+      .then((catalog) => {
+        setPlans(catalog.plans.map(mapCatalogPlan));
+        setPlansError(null);
+      })
+      .catch((err) => {
+        setPlans(PLANS);
+        setPlansError(err instanceof Error ? err.message : "Khong tai duoc goi dang ky.");
+      })
+      .finally(() => setLoadingPlans(false));
+  };
+
+  useEffect(() => {
+    loadCatalog();
+  }, [yearly]);
 
   return (
     <div className="space-y-8 pb-8">
@@ -429,6 +514,20 @@ export function LearnerSubscription() {
         </div>
       </div>
 
+      <WalletPanel mode="learner" allowTopUp />
+
+      {loadingPlans && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-gray-500" style={{ fontSize: "0.85rem" }}>
+          Dang tai goi dang ky...
+        </div>
+      )}
+
+      {plansError && (
+        <div className="bg-amber-50 border border-amber-100 text-amber-700 rounded-2xl px-4 py-3" style={{ fontSize: "0.85rem", fontWeight: 600 }}>
+          {plansError}
+        </div>
+      )}
+
       {/* ── HEADER + TOGGLE ─────────────────────────────────── */}
       <div className="text-center">
         <h2 style={{ fontWeight: 800, fontSize: "1.5rem" }} className="text-gray-900 mb-2">Chọn gói phù hợp với bạn</h2>
@@ -458,7 +557,7 @@ export function LearnerSubscription() {
 
       {/* ── PLAN CARDS ──────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {PLANS.map((plan) => {
+        {plans.map((plan) => {
           const c = PlanColor(plan.color);
           const PlanIcon = plan.icon;
           const price = yearly ? plan.yearlyPrice : plan.monthlyPrice;
@@ -634,6 +733,7 @@ export function LearnerSubscription() {
           plan={selectedPlan}
           yearly={yearly}
           onClose={() => setSelectedPlan(null)}
+          onPurchased={loadCatalog}
         />
       )}
     </div>

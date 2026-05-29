@@ -1,6 +1,7 @@
 import type { ApiRole, AuthResponse, AuthSession } from "../types/auth";
 
 const AUTH_SESSION_KEY = "coachfinder.auth";
+export const AUTH_SESSION_EXPIRED_EVENT = "coachfinder:auth-expired";
 
 function readStorage(storage: Storage) {
   const rawSession = storage.getItem(AUTH_SESSION_KEY);
@@ -42,6 +43,11 @@ export function updateAuthSession(updates: Partial<AuthSession>) {
 export function clearAuthSession() {
   localStorage.removeItem(AUTH_SESSION_KEY);
   sessionStorage.removeItem(AUTH_SESSION_KEY);
+}
+
+export function expireAuthSession() {
+  clearAuthSession();
+  window.dispatchEvent(new Event(AUTH_SESSION_EXPIRED_EVENT));
 }
 
 export function getDashboardPath(role: ApiRole) {

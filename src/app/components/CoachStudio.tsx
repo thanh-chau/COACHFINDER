@@ -60,18 +60,8 @@ export function CoachStudio() {
   const [isDragging, setIsDragging] = useState(false);
 
   const handleUpload = () => {
-    setUploading(true);
-    setUploadProgress(0);
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setTimeout(() => setUploading(false), 800);
-          return 100;
-        }
-        return prev + Math.random() * 15;
-      });
-    }, 250);
+    setUploading(false);
+    setUploadProgress(100);
   };
 
   const navItems = [
@@ -105,6 +95,12 @@ export function CoachStudio() {
             Tạo thư viện video coaching chuyên nghiệp với công nghệ 360°. Thu hút học viên,
             tăng doanh thu và xây dựng thương hiệu HLV số một trong môn của bạn.
           </p>
+        </div>
+
+        <div className="mb-8 text-center">
+          <div className="inline-flex max-w-2xl items-center justify-center rounded-2xl border border-blue-200 bg-blue-50 px-4 py-2 text-blue-700" style={{ fontSize: "0.78rem", fontWeight: 700 }}>
+            Marketing demo. Neu productize thanh coach tool that, dung API video/upload/status/analytics da liet ke trong Phase 7.
+          </div>
         </div>
 
         {/* Dashboard mockup */}

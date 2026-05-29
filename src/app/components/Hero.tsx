@@ -1,4 +1,5 @@
 import { Search, Star, Shield, Brain } from "lucide-react";
+import { useNavigate } from "react-router";
 
 const HERO_IMAGE = "https://images.unsplash.com/photo-1564282350350-a8355817fd2e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwZXJzb25hbCUyMHRyYWluZXIlMjBjb2FjaGluZyUyMGF0aGxldGUlMjBzcG9ydHN8ZW58MXx8fHwxNzcyNjM1NTc5fDA&ixlib=rb-4.1.0&q=80&w=1080";
 
@@ -12,6 +13,7 @@ const stats = [
 ];
 
 export function Hero() {
+  const navigate = useNavigate();
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden bg-gray-950 pt-16">
       {/* Background Image */}
@@ -74,6 +76,7 @@ export function Hero() {
               />
             </div>
             <button
+              onClick={() => navigate("/auth")}
               className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl hover:from-orange-600 hover:to-red-600 transition-all duration-200 shrink-0"
               style={{ fontWeight: 600 }}
             >

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import {
   TrendingUp, TrendingDown, Flame, Trophy, Target, Dumbbell,
   Calendar, Clock, CheckCircle2, ChevronRight, ChevronDown,
@@ -10,10 +10,53 @@ import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   CartesianGrid, XAxis, YAxis, Tooltip, Cell
 } from "recharts";
+import {
+  createBodyMetric,
+  createExerciseProgress,
+  getAchievements,
+  getBodyMetrics,
+  getExerciseProgress,
+  getProgressHeatmap,
+  getProgressOverview,
+} from "../api/progress";
+import type {
+  Achievement,
+  BodyMetricEntry,
+  ExerciseProgressEntry,
+  ProgressOverview,
+} from "../types/progress";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type TimeRange = "week" | "month" | "3months" | "year";
 type MetricTab = "overview" | "body" | "exercise" | "ai";
+
+type BodyMetricChartRow = {
+  month: string;
+  weight: number;
+  fat: number;
+  muscle: number;
+  bmi: number;
+};
+
+type ExerciseChartItem = {
+  id: string;
+  name: string;
+  emoji: string;
+  current1RM: number;
+  prev1RM: number;
+  unit: string;
+  history: Array<{ month: string; value: number }>;
+  color: string;
+};
+
+type AchievementCard = {
+  id: number;
+  icon: string;
+  title: string;
+  desc: string;
+  date: string;
+  unlocked: boolean;
+};
 
 // ─── Mock Data ───────────────────────────────────────────────────────────────
 const WEEKLY_DATA = [
@@ -118,7 +161,7 @@ const RADAR_DATA = [
   { subject: "Phục hồi", value: 80, fullMark: 100 },
 ];
 
-const ACHIEVEMENTS = [
+const ACHIEVEMENTS: AchievementCard[] = [
   { id: 1, icon: "🔥", title: "Streak Master", desc: "14 ngày tập liên tiếp", date: "Hôm nay", unlocked: true },
   { id: 2, icon: "🏆", title: "20 Sessions", desc: "Hoàn thành 20 buổi tập", date: "2 ngày trước", unlocked: true },
   { id: 3, icon: "💪", title: "Squat Pro", desc: "Squat đạt 90+ AI score", date: "Tuần trước", unlocked: true },
@@ -150,6 +193,81 @@ const DAY_LABELS = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 function pct(current: number, prev: number) {
   if (prev === 0) return 0;
   return Math.round(((current - prev) / prev) * 100);
+}
+
+function monthLabel(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return `T${date.getMonth() + 1}`;
+}
+
+function mapBodyMetricRows(entries: BodyMetricEntry[]): BodyMetricChartRow[] {
+  const rows = entries
+    .filter((entry) => entry.weight || entry.bodyFat || entry.muscleMass)
+    .map((entry) => {
+      const weight = entry.weight ?? 0;
+      return {
+        month: monthLabel(entry.measuredAt),
+        weight,
+        fat: entry.bodyFat ?? 0,
+        muscle: entry.muscleMass ?? 0,
+        bmi: weight ? Number((weight / (1.7 * 1.7)).toFixed(1)) : 0,
+      };
+    });
+  return rows.length >= 2 ? rows.slice(-7) : BODY_METRICS_HISTORY;
+}
+
+function mapExerciseRows(entries: ExerciseProgressEntry[]): ExerciseChartItem[] {
+  const colors = ["#10b981", "#3b82f6", "#f97316", "#8b5cf6", "#f59e0b"];
+  const grouped = entries.reduce<Record<string, ExerciseProgressEntry[]>>((acc, entry) => {
+    const key = entry.exerciseName || "Exercise";
+    acc[key] = [...(acc[key] ?? []), entry];
+    return acc;
+  }, {});
+
+  const mapped = Object.entries(grouped).map(([name, rows], index) => {
+    const sorted = [...rows].sort((a, b) => a.measuredAt.localeCompare(b.measuredAt));
+    const latest = sorted[sorted.length - 1];
+    const prev = sorted[sorted.length - 2] ?? latest;
+    return {
+      id: name.toLowerCase().replace(/[^a-z0-9]+/g, "-") || `exercise-${index}`,
+      name,
+      emoji: "💪",
+      current1RM: latest?.value ?? 0,
+      prev1RM: prev?.value ?? 0,
+      unit: latest?.unit ?? "kg",
+      history: sorted.slice(-6).map((entry) => ({
+        month: monthLabel(entry.measuredAt),
+        value: entry.value,
+      })),
+      color: colors[index % colors.length],
+    };
+  });
+
+  return mapped.length ? mapped : EXERCISE_PROGRESS;
+}
+
+function mapHeatmapRows(points: Array<{ date: string; value: number }>) {
+  if (!points.length) return WEEKLY_HEATMAP;
+  const recent = points.slice(-84);
+  const weeks: number[][] = [];
+  for (let i = 0; i < 12; i++) {
+    const week = recent.slice(i * 7, i * 7 + 7).map((point) => Math.min(2, point.value));
+    weeks.push(week.length === 7 ? week : [...week, ...Array(7 - week.length).fill(0)]);
+  }
+  return weeks.length ? weeks : WEEKLY_HEATMAP;
+}
+
+function mapAchievements(items: Achievement[]) {
+  if (!items.length) return ACHIEVEMENTS;
+  return items.map((item, index) => ({
+    id: item.id,
+    icon: ["🔥", "🏆", "💪", "🎯"][index % 4],
+    title: item.title,
+    desc: item.description,
+    date: new Date(item.achievedAt).toLocaleDateString("vi-VN"),
+    unlocked: true,
+  }));
 }
 
 function TrendBadge({ value, suffix = "%" }: { value: number; suffix?: string }) {
@@ -187,7 +305,9 @@ function StatCard({ icon: Icon, label, value, sub, trend, color, bg }: {
   );
 }
 
-function HeatmapSection() {
+function HeatmapSection({ heatmap = WEEKLY_HEATMAP, streakDays = 14 }: { heatmap?: number[][]; streakDays?: number }) {
+  const activeDays = heatmap.flat().filter((value) => value > 0).length;
+  const totalDays = heatmap.flat().length || 84;
   return (
     <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
       <div className="flex items-center justify-between mb-4">
@@ -215,7 +335,7 @@ function HeatmapSection() {
             ))}
           </div>
           {/* Grid */}
-          {WEEKLY_HEATMAP.map((week, wi) => (
+          {heatmap.map((week, wi) => (
             <div key={`week-${wi}`} className="flex items-center gap-1 mb-1">
               <div className="w-9 text-right pr-1" style={{ fontSize: "0.6rem", color: "#9ca3af" }}>
                 {wi === 0 ? "Tuần này" : wi === 1 ? "1 tuần" : `${wi} tuần`}
@@ -237,11 +357,11 @@ function HeatmapSection() {
       <div className="flex items-center gap-4 mt-4 pt-3 border-t border-gray-100">
         <div className="flex items-center gap-2">
           <Flame className="w-4 h-4 text-orange-500" />
-          <span style={{ fontSize: "0.82rem", fontWeight: 700 }} className="text-gray-900">14 ngày streak</span>
+          <span style={{ fontSize: "0.82rem", fontWeight: 700 }} className="text-gray-900">{streakDays} ngày streak</span>
         </div>
         <div className="flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-          <span style={{ fontSize: "0.82rem", fontWeight: 600 }} className="text-gray-600">62/84 ngày (74%)</span>
+          <span style={{ fontSize: "0.82rem", fontWeight: 600 }} className="text-gray-600">{activeDays}/{totalDays} ngày ({Math.round((activeDays / totalDays) * 100)}%)</span>
         </div>
       </div>
     </div>
@@ -296,9 +416,9 @@ function TrainingChart({ timeRange }: { timeRange: TimeRange }) {
   );
 }
 
-function BodyMetricsSection() {
-  const latest = BODY_METRICS_HISTORY[BODY_METRICS_HISTORY.length - 1];
-  const prev = BODY_METRICS_HISTORY[BODY_METRICS_HISTORY.length - 2];
+function BodyMetricsSection({ data = BODY_METRICS_HISTORY }: { data?: BodyMetricChartRow[] }) {
+  const latest = data[data.length - 1] ?? BODY_METRICS_HISTORY[BODY_METRICS_HISTORY.length - 1];
+  const prev = data[data.length - 2] ?? latest;
 
   const metrics = [
     { label: "Cân nặng", value: `${latest.weight}`, unit: "kg", prev: prev.weight, current: latest.weight, color: "text-blue-600", bg: "bg-blue-50", icon: Weight, better: "down" },
@@ -306,6 +426,7 @@ function BodyMetricsSection() {
     { label: "Cơ bắp", value: `${latest.muscle}`, unit: "kg", prev: prev.muscle, current: latest.muscle, color: "text-emerald-600", bg: "bg-emerald-50", icon: Dumbbell, better: "up" },
     { label: "BMI", value: `${latest.bmi}`, unit: "", prev: prev.bmi, current: latest.bmi, color: "text-purple-600", bg: "bg-purple-50", icon: Ruler, better: "down" },
   ];
+
 
   return (
     <div className="space-y-5">
@@ -359,7 +480,7 @@ function BodyMetricsSection() {
           </div>
         </div>
         <ResponsiveContainer width="100%" height={220}>
-          <LineChart data={BODY_METRICS_HISTORY} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
+          <LineChart data={data} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
             <CartesianGrid key="grid" strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
             <XAxis key="xaxis" dataKey="month" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
             <YAxis key="yaxis" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
@@ -374,14 +495,14 @@ function BodyMetricsSection() {
   );
 }
 
-function ExerciseProgressSection() {
-  const [selected, setSelected] = useState("squat");
-  const selectedEx = EXERCISE_PROGRESS.find((e) => e.id === selected)!;
+function ExerciseProgressSection({ data = EXERCISE_PROGRESS }: { data?: ExerciseChartItem[] }) {
+  const [selected, setSelected] = useState(data[0]?.id ?? "squat");
+  const selectedEx = data.find((e) => e.id === selected) ?? data[0] ?? EXERCISE_PROGRESS[0];
 
   // combined chart data
-  const combinedData = EXERCISE_PROGRESS[0].history.map((_, i) => {
-    const row: Record<string, string | number> = { month: EXERCISE_PROGRESS[0].history[i].month };
-    EXERCISE_PROGRESS.forEach((ex) => {
+  const combinedData = (data[0]?.history ?? []).map((_, i) => {
+    const row: Record<string, string | number> = { month: data[0].history[i].month };
+    data.forEach((ex) => {
       row[ex.id] = ex.history[i].value;
     });
     return row;
@@ -391,7 +512,7 @@ function ExerciseProgressSection() {
     <div className="space-y-5">
       {/* Exercise cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {EXERCISE_PROGRESS.map((ex) => {
+        {data.map((ex) => {
           const change = pct(ex.current1RM, ex.prev1RM);
           const isActive = selected === ex.id;
           return (
@@ -432,7 +553,7 @@ function ExerciseProgressSection() {
             <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
             <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 12 }} />
-            {EXERCISE_PROGRESS.map((ex) => (
+            {data.map((ex) => (
               <Line
                 key={ex.id}
                 type="monotone"
@@ -563,9 +684,9 @@ function AIScoreSection() {
   );
 }
 
-function AchievementsSection() {
-  const unlocked = ACHIEVEMENTS.filter((a) => a.unlocked);
-  const locked = ACHIEVEMENTS.filter((a) => !a.unlocked);
+function AchievementsSection({ achievements = ACHIEVEMENTS }: { achievements?: AchievementCard[] }) {
+  const unlocked = achievements.filter((a) => a.unlocked);
+  const locked = achievements.filter((a) => !a.unlocked);
 
   return (
     <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
@@ -574,15 +695,15 @@ function AchievementsSection() {
           <Award className="w-5 h-5 text-amber-500" />
           <div>
             <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900">Thành tích</div>
-            <div style={{ fontSize: "0.78rem" }} className="text-gray-400">{unlocked.length}/{ACHIEVEMENTS.length} đã mở khóa</div>
+            <div style={{ fontSize: "0.78rem" }} className="text-gray-400">{unlocked.length}/{achievements.length} đã mở khóa</div>
           </div>
         </div>
         {/* progress bar */}
         <div className="flex items-center gap-2">
           <div className="w-24 bg-gray-100 rounded-full h-2">
-            <div className="h-2 rounded-full bg-gradient-to-r from-amber-400 to-orange-500" style={{ width: `${(unlocked.length / ACHIEVEMENTS.length) * 100}%` }} />
+            <div className="h-2 rounded-full bg-gradient-to-r from-amber-400 to-orange-500" style={{ width: `${(unlocked.length / Math.max(achievements.length, 1)) * 100}%` }} />
           </div>
-          <span style={{ fontSize: "0.75rem", fontWeight: 700 }} className="text-amber-600">{Math.round((unlocked.length / ACHIEVEMENTS.length) * 100)}%</span>
+          <span style={{ fontSize: "0.75rem", fontWeight: 700 }} className="text-amber-600">{Math.round((unlocked.length / Math.max(achievements.length, 1)) * 100)}%</span>
         </div>
       </div>
 
@@ -630,6 +751,95 @@ interface Props {
 export function ProgressTracking({ onNavigate }: Props) {
   const [timeRange, setTimeRange] = useState<TimeRange>("month");
   const [metricTab, setMetricTab] = useState<MetricTab>("overview");
+  const [overview, setOverview] = useState<ProgressOverview | null>(null);
+  const [bodyMetrics, setBodyMetrics] = useState<BodyMetricChartRow[]>(BODY_METRICS_HISTORY);
+  const [exerciseProgress, setExerciseProgress] = useState<ExerciseChartItem[]>(EXERCISE_PROGRESS);
+  const [heatmap, setHeatmap] = useState<number[][]>(WEEKLY_HEATMAP);
+  const [achievements, setAchievements] = useState<AchievementCard[]>(ACHIEVEMENTS);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [savingProgress, setSavingProgress] = useState(false);
+  const [bodyForm, setBodyForm] = useState({
+    measuredAt: new Date().toISOString().slice(0, 10),
+    weight: "",
+    bodyFat: "",
+    muscleMass: "",
+    note: "",
+  });
+  const [exerciseForm, setExerciseForm] = useState({
+    measuredAt: new Date().toISOString().slice(0, 10),
+    exerciseName: "Squat",
+    value: "",
+    unit: "kg",
+  });
+
+  const loadProgress = async () => {
+    try {
+      const [overviewData, bodyData, exerciseData, heatmapData, achievementData] = await Promise.all([
+        getProgressOverview(),
+        getBodyMetrics(),
+        getExerciseProgress(),
+        getProgressHeatmap(),
+        getAchievements(),
+      ]);
+      setOverview(overviewData);
+      setBodyMetrics(mapBodyMetricRows(bodyData));
+      setExerciseProgress(mapExerciseRows(exerciseData));
+      setHeatmap(mapHeatmapRows(heatmapData));
+      setAchievements(mapAchievements(achievementData));
+      setApiError(null);
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : "Khong the tai du lieu tien do.");
+    }
+  };
+
+  useEffect(() => {
+    void loadProgress();
+  }, []);
+
+  const submitBodyMetric = async () => {
+    setSavingProgress(true);
+    setActionNotice(null);
+    try {
+      await createBodyMetric({
+        measuredAt: bodyForm.measuredAt,
+        weight: bodyForm.weight ? Number(bodyForm.weight) : undefined,
+        bodyFat: bodyForm.bodyFat ? Number(bodyForm.bodyFat) : undefined,
+        muscleMass: bodyForm.muscleMass ? Number(bodyForm.muscleMass) : undefined,
+        note: bodyForm.note.trim() || undefined,
+      });
+      setActionNotice("Da luu chi so co the.");
+      await loadProgress();
+    } catch (error) {
+      setActionNotice(error instanceof Error ? error.message : "Khong luu duoc chi so co the.");
+    } finally {
+      setSavingProgress(false);
+    }
+  };
+
+  const submitExerciseProgress = async () => {
+    const value = Number(exerciseForm.value);
+    if (!exerciseForm.exerciseName.trim() || !Number.isFinite(value)) {
+      setActionNotice("Vui long nhap ten bai tap va gia tri hop le.");
+      return;
+    }
+    setSavingProgress(true);
+    setActionNotice(null);
+    try {
+      await createExerciseProgress({
+        measuredAt: exerciseForm.measuredAt,
+        exerciseName: exerciseForm.exerciseName.trim(),
+        value,
+        unit: exerciseForm.unit.trim() || "kg",
+      });
+      setActionNotice("Da luu tien do bai tap.");
+      await loadProgress();
+    } catch (error) {
+      setActionNotice(error instanceof Error ? error.message : "Khong luu duoc tien do bai tap.");
+    } finally {
+      setSavingProgress(false);
+    }
+  };
 
   const timeRanges: { id: TimeRange; label: string }[] = [
     { id: "week", label: "Tuần" },
@@ -649,10 +859,10 @@ export function ProgressTracking({ onNavigate }: Props) {
     <div className="space-y-5">
       {/* Stats row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={CheckCircle2} label="Buổi đã tập" value="24" sub="Tháng 3/2026" trend={12} color="text-emerald-500" bg="bg-emerald-50" />
-        <StatCard icon={Clock} label="Tổng giờ tập" value="48h" sub="Tương đương ~86 tiếng" trend={28} color="text-blue-500" bg="bg-blue-50" />
+        <StatCard icon={CheckCircle2} label="Buổi đã tập" value={String(overview?.totalSessions ?? 24)} sub="Theo dữ liệu đặt lịch" trend={12} color="text-emerald-500" bg="bg-emerald-50" />
+        <StatCard icon={Clock} label="Tổng giờ tập" value={`${overview?.trainingHours ?? 48}h`} sub="Tổng thời lượng ước tính" trend={28} color="text-blue-500" bg="bg-blue-50" />
         <StatCard icon={Flame} label="Calo tiêu thụ" value="14.4K" sub="kcal tháng này" trend={18} color="text-orange-500" bg="bg-orange-50" />
-        <StatCard icon={Trophy} label="AI Score TB" value="87" sub="Top 15% học viên" trend={4} color="text-purple-500" bg="bg-purple-50" />
+        <StatCard icon={Trophy} label="AI Score TB" value={String(overview?.averageAiScore ?? 87)} sub={`${overview?.activeCoaches ?? 0} HLV đang hoạt động`} trend={4} color="text-purple-500" bg="bg-purple-50" />
       </div>
 
       {/* Tab navigation */}
@@ -695,6 +905,55 @@ export function ProgressTracking({ onNavigate }: Props) {
         )}
       </div>
 
+      {apiError && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-700" style={{ fontSize: "0.82rem", fontWeight: 600 }}>
+          Dang hien thi du lieu mau vi chua tai duoc API tien do.
+        </div>
+      )}
+
+      {actionNotice && (
+        <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-blue-700" style={{ fontSize: "0.82rem", fontWeight: 600 }}>
+          {actionNotice}
+        </div>
+      )}
+
+      {metricTab === "body" && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Heart className="w-4 h-4 text-red-500" />
+            <div style={{ fontWeight: 800, fontSize: "0.95rem" }} className="text-gray-900">Cap nhat chi so co the</div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+            <input type="date" value={bodyForm.measuredAt} onChange={e => setBodyForm(p => ({ ...p, measuredAt: e.target.value }))} className="rounded-xl border border-gray-200 px-3 py-2.5 outline-none" style={{ fontSize: "0.82rem" }} />
+            <input type="number" placeholder="Can nang kg" value={bodyForm.weight} onChange={e => setBodyForm(p => ({ ...p, weight: e.target.value }))} className="rounded-xl border border-gray-200 px-3 py-2.5 outline-none" style={{ fontSize: "0.82rem" }} />
+            <input type="number" placeholder="Mo %" value={bodyForm.bodyFat} onChange={e => setBodyForm(p => ({ ...p, bodyFat: e.target.value }))} className="rounded-xl border border-gray-200 px-3 py-2.5 outline-none" style={{ fontSize: "0.82rem" }} />
+            <input type="number" placeholder="Co bap kg" value={bodyForm.muscleMass} onChange={e => setBodyForm(p => ({ ...p, muscleMass: e.target.value }))} className="rounded-xl border border-gray-200 px-3 py-2.5 outline-none" style={{ fontSize: "0.82rem" }} />
+            <button onClick={submitBodyMetric} disabled={savingProgress} className="rounded-xl bg-red-500 px-4 py-2.5 text-white disabled:opacity-60" style={{ fontSize: "0.82rem", fontWeight: 800 }}>
+              {savingProgress ? "Dang luu..." : "Luu"}
+            </button>
+          </div>
+          <input value={bodyForm.note} onChange={e => setBodyForm(p => ({ ...p, note: e.target.value }))} placeholder="Ghi chu" className="mt-3 w-full rounded-xl border border-gray-200 px-3 py-2.5 outline-none" style={{ fontSize: "0.82rem" }} />
+        </div>
+      )}
+
+      {metricTab === "exercise" && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Dumbbell className="w-4 h-4 text-orange-500" />
+            <div style={{ fontWeight: 800, fontSize: "0.95rem" }} className="text-gray-900">Cap nhat tien do bai tap</div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+            <input type="date" value={exerciseForm.measuredAt} onChange={e => setExerciseForm(p => ({ ...p, measuredAt: e.target.value }))} className="rounded-xl border border-gray-200 px-3 py-2.5 outline-none" style={{ fontSize: "0.82rem" }} />
+            <input value={exerciseForm.exerciseName} onChange={e => setExerciseForm(p => ({ ...p, exerciseName: e.target.value }))} placeholder="Bai tap" className="rounded-xl border border-gray-200 px-3 py-2.5 outline-none" style={{ fontSize: "0.82rem" }} />
+            <input type="number" value={exerciseForm.value} onChange={e => setExerciseForm(p => ({ ...p, value: e.target.value }))} placeholder="Gia tri" className="rounded-xl border border-gray-200 px-3 py-2.5 outline-none" style={{ fontSize: "0.82rem" }} />
+            <input value={exerciseForm.unit} onChange={e => setExerciseForm(p => ({ ...p, unit: e.target.value }))} placeholder="Don vi" className="rounded-xl border border-gray-200 px-3 py-2.5 outline-none" style={{ fontSize: "0.82rem" }} />
+            <button onClick={submitExerciseProgress} disabled={savingProgress} className="rounded-xl bg-orange-500 px-4 py-2.5 text-white disabled:opacity-60" style={{ fontSize: "0.82rem", fontWeight: 800 }}>
+              {savingProgress ? "Dang luu..." : "Luu"}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Tab content */}
       {metricTab === "overview" && (
         <div className="space-y-5">
@@ -703,15 +962,15 @@ export function ProgressTracking({ onNavigate }: Props) {
               <TrainingChart timeRange={timeRange} />
             </div>
             <div>
-              <HeatmapSection />
+              <HeatmapSection heatmap={heatmap} streakDays={overview?.streakDays ?? 14} />
             </div>
           </div>
-          <AchievementsSection />
+          <AchievementsSection achievements={achievements} />
         </div>
       )}
 
-      {metricTab === "body" && <BodyMetricsSection />}
-      {metricTab === "exercise" && <ExerciseProgressSection />}
+      {metricTab === "body" && <BodyMetricsSection data={bodyMetrics} />}
+      {metricTab === "exercise" && <ExerciseProgressSection data={exerciseProgress} />}
       {metricTab === "ai" && <AIScoreSection />}
     </div>
   );

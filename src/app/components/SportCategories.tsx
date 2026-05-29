@@ -1,3 +1,7 @@
+import { useEffect, useState } from "react";
+import { getCategories } from "../api/coaches";
+import type { Category } from "../types/coach";
+
 const FOOTBALL_IMG = "https://images.unsplash.com/photo-1574772135913-d519461c3996?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmb290YmFsbCUyMHNvY2NlciUyMGNvYWNoJTIwdHJhaW5pbmclMjBmaWVsZHxlbnwxfHx8fDE3NzI2MzU1ODB8MA&ixlib=rb-4.1.0&q=80&w=1080";
 const SWIMMING_IMG = "https://images.unsplash.com/photo-1506833787259-9d3b2eca6cdf?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzd2ltbWluZyUyMGNvYWNoJTIwcG9vbCUyMGF0aGxldGV8ZW58MXx8fHwxNzcyNjM1NTgwfDA&ixlib=rb-4.1.0&q=80&w=1080";
 const FITNESS_IMG = "https://images.unsplash.com/photo-1758875569414-120ebc62ada3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmaXRuZXNzJTIwY29hY2glMjBneW0lMjB0cmFpbmluZyUyMHNlc3Npb258ZW58MXx8fHwxNzcyNjM1NTc5fDA&ixlib=rb-4.1.0&q=80&w=1080";
@@ -17,7 +21,39 @@ const categories = [
   { name: "Xem tất cả →", count: 30, image: null, color: "from-gray-600 to-gray-700" },
 ];
 
+const categoryImages = [FITNESS_IMG, FOOTBALL_IMG, SWIMMING_IMG, YOGA_IMG, BOXING_IMG, BASKETBALL_IMG, RUNNING_IMG];
+
+function mapApiCategory(category: Category, index: number) {
+  const fallback = categories[index % categories.length];
+  return {
+    name: category.name,
+    count: fallback.count,
+    image: categoryImages[index % categoryImages.length],
+    color: fallback.color,
+  };
+}
+
 export function SportCategories() {
+  const [displayCategories, setDisplayCategories] = useState(categories);
+
+  useEffect(() => {
+    let mounted = true;
+    getCategories()
+      .then((items) => {
+        if (!mounted || items.length === 0) return;
+        setDisplayCategories([
+          ...items.slice(0, 7).map(mapApiCategory),
+          categories[categories.length - 1],
+        ]);
+      })
+      .catch(() => {
+        // Keep bundled categories as explicit fallback.
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   return (
     <section className="py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -37,7 +73,7 @@ export function SportCategories() {
 
         {/* Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {categories.map((cat) => (
+          {displayCategories.map((cat) => (
             <button
               key={cat.name}
               className="group relative overflow-hidden rounded-2xl aspect-[4/3] cursor-pointer text-left"

@@ -5,8 +5,8 @@ import {
   AlertCircle, ArrowRight, Camera, Dumbbell, LoaderCircle,
   MapPin, ShieldCheck, Sparkles, Wallet
 } from "lucide-react";
-import { createCoachProfile, getCategories } from "../api/coaches";
-import type { Category, TeachingType } from "../types/coach";
+import { createCoachProfile, getCategories, getCurrentCoachProfile, updateCurrentCoachProfile } from "../api/coaches";
+import type { Category, CoachDetail, TeachingType } from "../types/coach";
 import { getAuthSession, updateAuthSession } from "../utils/authSession";
 
 interface CoachProfileFormData {
@@ -34,11 +34,13 @@ export function CoachProfileSetupPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryLoading, setCategoryLoading] = useState(true);
   const [categoryError, setCategoryError] = useState("");
+  const [currentProfile, setCurrentProfile] = useState<CoachDetail | null>(null);
   const [submitError, setSubmitError] = useState("");
   const {
     register,
     handleSubmit,
     watch,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<CoachProfileFormData>({
     defaultValues: { teachingType: "BOTH" },
@@ -46,6 +48,7 @@ export function CoachProfileSetupPage() {
 
   const avatarName = watch("avatar")?.[0]?.name;
   const isCoach = session?.role === "COACHES";
+  const isEditing = !!currentProfile;
 
   const loadCategories = async () => {
     setCategoryLoading(true);
@@ -88,18 +91,48 @@ export function CoachProfileSetupPage() {
     };
   }, [isCoach]);
 
+  useEffect(() => {
+    if (!isCoach) return;
+
+    let active = true;
+    getCurrentCoachProfile()
+      .then(profile => {
+        if (!active) return;
+        setCurrentProfile(profile);
+        const matchedCategory = categories.find(category => category.name === profile.category);
+        reset({
+          categoryId: String(profile.categoryId ?? matchedCategory?.id ?? ""),
+          price: profile.price ? String(profile.price) : "",
+          experienceYears: profile.experienceYears ? String(profile.experienceYears) : "",
+          location: profile.location || "",
+          teachingType: profile.teachingType || "BOTH",
+          bio: profile.bio || "",
+        });
+      })
+      .catch(() => {
+        if (active) setCurrentProfile(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [categories, isCoach, reset]);
+
   const onSubmit = async (data: CoachProfileFormData) => {
     setSubmitError("");
     try {
-      const coach = await createCoachProfile({
+      const request = {
         categoryId: Number(data.categoryId),
         price: Number(data.price),
         experienceYears: Number(data.experienceYears),
-        avatar: data.avatar![0],
+        avatar: data.avatar?.[0],
         location: data.location.trim(),
         teachingType: data.teachingType,
         bio: data.bio.trim(),
-      });
+      };
+      const coach = isEditing
+        ? await updateCurrentCoachProfile(request)
+        : await createCoachProfile({ ...request, avatar: data.avatar![0] });
       updateAuthSession({
         coachId: coach.id,
         fullName: coach.fullName || session?.fullName,
@@ -172,7 +205,7 @@ export function CoachProfileSetupPage() {
 
         <section className="rounded-3xl bg-white border border-gray-100 shadow-sm p-6 lg:p-8">
           <div className="mb-6">
-            <h2 className="text-gray-900" style={{ fontSize: "1.45rem", fontWeight: 800 }}>Thiết lập hồ sơ công khai</h2>
+            <h2 className="text-gray-900" style={{ fontSize: "1.45rem", fontWeight: 800 }}>{isEditing ? "Cập nhật hồ sơ công khai" : "Thiết lập hồ sơ công khai"}</h2>
             <p className="text-gray-500 mt-1" style={{ fontSize: "0.85rem" }}>Thông tin này sẽ hiển thị cho học viên khi tìm HLV.</p>
           </div>
 
@@ -207,7 +240,18 @@ export function CoachProfileSetupPage() {
                   type="file"
                   accept="image/png,image/jpeg,image/webp"
                   className="sr-only"
-                  {...register("avatar", { validate: files => !!files?.length || "Vui lòng tải ảnh đại diện" })}
+                  {...register("avatar", { 
+                    validate: files => {
+                      if (!isEditing && (!files || !files.length)) return "Vui lòng tải ảnh đại diện";
+                      if (files && files.length > 0) {
+                        const file = files[0];
+                        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+                          return "Chỉ chấp nhận file ảnh (PNG, JPG, WEBP)";
+                        }
+                      }
+                      return true;
+                    } 
+                  })}
                 />
               </label>
               {errors.avatar && <p className="text-red-500 mt-1.5" style={{ fontSize: "0.76rem" }}>{errors.avatar.message}</p>}
@@ -310,7 +354,7 @@ export function CoachProfileSetupPage() {
               className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white py-3.5 rounded-xl hover:from-blue-600 hover:to-indigo-600 disabled:opacity-60 transition-all flex items-center justify-center gap-2"
               style={{ fontSize: "0.92rem", fontWeight: 700 }}
             >
-              {isSubmitting ? <><LoaderCircle className="w-4 h-4 animate-spin" /> Đang lưu hồ sơ...</> : <>Công bố hồ sơ HLV <ArrowRight className="w-4 h-4" /></>}
+              {isSubmitting ? <><LoaderCircle className="w-4 h-4 animate-spin" /> Đang lưu hồ sơ...</> : <>{isEditing ? "Cập nhật hồ sơ HLV" : "Công bố hồ sơ HLV"} <ArrowRight className="w-4 h-4" /></>}
             </button>
           </form>
         </section>

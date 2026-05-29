@@ -6,8 +6,16 @@ import {
   Dumbbell, GraduationCap, Mail, Lock, User,
   Phone, AlertCircle, Zap, Shield, Brain, Star
 } from "lucide-react";
-import { login, registerAccount } from "../api/auth";
+import {
+  forgotPassword,
+  login,
+  loginWithFacebook,
+  loginWithGoogle,
+  registerAccount,
+  resetPassword,
+} from "../api/auth";
 import { getDashboardPath, saveAuthSession } from "../utils/authSession";
+import { GoogleLogin } from "@react-oauth/google";
 
 const AUTH_BG =
   "https://images.unsplash.com/photo-1693214674477-1159bddf1598?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmaXRuZXNzJTIwY29hY2glMjB0cmFpbmluZyUyMGF0aGxldGUlMjBtb2RpdmF0aW9uJTIwZGFyayUyMGd5bXxlbnwxfHx8fDE3NzI2Mzc1Mjd8MA&ixlib=rb-4.1.0&q=80&w=1080";
@@ -114,12 +122,16 @@ function LeftPanel({ mode }: { mode: AuthMode }) {
 
 // ─── Login form ───────────────────────────────────────────────────────────────
 interface LoginData { email: string; password: string; remember: boolean; }
+interface ResetData { email: string; otp: string; newPassword: string; }
 
 function LoginForm({ onSwitch }: { onSwitch: () => void }) {
   const [showPw, setShowPw] = useState(false);
   const [loginError, setLoginError] = useState("");
+  const [authNotice, setAuthNotice] = useState("");
+  const [resetMode, setResetMode] = useState(false);
   const navigate = useNavigate();
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginData>();
+  const resetForm = useForm<ResetData>();
 
   const onSubmit = async (data: LoginData) => {
     setLoginError("");
@@ -132,6 +144,46 @@ function LoginForm({ onSwitch }: { onSwitch: () => void }) {
     }
   };
 
+  const handleForgotPassword = async () => {
+    const email = prompt("Nhap email can khoi phuc mat khau");
+    if (!email) return;
+    setLoginError("");
+    setAuthNotice("");
+    try {
+      await forgotPassword(email.trim());
+      resetForm.setValue("email", email.trim());
+      setResetMode(true);
+      setAuthNotice("Da gui OTP khoi phuc mat khau. Vui long kiem tra email.");
+    } catch (error) {
+      setLoginError(error instanceof Error ? error.message : "Khong the gui OTP khoi phuc mat khau.");
+    }
+  };
+
+  const handleResetPassword = async (data: ResetData) => {
+    setLoginError("");
+    setAuthNotice("");
+    try {
+      await resetPassword(data.email.trim(), data.otp.trim(), data.newPassword);
+      setResetMode(false);
+      setAuthNotice("Da doi mat khau. Ban co the dang nhap bang mat khau moi.");
+    } catch (error) {
+      setLoginError(error instanceof Error ? error.message : "Khong the doi mat khau.");
+    }
+  };
+
+  const handleSocialLogin = async (provider: "Facebook") => {
+    const token = prompt("Nhap Facebook accessToken de dang nhap");
+    if (!token) return;
+    setLoginError("");
+    try {
+      const auth = await loginWithFacebook(token.trim());
+      saveAuthSession(auth);
+      navigate(getDashboardPath(auth.role));
+    } catch (error) {
+      setLoginError(error instanceof Error ? error.message : `Dang nhap ${provider} khong thanh cong.`);
+    }
+  };
+
   return (
     <div className="w-full max-w-md mx-auto">
       <div className="mb-6">
@@ -141,11 +193,32 @@ function LoginForm({ onSwitch }: { onSwitch: () => void }) {
 
       {/* Social login */}
       <div className="grid grid-cols-2 gap-3 mb-5">
-        {[{ name: "Google", logo: "G" }, { name: "Facebook", logo: "f" }].map(s => (
-          <button key={s.name} className="flex items-center justify-center gap-2.5 py-2.5 border-2 border-gray-200 rounded-xl hover:bg-gray-50 transition-colors" style={{ fontSize: "0.88rem", fontWeight: 600, color: "#374151" }}>
-            <span style={{ fontWeight: 800, fontSize: "0.9rem" }}>{s.logo}</span>{s.name}
-          </button>
-        ))}
+        <div className="flex items-center justify-center overflow-hidden h-[46px]">
+          <GoogleLogin
+            onSuccess={async (credentialResponse) => {
+              setLoginError("");
+              try {
+                if (!credentialResponse.credential) throw new Error("No credential");
+                const auth = await loginWithGoogle(credentialResponse.credential);
+                saveAuthSession(auth, true);
+                navigate(getDashboardPath(auth.role));
+              } catch (error) {
+                setLoginError(error instanceof Error ? error.message : "Đăng nhập Google không thành công.");
+              }
+            }}
+            onError={() => {
+              setLoginError("Đăng nhập Google thất bại.");
+            }}
+            useOneTap
+            shape="rectangular"
+            theme="outline"
+            text="signin_with"
+            size="large"
+          />
+        </div>
+        <button type="button" onClick={() => handleSocialLogin("Facebook")} className="flex items-center justify-center gap-2.5 h-[46px] border-2 border-gray-200 rounded-[4px] hover:bg-gray-50 transition-colors" style={{ fontSize: "0.88rem", fontWeight: 600, color: "#374151" }}>
+          <span style={{ fontWeight: 800, fontSize: "1rem", color: "#1877F2" }}>f</span>Facebook
+        </button>
       </div>
 
       <div className="flex items-center gap-3 mb-5">
@@ -174,6 +247,13 @@ function LoginForm({ onSwitch }: { onSwitch: () => void }) {
           </div>
         )}
 
+        {authNotice && (
+          <div className="flex items-start gap-2 bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+            <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+            <span style={{ fontSize: "0.82rem" }} className="text-emerald-600">{authNotice}</span>
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" className="w-4 h-4 rounded border-gray-300 accent-orange-500" {...register("remember")} />
@@ -182,12 +262,29 @@ function LoginForm({ onSwitch }: { onSwitch: () => void }) {
           <button type="button" className="text-orange-500 hover:text-orange-600" style={{ fontSize: "0.85rem", fontWeight: 600 }}>Quên mật khẩu?</button>
         </div>
 
+        <button type="button" onClick={handleForgotPassword} className="w-full py-2.5 border border-orange-200 text-orange-600 rounded-xl hover:bg-orange-50 transition-colors" style={{ fontWeight: 700, fontSize: "0.86rem" }}>
+          Dat lai mat khau bang OTP
+        </button>
+
         <button type="submit" disabled={isSubmitting}
           className="w-full py-3.5 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-200 disabled:opacity-70 flex items-center justify-center gap-2"
           style={{ fontWeight: 700, fontSize: "0.95rem" }}>
           {isSubmitting ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Đang đăng nhập...</> : "Đăng nhập →"}
         </button>
       </form>
+
+      {resetMode && (
+        <form onSubmit={resetForm.handleSubmit(handleResetPassword)} className="space-y-3 mt-4 rounded-2xl border border-orange-100 bg-orange-50/50 p-4">
+          <div style={{ fontSize: "0.84rem", fontWeight: 700 }} className="text-gray-800">Dat lai mat khau bang OTP</div>
+          <input {...resetForm.register("email", { required: true })} placeholder="Email" className="w-full rounded-xl border border-orange-100 bg-white px-3 py-2.5 outline-none" />
+          <input {...resetForm.register("otp", { required: true })} placeholder="OTP" className="w-full rounded-xl border border-orange-100 bg-white px-3 py-2.5 outline-none" />
+          <input type="password" {...resetForm.register("newPassword", { required: true, minLength: 8 })} placeholder="Mat khau moi" className="w-full rounded-xl border border-orange-100 bg-white px-3 py-2.5 outline-none" />
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setResetMode(false)} className="flex-1 rounded-xl border border-gray-200 bg-white py-2 text-gray-600" style={{ fontSize: "0.82rem", fontWeight: 600 }}>Huy</button>
+            <button type="submit" disabled={resetForm.formState.isSubmitting} className="flex-1 rounded-xl bg-orange-500 py-2 text-white disabled:opacity-60" style={{ fontSize: "0.82rem", fontWeight: 700 }}>Doi mat khau</button>
+          </div>
+        </form>
+      )}
 
       <p className="text-center mt-5" style={{ fontSize: "0.88rem" }}>
         <span className="text-gray-500">Chưa có tài khoản? </span>

@@ -5,7 +5,8 @@ import { CoachStudents } from "../components/CoachStudents";
 import { CoachAnalytics } from "../components/CoachAnalytics";
 import { CoachMessages } from "../components/CoachMessages";
 import { CoachSubscription } from "../components/CoachSubscription";
-import { useState } from "react";
+import { NotificationBell } from "../components/NotificationBell";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import {
   LayoutDashboard, Users, Calendar, Video, DollarSign,
@@ -19,37 +20,33 @@ import {
   Tooltip, ResponsiveContainer, LineChart, Line
 } from "recharts";
 import { clearAuthSession, getAuthSession } from "../utils/authSession";
+import { logoutAccount } from "../api/auth";
+import { getCoachCalendarBookings } from "../api/bookings";
+import { coachWorkspaceApi } from "../api/coachWorkspace";
+import { getNotificationUnreadCount } from "../api/notifications";
+import type { BookingListItem } from "../types/booking";
+import type { CoachAnalyticsOverview, CoachStudentProgress, CoachStudentSummary } from "../types/coachWorkspace";
+import type { WalletTransaction } from "../types/wallet";
 
 const STUDENT_1 = "https://images.unsplash.com/photo-1607286908165-b8b6a2874fc4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=100";
 const STUDENT_2 = "https://images.unsplash.com/photo-1755549476788-efd8bf819561?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=100";
 const STUDENT_3 = "https://images.unsplash.com/photo-1660463527860-b66aebd362c9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=100";
 
-const earningsData = [
-  { month: "T10", revenue: 9800000 }, { month: "T11", revenue: 11200000 },
-  { month: "T12", revenue: 14500000 }, { month: "T1", revenue: 12300000 },
-  { month: "T2", revenue: 13800000 }, { month: "T3", revenue: 15600000 },
-];
+type EarningsRow = { month: string; revenue: number };
+type DashboardStudentRow = { name: string; sport: string; sessions: number; progress: number; status: "active" | "pending"; avatar: string; lastSession: string; paid: string };
+type TodaySessionRow = { student: string; time: string; type: string; status: "done" | "upcoming"; avatar: string };
+type RecentPaymentRow = { student: string; amount: string; date: string; type: string };
 
-const studentsData = [
-  { name: "Nguyễn Minh Anh", sport: "Thể hình", sessions: 18, progress: 87, status: "active", avatar: STUDENT_1, lastSession: "2 ngày trước", paid: "3.6M" },
-  { name: "Trần Bảo Long", sport: "Thể hình", sessions: 12, progress: 74, status: "active", avatar: STUDENT_2, lastSession: "Hôm nay", paid: "2.4M" },
-  { name: "Lê Thúy Nga", sport: "Thể hình", sessions: 7, progress: 91, status: "active", avatar: STUDENT_3, lastSession: "3 ngày trước", paid: "1.4M" },
-  { name: "Phạm Đức Hải", sport: "Thể hình", sessions: 5, progress: 62, status: "pending", avatar: STUDENT_1, lastSession: "1 tuần trước", paid: "1.0M" },
-  { name: "Võ Thị Hoa", sport: "Thể hình", sessions: 22, progress: 95, status: "active", avatar: STUDENT_2, lastSession: "Hôm nay", paid: "4.4M" },
-];
-
-const todaySessions = [
-  { student: "Trần Bảo Long", time: "09:00 – 10:30", type: "Online", status: "done", avatar: STUDENT_2 },
-  { student: "Võ Thị Hoa", time: "14:00 – 15:30", type: "Offline · Q1", status: "upcoming", avatar: STUDENT_2 },
-  { student: "Nguyễn Minh Anh", time: "17:00 – 18:30", type: "Online", status: "upcoming", avatar: STUDENT_1 },
-];
-
-const recentPayments = [
-  { student: "Võ Thị Hoa", amount: "400,000đ", date: "Hôm nay", type: "Buổi tập" },
-  { student: "Trần Bảo Long", amount: "400,000đ", date: "Hôm nay", type: "Buổi tập" },
-  { student: "Nguyễn Minh Anh", amount: "800,000đ", date: "Hôm qua", type: "Gói 2 buổi" },
-  { student: "Lê Thúy Nga", amount: "400,000đ", date: "2 ngày trước", type: "Buổi tập" },
-];
+const DEFAULT_OVERVIEW = {
+  totalStudents: 24,
+  monthRevenue: 15600000,
+  averageRating: 4.9,
+  totalReviews: 187,
+  weekSessions: 12,
+  todaySessions: 3,
+  totalVideos: 8,
+  totalVideoViews: 234,
+};
 
 const navItems = [
   { icon: LayoutDashboard, label: "Tổng quan", id: "overview" },
@@ -62,9 +59,108 @@ const navItems = [
   { icon: CreditCard, label: "Gói đăng ký", id: "subscription" },
 ];
 
+function formatCompactCurrency(amount: number) {
+  if (amount >= 1000000) return `${(amount / 1000000).toFixed(amount % 1000000 === 0 ? 0 : 1)}M`;
+  if (amount >= 1000) return `${Math.round(amount / 1000)}K`;
+  return String(amount);
+}
+
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat("vi-VN").format(amount) + "đ";
+}
+
+function formatRelativeDate(value?: string | null) {
+  if (!value) return "Chưa có";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Chưa có";
+  const today = new Date();
+  const startToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const startDate = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  const diffDays = Math.round((startToday - startDate) / 86400000);
+  if (diffDays === 0) return "Hôm nay";
+  if (diffDays === 1) return "Hôm qua";
+  if (diffDays > 1 && diffDays < 7) return `${diffDays} ngày trước`;
+  return date.toLocaleDateString("vi-VN");
+}
+
+function mapRevenueRows(rows: { period: string; value: number }[]): EarningsRow[] {
+  return rows.slice(-6).map(row => ({
+    month: row.period,
+    revenue: row.value,
+  }));
+}
+
+function mapDashboardStudents(summaries: CoachStudentSummary[], progressList: CoachStudentProgress[]): DashboardStudentRow[] {
+  const progressById = new Map(progressList.map(item => [item.traineeId, item]));
+  const avatars = [STUDENT_1, STUDENT_2, STUDENT_3];
+
+  return summaries.slice(0, 5).map((student, index) => {
+    const progress = progressById.get(student.traineeId);
+    const score = progress?.averageSubmissionScore == null ? 0 : Math.round(progress.averageSubmissionScore);
+
+    return {
+      name: student.fullName,
+      sport: student.goal || "Chưa cập nhật",
+      sessions: progress?.completedSessions ?? student.completedSessions ?? 0,
+      progress: score,
+      status: (student.sessions ?? 0) > (student.completedSessions ?? 0) ? "pending" : "active",
+      avatar: student.avatar || avatars[index % avatars.length],
+      lastSession: student.lastSessionDate ? formatRelativeDate(student.lastSessionDate) : "Chưa có",
+      paid: "API",
+    };
+  });
+}
+
+function mapTodaySessions(bookings: BookingListItem[]): TodaySessionRow[] {
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const source = bookings
+    .filter(item => item.date === todayKey)
+    .concat(bookings.filter(item => item.date !== todayKey && (item.status === "CONFIRMED" || item.status === "PENDING")))
+    .slice(0, 3);
+  const avatars = [STUDENT_1, STUDENT_2, STUDENT_3];
+
+  return source.map((booking, index) => ({
+    student: booking.traineeName || "Học viên",
+    time: `${booking.startTime.slice(0, 5)} - ${booking.endTime.slice(0, 5)}`,
+    type: booking.type === "ONLINE" ? "Online" : "Offline",
+    status: booking.status === "COMPLETED" ? "done" : "upcoming",
+    avatar: booking.traineeAvatar || avatars[index % avatars.length],
+  }));
+}
+
+function mapRecentPayments(transactions: WalletTransaction[]): RecentPaymentRow[] {
+  return transactions
+    .filter(item => item.amount > 0)
+    .slice(0, 4)
+    .map(item => ({
+      student: item.processedByName || item.description || "Thanh toán",
+      amount: formatCurrency(item.amount),
+      date: formatRelativeDate(item.createdAt),
+      type: item.referenceType || item.type,
+    }));
+}
+
+function buildOverviewStats(analytics?: CoachAnalyticsOverview | null, income?: { monthRevenue: number } | null) {
+  return {
+    ...DEFAULT_OVERVIEW,
+    totalStudents: analytics?.totalStudents ?? DEFAULT_OVERVIEW.totalStudents,
+    monthRevenue: income?.monthRevenue ?? analytics?.totalRevenue ?? DEFAULT_OVERVIEW.monthRevenue,
+    averageRating: analytics?.averageRating ?? DEFAULT_OVERVIEW.averageRating,
+    weekSessions: analytics?.confirmedBookings ?? DEFAULT_OVERVIEW.weekSessions,
+    totalVideos: analytics?.totalVideos ?? DEFAULT_OVERVIEW.totalVideos,
+    totalVideoViews: analytics?.totalVideoViews ?? DEFAULT_OVERVIEW.totalVideoViews,
+  };
+}
+
 export function CoachDashboard() {
   const [activeNav, setActiveNav] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [overview, setOverview] = useState(DEFAULT_OVERVIEW);
+  const [earningsRows, setEarningsRows] = useState<EarningsRow[]>([]);
+  const [studentRows, setStudentRows] = useState<DashboardStudentRow[]>([]);
+  const [sessionRows, setSessionRows] = useState<TodaySessionRow[]>([]);
+  const [paymentRows, setPaymentRows] = useState<RecentPaymentRow[]>([]);
   const navigate = useNavigate();
   const session = getAuthSession();
   const coachName = session?.fullName?.trim() || session?.username || "Huấn luyện viên";
@@ -74,10 +170,58 @@ export function CoachDashboard() {
     .map(part => part.charAt(0))
     .join("")
     .toUpperCase();
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await logoutAccount();
+    } catch {
+      // Keep logout reliable even if the API call cannot complete.
+    }
     clearAuthSession();
     navigate("/auth");
   };
+
+  useEffect(() => {
+    getNotificationUnreadCount()
+      .then((result) => setNotificationCount(result.unreadCount))
+      .catch(() => setNotificationCount(0));
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    Promise.all([
+      coachWorkspaceApi.getAnalyticsOverview().catch(() => null),
+      coachWorkspaceApi.getIncomeOverview().catch(() => null),
+      coachWorkspaceApi.getRevenueAnalytics().catch(() => []),
+      coachWorkspaceApi.getStudents().catch(() => []),
+      coachWorkspaceApi.getIncomeTransactions().catch(() => []),
+      getCoachCalendarBookings().catch(() => []),
+    ]).then(async ([analytics, income, revenueRows, students, transactions, bookings]) => {
+      const progressRows = await Promise.all(
+        students.map(student => coachWorkspaceApi.getStudentProgress(student.traineeId).catch(() => null))
+      );
+      if (!active) return;
+
+      setOverview(buildOverviewStats(analytics, income));
+      const mappedRevenue = mapRevenueRows(revenueRows);
+      const mappedStudents = mapDashboardStudents(
+        students,
+        progressRows.filter((item): item is CoachStudentProgress => item !== null)
+      );
+      const mappedSessions = mapTodaySessions(bookings);
+      const mappedPayments = mapRecentPayments(transactions);
+
+      setEarningsRows(mappedRevenue);
+      setStudentRows(mappedStudents);
+      setSessionRows(mappedSessions);
+      setOverview(current => ({ ...current, todaySessions: mappedSessions.length }));
+      setPaymentRows(mappedPayments);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const formatM = (n: number) => {
     if (n >= 1000000) return (n / 1000000).toFixed(1) + "M";
@@ -140,7 +284,7 @@ export function CoachDashboard() {
         <div className="px-4 py-3 border-b border-white/[0.06]">
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-3.5 py-3">
             <div style={{ fontSize: "0.68rem" }} className="text-blue-300 mb-0.5">Doanh thu tháng 3</div>
-            <div style={{ fontWeight: 800, fontSize: "1.15rem", letterSpacing: "-0.02em" }} className="text-white">15,600,000đ</div>
+            <div style={{ fontWeight: 800, fontSize: "1.15rem", letterSpacing: "-0.02em" }} className="text-white">{formatCurrency(overview.monthRevenue)}</div>
             <div className="flex items-center gap-1 mt-0.5">
               <TrendingUp className="w-3 h-3 text-green-400" />
               <span style={{ fontSize: "0.68rem" }} className="text-green-400">+13% tháng trước</span>
@@ -150,7 +294,9 @@ export function CoachDashboard() {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
-          {navItems.map(({ icon: Icon, label, id, badge }) => (
+          {navItems.map(({ icon: Icon, label, id, badge }) => {
+            const dynamicBadge = id === "students" ? String(overview.totalStudents) : badge;
+            return (
             <button
               key={id}
               onClick={() => { setActiveNav(id); setSidebarOpen(false); }}
@@ -162,18 +308,19 @@ export function CoachDashboard() {
             >
               <Icon className="w-[18px] h-[18px] shrink-0" />
               <span style={{ fontSize: "0.84rem", fontWeight: activeNav === id ? 600 : 500 }}>{label}</span>
-              {badge && (
+              {dynamicBadge && (
                 <span
                   className={`ml-auto rounded-full px-2 py-0.5 ${
-                    activeNav === id ? "bg-white/25 text-white" : typeof badge === "string" && isNaN(Number(badge)) ? "bg-emerald-500 text-white" : "bg-blue-500 text-white"
+                    activeNav === id ? "bg-white/25 text-white" : typeof dynamicBadge === "string" && isNaN(Number(dynamicBadge)) ? "bg-emerald-500 text-white" : "bg-blue-500 text-white"
                   }`}
                   style={{ fontSize: "0.65rem", fontWeight: 700, minWidth: 20, textAlign: "center" }}
                 >
-                  {badge}
+                  {dynamicBadge}
                 </span>
               )}
             </button>
-          ))}
+          );
+          })}
         </nav>
 
         {/* Bottom nav */}
@@ -201,16 +348,13 @@ export function CoachDashboard() {
           </button>
           <div className="flex-1 min-w-0">
             <div style={{ fontWeight: 700, fontSize: "1.05rem", letterSpacing: "-0.01em" }} className="text-gray-900 truncate">Xin chào, {coachName} 👊</div>
-            <div style={{ fontSize: "0.78rem" }} className="text-gray-400 truncate">Thứ Tư, 4 tháng 3, 2026 · 3 buổi dạy hôm nay</div>
+            <div style={{ fontSize: "0.78rem" }} className="text-gray-400 truncate">{new Date().toLocaleDateString("vi-VN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · {overview.todaySessions} buổi dạy hôm nay</div>
           </div>
           <div className="flex items-center gap-2.5">
             <button className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:from-blue-600 hover:to-indigo-600 transition-all shadow-md shadow-blue-200" style={{ fontSize: "0.82rem", fontWeight: 700 }}>
               <Plus className="w-3.5 h-3.5" /> Thêm buổi dạy
             </button>
-            <button className="relative p-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-100 transition-colors">
-              <Bell className="w-[18px] h-[18px] text-gray-500" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
-            </button>
+            <NotificationBell />
             {session?.avatar ? (
               <img src={session.avatar} alt={coachName} className="w-9 h-9 rounded-xl object-cover border-2 border-blue-200 cursor-pointer hover:border-blue-300 transition-colors" />
             ) : (
@@ -250,10 +394,10 @@ export function CoachDashboard() {
             {activeNav === "overview" && (
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                  { icon: Users, label: "Học viên", value: "24", sub: "+2 tháng này", color: "text-blue-500", bg: "bg-blue-50", trend: "+9%" },
-                  { icon: DollarSign, label: "Doanh thu T3", value: "15.6M", sub: "Sau hoa hồng 12%", color: "text-emerald-500", bg: "bg-emerald-50", trend: "+13%" },
-                  { icon: Star, label: "Đánh giá TB", value: "4.9", sub: "Từ 187 đánh giá", color: "text-amber-500", bg: "bg-amber-50", trend: "⭐" },
-                  { icon: Calendar, label: "Buổi dạy", value: "12", sub: "Tuần này · 3 hôm nay", color: "text-purple-500", bg: "bg-purple-50", trend: "tuần" },
+                  { icon: Users, label: "Học viên", value: String(overview.totalStudents), sub: "Đang theo dõi", color: "text-blue-500", bg: "bg-blue-50", trend: "API" },
+                  { icon: DollarSign, label: "Doanh thu", value: formatCompactCurrency(overview.monthRevenue), sub: "Theo workspace", color: "text-emerald-500", bg: "bg-emerald-50", trend: "API" },
+                  { icon: Star, label: "Đánh giá TB", value: overview.averageRating.toFixed(1), sub: `Từ ${overview.totalReviews} đánh giá`, color: "text-amber-500", bg: "bg-amber-50", trend: "★" },
+                  { icon: Calendar, label: "Buổi dạy", value: String(overview.weekSessions), sub: `Tuần này · ${overview.todaySessions} hôm nay`, color: "text-purple-500", bg: "bg-purple-50", trend: "tuần" },
                 ].map(({ icon: Icon, label, value, sub, color, bg, trend }) => (
                   <div key={label} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between mb-3">
@@ -301,7 +445,7 @@ export function CoachDashboard() {
                     </div>
                   </div>
                   <ResponsiveContainer width="100%" height={175}>
-                    <BarChart data={earningsData} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
+                    <BarChart data={earningsRows} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
                       <CartesianGrid key="cd-grid" strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
                       <XAxis key="cd-xaxis" dataKey="month" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
                       <YAxis key="cd-yaxis" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={v => formatM(v)} />
@@ -318,10 +462,10 @@ export function CoachDashboard() {
                 <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
                   <div className="flex items-center justify-between mb-4">
                     <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900">Lịch dạy hôm nay</div>
-                    <span className="bg-blue-100 text-blue-600 px-2.5 py-1 rounded-full" style={{ fontSize: "0.72rem", fontWeight: 700 }}>3 buổi</span>
+                    <span className="bg-blue-100 text-blue-600 px-2.5 py-1 rounded-full" style={{ fontSize: "0.72rem", fontWeight: 700 }}>{sessionRows.length} buổi</span>
                   </div>
                   <div className="space-y-3">
-                    {todaySessions.map((s, i) => (
+                    {sessionRows.map((s, i) => (
                       <div key={i} className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all ${s.status === "upcoming" ? "border-blue-200 bg-blue-50/40" : "border-gray-100 bg-gray-50 opacity-70"}`}>
                         <img src={s.avatar} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" />
                         <div className="flex-1 min-w-0">
@@ -353,7 +497,7 @@ export function CoachDashboard() {
                     </button>
                   </div>
                   <div className="space-y-2">
-                    {studentsData.map((s) => (
+                    {studentRows.map((s) => (
                       <div key={s.name} className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors">
                         <img src={s.avatar} alt="" className="w-9 h-9 rounded-xl object-cover shrink-0" />
                         <div className="flex-1 min-w-0">
@@ -410,7 +554,7 @@ export function CoachDashboard() {
                     <span className="bg-green-50 text-green-600 px-2 py-0.5 rounded-full" style={{ fontSize: "0.7rem", fontWeight: 700 }}>Hôm nay: 800K</span>
                   </div>
                   <div className="space-y-3">
-                    {recentPayments.map((p, i) => (
+                    {paymentRows.map((p, i) => (
                       <div key={i} className="flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
                           <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
@@ -431,12 +575,12 @@ export function CoachDashboard() {
                 <div className="bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200 rounded-2xl p-5">
                   <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900 mb-1">Đánh giá của tôi</div>
                   <div className="flex items-baseline gap-2 my-3">
-                    <span style={{ fontWeight: 900, fontSize: "2.5rem", lineHeight: 1 }} className="text-gray-900">4.9</span>
+                    <span style={{ fontWeight: 900, fontSize: "2.5rem", lineHeight: 1 }} className="text-gray-900">{overview.averageRating.toFixed(1)}</span>
                     <div>
                       <div className="flex gap-0.5 mb-0.5">
                         {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 text-amber-400 fill-amber-400" />)}
                       </div>
-                      <div style={{ fontSize: "0.72rem" }} className="text-gray-500">187 đánh giá</div>
+                      <div style={{ fontSize: "0.72rem" }} className="text-gray-500">{overview.totalReviews} đánh giá</div>
                     </div>
                   </div>
                   <div className="space-y-1.5">
@@ -459,7 +603,7 @@ export function CoachDashboard() {
                     <span style={{ fontWeight: 700, fontSize: "0.95rem" }}>Video Studio 360°</span>
                   </div>
                   <p style={{ fontSize: "0.8rem", lineHeight: 1.6 }} className="text-blue-100 mb-4">
-                    Bạn đã upload 8 video 360°. Học viên đã xem 234 lần tháng này.
+                    Bạn đã upload {overview.totalVideos} video 360°. Học viên đã xem {overview.totalVideoViews} lần tháng này.
                   </p>
                   <button className="w-full flex items-center justify-center gap-2 py-2.5 bg-white/15 hover:bg-white/25 border border-white/20 rounded-xl transition-colors" style={{ fontSize: "0.85rem", fontWeight: 600 }}>
                     <Upload className="w-4 h-4" /> Upload video mới

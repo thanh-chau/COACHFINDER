@@ -7,6 +7,14 @@ import {
   Calendar, TrendingUp, Clock, Award, MessageSquare,
   Zap,
 } from "lucide-react";
+import {
+  getConversationMessages,
+  getConversations,
+  markConversationRead,
+  sendConversationMessage,
+} from "../api/chat";
+import { useChatWebSocket } from "../api/websocket";
+import type { ChatMessage as ApiChatMessage, Conversation as ApiConversation } from "../types/chat";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type MsgStatus  = "sent"|"delivered"|"read";
@@ -129,6 +137,41 @@ const QUICK_REPLIES = [
   "Xem feedback trong Video Studio nhé","Nhớ nghỉ ngơi đủ giấc nhé","Cố lên! Đang tiến bộ rất tốt 🏆",
 ];
 
+function formatChatTime(value: string | null) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+}
+
+function mapApiMessage(message: ApiChatMessage): Message {
+  return {
+    id: String(message.id),
+    from: message.ownMessage ? "coach" : "student",
+    text: message.content,
+    time: formatChatTime(message.createdAt),
+    status: message.read ? "read" : "delivered",
+    type: "text",
+  };
+}
+
+function mapApiConversation(conversation: ApiConversation): Conversation {
+  return {
+    id: String(conversation.id),
+    name: conversation.participantFullName || conversation.participantUsername,
+    avatar: conversation.participantAvatarUrl || AVT.a,
+    sport: "Học viên",
+    status: "offline",
+    lastMsg: conversation.lastMessage || "Chưa có tin nhắn",
+    lastTime: formatChatTime(conversation.lastMessageAt || conversation.updatedAt),
+    unread: 0,
+    messages: [],
+    sessions: 0,
+    progress: 0,
+    joined: "",
+  };
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const STATUS_DOT:Record<ConvStatus,string> = {
   online:"bg-emerald-400", offline:"bg-gray-300", away:"bg-amber-400"
@@ -249,6 +292,7 @@ function InfoPanel({ conv, onClose }:{ conv:Conversation; onClose:()=>void }) {
 export function CoachMessages() {
   const [convs,setConvs]         = useState<Conversation[]>(INITIAL_CONVS);
   const [activeId,setActiveId]   = useState<string>("c1");
+  const [activeId,setActiveId]   = useState<string>("c1");
   const [text,setText]           = useState("");
   const [search,setSearch]       = useState("");
   const [showInfo,setShowInfo]   = useState(false);
@@ -256,11 +300,47 @@ export function CoachMessages() {
   const [filter,setFilter]       = useState<"all"|"unread"|"pinned">("all");
   const [showQuick,setShowQuick] = useState(false);
   const msgEndRef = useRef<HTMLDivElement>(null);
+  const activeIdRef = useRef(activeId);
+  activeIdRef.current = activeId;
+  const usingApi = convs.some((conversation) => /^\d+$/.test(conversation.id));
 
   const active = convs.find(c=>c.id===activeId)!;
 
   const totalUnread = convs.reduce((s,c)=>s+c.unread,0);
 
+  useChatWebSocket((incomingMsg) => {
+    setConvs((prev) => {
+      const convId = String(incomingMsg.conversationId);
+      const convIndex = prev.findIndex(c => c.id === convId);
+      if (convIndex === -1) {
+        // Just reload conversations list if a new one pops up
+        getConversations().then(items => {
+          setConvs(items.map(mapApiConversation));
+        }).catch(() => {});
+        return prev;
+      }
+      const conv = prev[convIndex];
+      if (conv.messages.some(m => m.id === String(incomingMsg.id))) {
+        return prev;
+      }
+      const mappedMsg = mapApiMessage(incomingMsg);
+      const isCurrentActive = activeIdRef.current === convId;
+      
+      const newConv = {
+        ...conv,
+        messages: [...conv.messages, mappedMsg],
+        lastMsg: mappedMsg.text,
+        lastTime: "Vừa xong",
+        unread: isCurrentActive ? 0 : conv.unread + 1,
+      };
+
+      if (isCurrentActive && !incomingMsg.ownMessage) {
+        markConversationRead(Number(convId)).catch(() => {});
+      }
+
+      return [newConv, ...prev.filter(c => c.id !== convId)];
+    });
+  });
   const filtered = convs.filter(c=>{
     const q = search.toLowerCase();
     if(q && !c.name.toLowerCase().includes(q) && !c.lastMsg.toLowerCase().includes(q)) return false;
@@ -273,15 +353,72 @@ export function CoachMessages() {
     msgEndRef.current?.scrollIntoView({behavior:"smooth"});
   },[activeId, active?.messages.length]);
 
+  useEffect(() => {
+    let mounted = true;
+    getConversations()
+      .then((items) => {
+        if (!mounted || items.length === 0) return;
+        const mapped = items.map(mapApiConversation);
+        setConvs(mapped);
+        setActiveId(String(items[0].id));
+      })
+      .catch(() => {
+        // Keep bundled sample conversations as fallback.
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!/^\d+$/.test(activeId)) return;
+    let mounted = true;
+    const conversationId = Number(activeId);
+
+    Promise.all([
+      getConversationMessages(conversationId, 0, 50),
+      markConversationRead(conversationId).catch(() => undefined),
+    ])
+      .then(([page]) => {
+        if (!mounted) return;
+        setConvs((prev) => prev.map((conversation) =>
+          conversation.id === activeId
+            ? { ...conversation, messages: page.content.map(mapApiMessage), unread: 0 }
+            : conversation
+        ));
+      })
+      .catch(() => {
+        // Keep current messages if fetching this conversation fails.
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [activeId]);
+
   const openConv = (id:string) => {
     setActiveId(id);
     setShowMobile("chat");
     setConvs(prev=>prev.map(c=>c.id===id?{...c,unread:0}:c));
   };
 
-  const sendMsg = () => {
+  const sendMsg = async () => {
     const t = text.trim();
     if(!t) return;
+
+    if (/^\d+$/.test(activeId)) {
+      try {
+        const sent = await sendConversationMessage(Number(activeId), t);
+        setConvs(prev=>prev.map(c=>
+          c.id===activeId ? {...c, messages:[...c.messages,mapApiMessage(sent)], lastMsg:t, lastTime:"Vừa xong"} : c
+        ));
+        setText("");
+        setShowQuick(false);
+        return;
+      } catch {
+        // Fall through to local optimistic message.
+      }
+    }
+
     const newMsg:Message = {
       id:"m"+Date.now(), from:"coach", text:t,
       time:new Date().toLocaleTimeString("vi",{hour:"2-digit",minute:"2-digit"}),
@@ -292,6 +429,7 @@ export function CoachMessages() {
     ));
     setText("");
     setShowQuick(false);
+    if (usingApi) return;
   };
 
   return (

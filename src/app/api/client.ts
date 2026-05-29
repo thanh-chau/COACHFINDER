@@ -1,4 +1,4 @@
-import { getAccessToken } from "../utils/authSession";
+import { expireAuthSession, getAccessToken } from "../utils/authSession";
 
 interface ApiResponse<T> {
   success: boolean;
@@ -9,12 +9,22 @@ interface ApiResponse<T> {
 interface ApiRequestOptions extends RequestInit {
   authenticated?: boolean;
   acceptDataWhenSuccessFalse?: boolean;
+  allowEmptyData?: boolean;
 }
 
-const API_BASE_URL = "https://www.minhthien.io.vn";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
-export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}) {
-  const { authenticated = true, acceptDataWhenSuccessFalse = false, headers, ...requestOptions } = options;
+export async function apiRequest<T>(
+  path: string,
+  options: ApiRequestOptions = {},
+) {
+  const {
+    authenticated = true,
+    acceptDataWhenSuccessFalse = false,
+    allowEmptyData = false,
+    headers,
+    ...requestOptions
+  } = options;
   const token = authenticated ? getAccessToken() : undefined;
   const requestHeaders = new Headers(headers);
 
@@ -45,17 +55,34 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   }
 
   const data = payload?.data;
-  if (!response.ok || data === undefined || data === null || (!payload?.success && !acceptDataWhenSuccessFalse)) {
+  if (response.ok && allowEmptyData && payload?.success !== false) {
+    return data as T;
+  }
+
+  if (
+    !response.ok ||
+    data === undefined ||
+    data === null ||
+    (!payload?.success && !acceptDataWhenSuccessFalse)
+  ) {
     if (response.status === 401) {
+      expireAuthSession();
       throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
     }
-    throw new Error(payload?.message || responseBody || "Yêu cầu không thành công. Vui lòng thử lại.");
+    throw new Error(
+      payload?.message ||
+        responseBody ||
+        "Yêu cầu không thành công. Vui lòng thử lại.",
+    );
   }
 
   return data;
 }
 
-export async function rawApiRequest<T>(path: string, options: ApiRequestOptions = {}) {
+export async function rawApiRequest<T>(
+  path: string,
+  options: ApiRequestOptions = {},
+) {
   const { authenticated = true, headers, ...requestOptions } = options;
   const token = authenticated ? getAccessToken() : undefined;
   const requestHeaders = new Headers(headers);
@@ -87,9 +114,14 @@ export async function rawApiRequest<T>(path: string, options: ApiRequestOptions 
 
   if (!response.ok) {
     if (response.status === 401) {
+      expireAuthSession();
       throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
     }
-    throw new Error((payload as { message?: string } | undefined)?.message || responseBody || "Yêu cầu không thành công. Vui lòng thử lại.");
+    throw new Error(
+      (payload as { message?: string } | undefined)?.message ||
+        responseBody ||
+        "Yêu cầu không thành công. Vui lòng thử lại.",
+    );
   }
 
   return payload as T;

@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "smoke:phase8": "node scripts/phase8-smoke.mjs",
+    "phase9:prepare": "node scripts/phase9-prepare-env.mjs"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
@@ -39,6 +41,9 @@
     "@radix-ui/react-toggle": "1.1.2",
     "@radix-ui/react-toggle-group": "1.1.2",
     "@radix-ui/react-tooltip": "1.1.8",
+    "@react-oauth/google": "^0.13.5",
+    "@stomp/stompjs": "^7.3.0",
+    "@types/sockjs-client": "^1.5.4",
     "@types/three": "^0.183.1",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
@@ -59,6 +64,7 @@
     "react-router": "7.13.0",
     "react-slick": "0.31.0",
     "recharts": "2.15.2",
+    "sockjs-client": "^1.6.1",
     "sonner": "2.0.3",
     "tailwind-merge": "3.2.0",
     "three": "^0.183.2",
@@ -67,6 +73,7 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.1.12",
+    "@types/react-facebook-login": "^4.1.11",
     "@vitejs/plugin-react": "4.7.0",
     "tailwindcss": "4.1.12",
     "vite": "6.3.5"

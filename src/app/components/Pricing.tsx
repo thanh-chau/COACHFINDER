@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, X, Zap, Crown, Star, Users, Video, BarChart3, Shield, Dumbbell, Globe } from "lucide-react";
+import { getCoachSubscriptionCatalog, getTraineeSubscriptionCatalog } from "../api/subscriptions";
+import type { SubscriptionPlanCard } from "../types/subscription";
 
 // ─── LEARNER PLANS ───────────────────────────────────────────────────────────
 const learnerPlans = [
@@ -141,12 +143,57 @@ function formatPrice(price: number): string {
 }
 
 type TabType = "learner" | "coach";
+type LocalPlan = (typeof learnerPlans)[number] | (typeof coachPlans)[number];
+
+function planCodeFromId(id: string) {
+  if (id.includes("premium") || id.includes("elite")) return "PREMIUM";
+  if (id.includes("pro")) return "PRO";
+  return "FREE";
+}
+
+function mapCatalogPlans(catalogPlans: SubscriptionPlanCard[], fallbackPlans: LocalPlan[]) {
+  const byCode = new Map(catalogPlans.map((plan) => [plan.planCode, plan]));
+  return fallbackPlans.map((fallback) => {
+    const plan = byCode.get(planCodeFromId(fallback.id));
+    if (!plan) return fallback;
+    return {
+      ...fallback,
+      name: plan.displayName || fallback.name,
+      tagline: plan.description || fallback.tagline,
+      monthlyPrice: plan.monthlyPrice,
+      yearlyPrice: plan.billingLabel === "YEARLY" ? Math.round(plan.billingPrice / 12) : fallback.yearlyPrice,
+      badge: plan.ribbonText || fallback.badge,
+      highlight: plan.highlighted,
+      features: plan.features.length > 0
+        ? plan.features.map((feature) => ({ text: feature.text, ok: feature.included }))
+        : fallback.features,
+    };
+  });
+}
 
 export function Pricing() {
   const [isYearly, setIsYearly] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("learner");
+  const [apiPlans, setApiPlans] = useState<LocalPlan[] | null>(null);
 
-  const plans = activeTab === "learner" ? learnerPlans : coachPlans;
+  useEffect(() => {
+    let mounted = true;
+    const loader = activeTab === "learner" ? getTraineeSubscriptionCatalog : getCoachSubscriptionCatalog;
+    const fallback = activeTab === "learner" ? learnerPlans : coachPlans;
+    loader(isYearly ? "YEARLY" : "MONTHLY")
+      .then((catalog) => {
+        if (!mounted) return;
+        setApiPlans(mapCatalogPlans(catalog.plans, fallback));
+      })
+      .catch(() => {
+        if (mounted) setApiPlans(null);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [activeTab, isYearly]);
+
+  const plans = apiPlans ?? (activeTab === "learner" ? learnerPlans : coachPlans);
 
   return (
     <section className="py-24 bg-white" id="pricing">

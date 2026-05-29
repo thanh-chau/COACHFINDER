@@ -1148,6 +1148,16 @@ export function AIAnalysis({ onNavigate }: Props) {
         </div>
       </div>
 
+      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
+        <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+        <div>
+          <div className="text-amber-800" style={{ fontWeight: 800, fontSize: "0.9rem" }}>Demo UI - can backend AI analysis endpoints</div>
+          <p className="text-amber-700 mt-1" style={{ fontSize: "0.78rem", lineHeight: 1.6 }}>
+            Ket qua hien tai la du lieu mau. Phase 7 da them wrapper cho upload/analyze video, history, detail va feedback de dau noi khi backend san sang.
+          </p>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
         {/* ── LEFT: Canvas + Upload ────────────────────────── */}

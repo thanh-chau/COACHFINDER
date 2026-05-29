@@ -13,8 +13,17 @@ import {
   Radar, PolarGrid, PolarAngleAxis
 } from "recharts";
 import { getCoachCalendarBookings } from "../api/bookings";
+import { coachWorkspaceApi } from "../api/coachWorkspace";
 import { searchMyTrainees } from "../api/trainees";
 import type { BookingListItem } from "../types/booking";
+import type {
+  CoachStudentDetail,
+  CoachStudentNote,
+  CoachStudentProgress,
+  CoachStudentSession,
+  CoachStudentSummary,
+  CoachStudentTask,
+} from "../types/coachWorkspace";
 import type { Trainee } from "../types/trainee";
 
 // ─── Avatars ──────────────────────────────────────────────────────────────────
@@ -410,6 +419,104 @@ function buildStudents(trainees: Trainee[], bookings: BookingListItem[]) {
   });
 }
 
+function buildProgressHistory(sessions: number, score: number | null) {
+  if (score === null) return [];
+  const base = Math.max(45, score - 18);
+  return ["T9", "T10", "T11", "T12", "T1", "T2", "T3"].map((month, index) => ({
+    month,
+    score: Math.min(100, Math.round(base + ((score - base) * (index + 1)) / 7)),
+    sessions: Math.max(0, Math.round((sessions * (index + 1)) / 7)),
+  }));
+}
+
+function buildRadarData(score: number | null) {
+  if (score === null) return [];
+  return [
+    { subject: "Sức mạnh", value: Math.max(35, score - 8) },
+    { subject: "Kỹ thuật", value: score },
+    { subject: "Thể lực", value: Math.max(35, score - 12) },
+    { subject: "Linh hoạt", value: Math.max(35, score - 5) },
+    { subject: "Kiên trì", value: Math.min(100, score + 7) },
+  ];
+}
+
+function mapWorkspaceSession(session: CoachStudentSession): SessionRecord {
+  return {
+    date: displayBookingDate(session.startDate),
+    type: "Lịch học",
+    duration: durationBetween(session.startTime, session.endTime),
+    note: `Trạng thái: ${session.status || "Đang xử lý"}`,
+    score: null,
+    status: session.status === "CANCELLED" ? "cancelled" : "done",
+  };
+}
+
+function mapWorkspaceTask(task: CoachStudentTask): AssignedTask {
+  return {
+    id: String(task.id),
+    title: task.title,
+    note: task.description || "",
+    dueDate: task.dueDate ? displayBookingDate(task.dueDate) : "Chưa có hạn",
+    done: task.completed,
+  };
+}
+
+function mapWorkspaceNote(note: CoachStudentNote): CoachNote {
+  return {
+    id: String(note.id),
+    date: note.createdAt ? new Date(note.createdAt).toLocaleDateString("vi-VN") : "Hôm nay",
+    content: note.content,
+  };
+}
+
+function applyWorkspaceDetail(student: Student, detail: CoachStudentDetail): Student {
+  const sessions = detail.recentSessions.map(mapWorkspaceSession);
+  return {
+    ...student,
+    sessionHistory: sessions,
+    tasks: detail.tasks.map(mapWorkspaceTask),
+    notes: detail.notes.map(mapWorkspaceNote),
+  };
+}
+
+function buildWorkspaceStudents(summaries: CoachStudentSummary[], progressList: CoachStudentProgress[]) {
+  const progressById = new Map(progressList.map(progress => [progress.traineeId, progress]));
+
+  return summaries.map((summary, index): Student => {
+    const progress = progressById.get(summary.traineeId);
+    const aiScore = progress?.averageSubmissionScore === null || progress?.averageSubmissionScore === undefined
+      ? null
+      : Math.round(progress.averageSubmissionScore);
+    const completedSessions = progress?.completedSessions ?? summary.completedSessions ?? 0;
+    const totalSessions = progress?.totalSessions ?? summary.sessions ?? 0;
+
+    return {
+      id: String(summary.traineeId),
+      name: summary.fullName,
+      avatar: summary.avatar || AVT[index % AVT.length],
+      plan: "Chưa có dữ liệu",
+      status: totalSessions > completedSessions ? "pending" : totalSessions > 0 ? "active" : "inactive",
+      goal: summary.goal || "Chưa cập nhật mục tiêu",
+      sessions: completedSessions,
+      revenue: "Chưa có dữ liệu",
+      revenueNum: 0,
+      aiScore,
+      aiScorePrev: aiScore === null ? null : Math.max(0, aiScore - 3),
+      joinDate: "Chưa có dữ liệu",
+      lastSession: summary.lastSessionDate ? displayBookingDate(summary.lastSessionDate) : "Chưa có buổi hoàn thành",
+      nextSession: null,
+      phone: summary.phone || "Chưa cập nhật",
+      weight: "Chưa cập nhật",
+      height: "Chưa cập nhật",
+      progressHistory: buildProgressHistory(completedSessions, aiScore),
+      sessionHistory: [],
+      tasks: [],
+      notes: [],
+      radarData: buildRadarData(aiScore),
+    };
+  });
+}
+
 // ─── Student Card (grid view) ─────────────────────────────────────────────────
 function StudentCard({ s, onSelect }: { s: Student; onSelect: () => void }) {
   const st = STATUS_CFG[s.status];
@@ -508,13 +615,116 @@ function StudentRow({ s, onSelect }: { s: Student; onSelect: () => void }) {
 // ─── Detail Panel ─────────────────────────────────────────────────────────────
 type DetailTab = "overview" | "history" | "tasks" | "notes";
 
-function StudentDetail({ s, onClose, onNavigate }: { s: Student; onClose: () => void; onNavigate?: (v: string) => void }) {
+function StudentDetail({
+  s,
+  onClose,
+  onNavigate,
+  onStudentChange,
+}: {
+  s: Student;
+  onClose: () => void;
+  onNavigate?: (v: string) => void;
+  onStudentChange?: (student: Student) => void;
+}) {
   const [tab, setTab] = useState<DetailTab>("overview");
   const [newNote, setNewNote] = useState("");
   const [notes, setNotes] = useState(s.notes);
   const [tasks, setTasks] = useState(s.tasks);
+  const [detailLoading, setDetailLoading] = useState(false);
   const st = STATUS_CFG[s.status];
   const pl = PLAN_CFG[s.plan];
+
+  useEffect(() => {
+    setNotes(s.notes);
+    setTasks(s.tasks);
+  }, [s.id, s.notes, s.tasks]);
+
+  useEffect(() => {
+    const traineeId = Number(s.id);
+    if (!Number.isFinite(traineeId)) return;
+    let active = true;
+    setDetailLoading(true);
+
+    coachWorkspaceApi.getStudent(traineeId)
+      .then(detail => {
+        if (!active) return;
+        const nextStudent = applyWorkspaceDetail(s, detail);
+        setNotes(nextStudent.notes);
+        setTasks(nextStudent.tasks);
+        onStudentChange?.(nextStudent);
+      })
+      .catch(() => {
+        if (!active) return;
+      })
+      .finally(() => {
+        if (active) setDetailLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [s.id]);
+
+  const updateTaskStatus = async (task: AssignedTask) => {
+    const traineeId = Number(s.id);
+    const taskId = Number(task.id);
+    const nextDone = !task.done;
+    setTasks(prev => prev.map(item => item.id === task.id ? { ...item, done: nextDone } : item));
+
+    if (!Number.isFinite(traineeId) || !Number.isFinite(taskId)) return;
+
+    try {
+      const updated = await coachWorkspaceApi.updateTask(traineeId, taskId, {
+        title: task.title,
+        description: task.note,
+        completed: nextDone,
+      });
+      const mapped = mapWorkspaceTask(updated);
+      setTasks(prev => prev.map(item => item.id === task.id ? mapped : item));
+    } catch {
+      setTasks(prev => prev.map(item => item.id === task.id ? { ...item, done: task.done } : item));
+    }
+  };
+
+  const deleteNote = async (note: CoachNote) => {
+    const previous = notes;
+    const traineeId = Number(s.id);
+    const noteId = Number(note.id);
+    setNotes(prev => prev.filter(item => item.id !== note.id));
+
+    if (!Number.isFinite(traineeId) || !Number.isFinite(noteId)) return;
+
+    try {
+      await coachWorkspaceApi.deleteNote(traineeId, noteId);
+    } catch {
+      setNotes(previous);
+    }
+  };
+
+  const addNote = async () => {
+    const content = newNote.trim();
+    const traineeId = Number(s.id);
+    if (!content) return;
+
+    const optimisticNote = {
+      id: `n${Date.now()}`,
+      date: new Date().toLocaleDateString("vi-VN"),
+      content,
+    };
+    setNotes(prev => [optimisticNote, ...prev]);
+    setNewNote("");
+
+    if (!Number.isFinite(traineeId)) return;
+
+    try {
+      const created = await coachWorkspaceApi.createNote(traineeId, { content });
+      const mapped = mapWorkspaceNote(created);
+      setNotes(prev => prev.map(item => item.id === optimisticNote.id ? mapped : item));
+    } catch {
+      setNotes(prev => prev.filter(item => item.id !== optimisticNote.id));
+      setNewNote(content);
+    }
+  };
 
   const tabs: { id: DetailTab; label: string; icon: React.ElementType }[] = [
     { id: "overview", label: "Tổng quan", icon: LayoutDashboard2 },
@@ -580,6 +790,11 @@ function StudentDetail({ s, onClose, onNavigate }: { s: Student; onClose: () => 
 
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {detailLoading && (
+          <div className="rounded-xl bg-blue-50 px-3 py-2 text-blue-600" style={{ fontSize: "0.75rem", fontWeight: 600 }}>
+            Đang đồng bộ dữ liệu học viên...
+          </div>
+        )}
 
         {/* ── OVERVIEW ── */}
         {tab === "overview" && (
@@ -708,7 +923,7 @@ function StudentDetail({ s, onClose, onNavigate }: { s: Student; onClose: () => 
               <div key={task.id} className={`p-3.5 rounded-xl border-2 transition-all ${task.done ? "border-emerald-200 bg-emerald-50/40" : "border-gray-100 bg-white"}`}>
                 <div className="flex items-start gap-3">
                   <button
-                    onClick={() => setTasks(prev => prev.map(t => t.id === task.id ? { ...t, done: !t.done } : t))}
+                    onClick={() => updateTaskStatus(task)}
                     className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${task.done ? "border-emerald-500 bg-emerald-500" : "border-gray-300 hover:border-blue-400"}`}
                   >
                     {task.done && <Check className="w-3 h-3 text-white" />}
@@ -734,7 +949,7 @@ function StudentDetail({ s, onClose, onNavigate }: { s: Student; onClose: () => 
                 {tasks.filter(t => t.done).length}/{tasks.length} bài hoàn thành
               </div>
               <div className="w-full bg-gray-100 rounded-full h-1.5 mt-1.5">
-                <div className="h-1.5 rounded-full bg-emerald-500 transition-all" style={{ width: `${(tasks.filter(t=>t.done).length / tasks.length) * 100}%` }} />
+                <div className="h-1.5 rounded-full bg-emerald-500 transition-all" style={{ width: `${tasks.length ? (tasks.filter(t=>t.done).length / tasks.length) * 100 : 0}%` }} />
               </div>
             </div>
           </div>
@@ -749,7 +964,7 @@ function StudentDetail({ s, onClose, onNavigate }: { s: Student; onClose: () => 
                 <div className="flex items-center justify-between mb-2">
                   <span style={{ fontSize: "0.72rem", fontWeight: 600 }} className="text-amber-600">📅 {note.date}</span>
                   <button
-                    onClick={() => setNotes(prev => prev.filter(n => n.id !== note.id))}
+                    onClick={() => deleteNote(note)}
                     className="p-1 rounded-lg hover:bg-amber-200/50 text-amber-400 hover:text-amber-600 transition-colors"
                   >
                     <Trash2 className="w-3 h-3" />
@@ -771,11 +986,7 @@ function StudentDetail({ s, onClose, onNavigate }: { s: Student; onClose: () => 
               <div className="flex justify-end mt-2">
                 <button
                   disabled={!newNote.trim()}
-                  onClick={() => {
-                    if (!newNote.trim()) return;
-                    setNotes(prev => [{ id: `n${Date.now()}`, date: "05/03/2026", content: newNote.trim() }, ...prev]);
-                    setNewNote("");
-                  }}
+                  onClick={addNote}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors ${newNote.trim() ? "bg-blue-500 text-white hover:bg-blue-600" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
                   style={{ fontSize: "0.75rem", fontWeight: 700 }}
                 >
@@ -823,17 +1034,29 @@ export function CoachStudents({ onNavigate }: CoachStudentsProps) {
     setLoading(true);
     setLoadError("");
 
-    Promise.all([
-      searchMyTrainees("").catch(() => []),
-      getCoachCalendarBookings().catch(() => []),
-    ])
-      .then(([trainees, bookings]) => {
+    coachWorkspaceApi.getStudents()
+      .then(async summaries => {
+        const progressList = await Promise.all(
+          summaries.map(summary =>
+            coachWorkspaceApi.getStudentProgress(summary.traineeId).catch(() => null)
+          )
+        );
+        return buildWorkspaceStudents(
+          summaries,
+          progressList.filter((item): item is CoachStudentProgress => item !== null)
+        );
+      })
+      .catch(async () => {
+        const [trainees, bookings] = await Promise.all([
+          searchMyTrainees("").catch(() => []),
+          getCoachCalendarBookings().catch(() => []),
+        ]);
+        return buildStudents(trainees, bookings);
+      })
+      .then(nextStudents => {
         if (!active) return;
-        const nextStudents = buildStudents(trainees, bookings);
         setStudents(nextStudents);
-        if (nextStudents.length && !selectedId) {
-          setSelectedId(nextStudents[0].id);
-        }
+        setSelectedId(current => current ?? nextStudents[0]?.id ?? null);
       })
       .catch(reason => {
         if (!active) return;
@@ -1046,6 +1269,9 @@ export function CoachStudents({ onNavigate }: CoachStudentsProps) {
             s={selected}
             onClose={() => setSelectedId(null)}
             onNavigate={onNavigate}
+            onStudentChange={nextStudent => {
+              setStudents(prev => prev.map(item => item.id === nextStudent.id ? nextStudent : item));
+            }}
           />
         </div>
       ) : (

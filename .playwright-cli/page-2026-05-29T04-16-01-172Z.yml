@@ -1,0 +1,928 @@
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e6]:
+      - link "CoachFinder" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - img [ref=e9]
+        - generic [ref=e11]: CoachFinder
+      - generic [ref=e12]:
+        - link "Tìm HLV" [ref=e13] [cursor=pointer]:
+          - /url: "#coaches"
+        - link "Môn thể thao" [ref=e14] [cursor=pointer]:
+          - /url: "#sports"
+        - link "AI Phân tích" [ref=e15] [cursor=pointer]:
+          - /url: "#ai-analysis"
+        - link "Video 360°" [ref=e16] [cursor=pointer]:
+          - /url: "#video-360"
+        - link "Bảng giá" [ref=e17] [cursor=pointer]:
+          - /url: "#pricing"
+      - generic [ref=e18]:
+        - link "Đăng nhập" [ref=e19] [cursor=pointer]:
+          - /url: /auth
+        - link "Đăng ký miễn phí" [ref=e20] [cursor=pointer]:
+          - /url: /auth
+  - generic [ref=e22]:
+    - img "Sports coaching" [ref=e24]
+    - generic [ref=e29]:
+      - generic [ref=e30]:
+        - generic [ref=e33]: "Nền tảng huấn luyện thể thao #1 Việt Nam"
+        - heading "Tìm Huấn Luyện Viên Phù Hợp Với Bạn" [level=1] [ref=e34]
+        - paragraph [ref=e35]: Kết nối với hàng nghìn HLV thể thao chuyên nghiệp được chứng nhận. Luyện tập theo lịch của bạn, đạt mục tiêu nhanh hơn.
+        - generic [ref=e36]:
+          - generic [ref=e37]:
+            - img [ref=e38]
+            - textbox "Bạn muốn học môn thể thao gì?" [ref=e41]
+          - generic [ref=e42]:
+            - generic [ref=e43]: 📍
+            - textbox "Khu vực (TP. HCM, Hà Nội...)" [ref=e44]
+          - button "Tìm HLV" [ref=e45]
+        - generic [ref=e46]:
+          - generic [ref=e47]: "Phổ biến:"
+          - button "Bóng đá" [ref=e48]
+          - button "Thể hình" [ref=e49]
+          - button "Bơi lội" [ref=e50]
+          - button "Tennis" [ref=e51]
+          - button "Yoga" [ref=e52]
+          - button "Quyền anh" [ref=e53]
+          - button "Chạy bộ" [ref=e54]
+          - button "Bóng rổ" [ref=e55]
+        - generic [ref=e56]:
+          - generic [ref=e57]:
+            - img [ref=e58]
+            - generic [ref=e60]: HLV được xác minh
+          - generic [ref=e61]:
+            - img [ref=e62]
+            - generic [ref=e64]: Đánh giá thực từ học viên
+          - generic [ref=e65]:
+            - img [ref=e66]
+            - generic [ref=e76]: AI phân tích động tác
+      - generic [ref=e77]:
+        - generic [ref=e78]:
+          - generic [ref=e79]: 2,500+
+          - generic [ref=e80]: HLV chuyên nghiệp
+        - generic [ref=e81]:
+          - generic [ref=e82]: 50,000+
+          - generic [ref=e83]: Học viên
+        - generic [ref=e84]:
+          - generic [ref=e85]: 30+
+          - generic [ref=e86]: Môn thể thao
+        - generic [ref=e87]:
+          - generic [ref=e88]: 4.9★
+          - generic [ref=e89]: Đánh giá trung bình
+  - generic [ref=e92]:
+    - generic [ref=e93]:
+      - generic [ref=e94]:
+        - generic [ref=e96]: ⭐ HLV nổi bật tuần này
+        - heading "Gặp Gỡ Các HLV Xuất Sắc" [level=2] [ref=e97]
+        - paragraph [ref=e98]: Được chọn lọc dựa trên đánh giá và thành tích thực tế.
+      - button "Xem tất cả HLV →" [ref=e99]
+    - generic [ref=e100]:
+      - generic [ref=e101]:
+        - generic [ref=e102]:
+          - img "Nguyễn Minh Tuấn" [ref=e103]
+          - generic [ref=e105]: Top HLV
+          - button [ref=e106]:
+            - img [ref=e107]
+          - generic [ref=e109]:
+            - img [ref=e110]
+            - generic [ref=e112]: "4.9"
+            - generic [ref=e113]: (312)
+        - generic [ref=e114]:
+          - generic [ref=e115]:
+            - heading "Nguyễn Minh Tuấn" [level=3] [ref=e116]
+            - img [ref=e117]
+          - paragraph [ref=e120]: HLV Thể hình & PT
+          - generic [ref=e121]:
+            - img [ref=e122]
+            - generic [ref=e125]: TP. Hồ Chí Minh
+            - generic [ref=e126]: •
+            - generic [ref=e127]: 8 năm
+          - generic [ref=e128]:
+            - generic [ref=e129]: Giảm cân
+            - generic [ref=e130]: Tăng cơ
+            - generic [ref=e131]: Dinh dưỡng
+          - generic [ref=e132]:
+            - generic [ref=e133]:
+              - generic [ref=e134]: 250.000đ/giờ
+              - generic [ref=e135]: 156 học viên
+            - button "Đặt lịch" [ref=e136]
+      - generic [ref=e137]:
+        - generic [ref=e138]:
+          - img "Trần Thị Lan Anh" [ref=e139]
+          - generic [ref=e141]: Pro
+          - button [ref=e142]:
+            - img [ref=e143]
+          - generic [ref=e145]:
+            - img [ref=e146]
+            - generic [ref=e148]: "4.8"
+            - generic [ref=e149]: (247)
+        - generic [ref=e150]:
+          - generic [ref=e151]:
+            - heading "Trần Thị Lan Anh" [level=3] [ref=e152]
+            - img [ref=e153]
+          - paragraph [ref=e156]: HLV Yoga & Pilates
+          - generic [ref=e157]:
+            - img [ref=e158]
+            - generic [ref=e161]: Hà Nội
+            - generic [ref=e162]: •
+            - generic [ref=e163]: 6 năm
+          - generic [ref=e164]:
+            - generic [ref=e165]: Yoga
+            - generic [ref=e166]: Thiền định
+            - generic [ref=e167]: Linh hoạt
+          - generic [ref=e168]:
+            - generic [ref=e169]:
+              - generic [ref=e170]: 200.000đ/giờ
+              - generic [ref=e171]: 203 học viên
+            - button "Đặt lịch" [ref=e172]
+      - generic [ref=e173]:
+        - generic [ref=e174]:
+          - img "Lê Văn Hùng" [ref=e175]
+          - generic [ref=e177]: Premium
+          - button [ref=e178]:
+            - img [ref=e179]
+          - generic [ref=e181]:
+            - img [ref=e182]
+            - generic [ref=e184]: "4.7"
+            - generic [ref=e185]: (189)
+        - generic [ref=e186]:
+          - generic [ref=e187]:
+            - heading "Lê Văn Hùng" [level=3] [ref=e188]
+            - img [ref=e189]
+          - paragraph [ref=e192]: HLV Thể lực & CrossFit
+          - generic [ref=e193]:
+            - img [ref=e194]
+            - generic [ref=e197]: Đà Nẵng
+            - generic [ref=e198]: •
+            - generic [ref=e199]: 10 năm
+          - generic [ref=e200]:
+            - generic [ref=e201]: CrossFit
+            - generic [ref=e202]: Sức mạnh
+            - generic [ref=e203]: HIIT
+          - generic [ref=e204]:
+            - generic [ref=e205]:
+              - generic [ref=e206]: 300.000đ/giờ
+              - generic [ref=e207]: 98 học viên
+            - button "Đặt lịch" [ref=e208]
+      - generic [ref=e209]:
+        - generic [ref=e210]:
+          - img "Phạm Quốc Bảo" [ref=e211]
+          - generic [ref=e213]: Top HLV
+          - button [ref=e214]:
+            - img [ref=e215]
+          - generic [ref=e217]:
+            - img [ref=e218]
+            - generic [ref=e220]: "4.9"
+            - generic [ref=e221]: (421)
+        - generic [ref=e222]:
+          - generic [ref=e223]:
+            - heading "Phạm Quốc Bảo" [level=3] [ref=e224]
+            - img [ref=e225]
+          - paragraph [ref=e228]: HLV Chạy bộ & Cardio
+          - generic [ref=e229]:
+            - img [ref=e230]
+            - generic [ref=e233]: TP. Hồ Chí Minh
+            - generic [ref=e234]: •
+            - generic [ref=e235]: 12 năm
+          - generic [ref=e236]:
+            - generic [ref=e237]: Marathon
+            - generic [ref=e238]: Cardio
+            - generic [ref=e239]: Chạy bộ
+          - generic [ref=e240]:
+            - generic [ref=e241]:
+              - generic [ref=e242]: 180.000đ/giờ
+              - generic [ref=e243]: 287 học viên
+            - button "Đặt lịch" [ref=e244]
+  - generic [ref=e247]:
+    - generic [ref=e248]:
+      - generic [ref=e250]: 🏆 Danh mục môn thể thao
+      - heading "Chọn Môn Thể Thao Của Bạn" [level=2] [ref=e251]
+      - paragraph [ref=e252]: Chúng tôi có HLV chuyên nghiệp cho hơn 30 môn thể thao khác nhau. Từ thể hình, bóng đá đến yoga và thiền định.
+    - generic [ref=e253]:
+      - button "Thể hình & PT Thể hình & PT 420 HLV" [ref=e254] [cursor=pointer]:
+        - img "Thể hình & PT" [ref=e255]
+        - generic [ref=e257]:
+          - generic [ref=e258]: Thể hình & PT
+          - generic [ref=e259]: 420 HLV
+      - button "Bóng đá Bóng đá 315 HLV" [ref=e261] [cursor=pointer]:
+        - img "Bóng đá" [ref=e262]
+        - generic [ref=e264]:
+          - generic [ref=e265]: Bóng đá
+          - generic [ref=e266]: 315 HLV
+      - button "Bơi lội Bơi lội 198 HLV" [ref=e268] [cursor=pointer]:
+        - img "Bơi lội" [ref=e269]
+        - generic [ref=e271]:
+          - generic [ref=e272]: Bơi lội
+          - generic [ref=e273]: 198 HLV
+      - button "Yoga & Pilates Yoga & Pilates 267 HLV" [ref=e275] [cursor=pointer]:
+        - img "Yoga & Pilates" [ref=e276]
+        - generic [ref=e278]:
+          - generic [ref=e279]: Yoga & Pilates
+          - generic [ref=e280]: 267 HLV
+      - button "Quyền anh & MMA Quyền anh & MMA 143 HLV" [ref=e282] [cursor=pointer]:
+        - img "Quyền anh & MMA" [ref=e283]
+        - generic [ref=e285]:
+          - generic [ref=e286]: Quyền anh & MMA
+          - generic [ref=e287]: 143 HLV
+      - button "Bóng rổ Bóng rổ 112 HLV" [ref=e289] [cursor=pointer]:
+        - img "Bóng rổ" [ref=e290]
+        - generic [ref=e292]:
+          - generic [ref=e293]: Bóng rổ
+          - generic [ref=e294]: 112 HLV
+      - button "Chạy bộ Chạy bộ 231 HLV" [ref=e296] [cursor=pointer]:
+        - img "Chạy bộ" [ref=e297]
+        - generic [ref=e299]:
+          - generic [ref=e300]: Chạy bộ
+          - generic [ref=e301]: 231 HLV
+      - button "🏅 Xem tất cả →" [ref=e303] [cursor=pointer]:
+        - generic [ref=e305]: 🏅
+        - generic [ref=e307]: Xem tất cả →
+  - generic [ref=e311]:
+    - generic [ref=e312]:
+      - generic [ref=e314]: ⚡ Đơn giản & nhanh chóng
+      - heading "Bắt Đầu Chỉ Trong 4 Bước" [level=2] [ref=e315]
+      - paragraph [ref=e316]: Từ việc tìm HLV đến buổi tập đầu tiên, mọi thứ diễn ra nhanh chóng và dễ dàng.
+    - generic [ref=e317]:
+      - generic [ref=e320]:
+        - img [ref=e322]
+        - generic [ref=e325]: BƯỚC 01
+        - heading "Tìm HLV phù hợp" [level=3] [ref=e326]
+        - paragraph [ref=e327]: Dùng bộ lọc thông minh để tìm HLV theo môn thể thao, khu vực, lịch trống và mức giá phù hợp với bạn.
+      - generic [ref=e330]:
+        - img [ref=e332]
+        - generic [ref=e336]: BƯỚC 02
+        - heading "Xem hồ sơ & video 360°" [level=3] [ref=e337]
+        - paragraph [ref=e338]: Xem chứng chỉ, kinh nghiệm và thư viện video 360° của HLV. Quan sát kỹ thuật từ mọi góc độ trước khi đặt lịch.
+      - generic [ref=e341]:
+        - img [ref=e343]
+        - generic [ref=e345]: BƯỚC 03
+        - heading "Đặt lịch & tập luyện" [level=3] [ref=e346]
+        - paragraph [ref=e347]: Đặt buổi tập trực tiếp hoặc online. Sau buổi tập, upload video để AI phân tích động tác ngay lập tức.
+      - generic [ref=e349]:
+        - img [ref=e351]
+        - generic [ref=e361]: BƯỚC 04
+        - heading "AI phân tích & cải thiện" [level=3] [ref=e362]
+        - paragraph [ref=e363]: AI nhận dạng 33 điểm khớp, chấm điểm kỹ thuật, phát hiện lỗi và đề xuất bài tập khắc phục chính xác.
+  - generic [ref=e370]:
+    - generic [ref=e371]:
+      - generic [ref=e372]:
+        - img [ref=e373]
+        - generic [ref=e383]: AI-Powered · Độc quyền trên CoachFinder
+      - heading "AI Phân Tích Động Tác Thời Gian Thực" [level=2] [ref=e384]
+      - paragraph [ref=e385]: Upload video luyện tập, AI sẽ phân tích toàn bộ động tác, phát hiện lỗi kỹ thuật và đưa ra phản hồi chi tiết chỉ trong 30 giây — như có HLV bên cạnh 24/7.
+    - generic [ref=e386]:
+      - generic [ref=e387]:
+        - generic [ref=e388]:
+          - generic [ref=e389]:
+            - generic [ref=e394]:
+              - img [ref=e395]
+              - generic [ref=e398]: squat_video_001.mp4
+            - generic [ref=e401]: LIVE ANALYSIS
+          - generic [ref=e402]:
+            - img "Video analysis" [ref=e403]
+            - img [ref=e404]
+            - generic [ref=e438]:
+              - generic [ref=e439]: FORM SCORE
+              - generic [ref=e440]: "87"
+              - generic [ref=e441]: /100
+            - generic [ref=e442]:
+              - img [ref=e443]
+              - generic [ref=e453]: AI ON
+            - generic [ref=e455]: ⚠ Góc khuỷu tay +12°
+            - generic [ref=e459]:
+              - button [ref=e460]:
+                - img [ref=e461]
+              - generic [ref=e464]: 0:31 / 0:50
+              - generic [ref=e467]: "Phân tích khung #154"
+          - button "Phân tích lại" [ref=e469]:
+            - img [ref=e470]
+            - text: Phân tích lại
+        - generic [ref=e480] [cursor=pointer]:
+          - img [ref=e482]
+          - generic [ref=e485]:
+            - generic [ref=e486]: Upload video luyện tập của bạn
+            - generic [ref=e487]: MP4, MOV, AVI · Tối đa 500MB · Mọi góc quay
+          - generic [ref=e488]: Chọn file
+      - generic [ref=e489]:
+        - generic [ref=e490]:
+          - button "📊 Chỉ số" [ref=e491]
+          - button "💡 Phản hồi AI" [ref=e492]
+        - generic [ref=e493]:
+          - generic [ref=e494]: Chỉ số hiệu suất
+          - generic [ref=e495]:
+            - generic [ref=e497]:
+              - generic [ref=e498]: Điểm hình thức
+              - generic [ref=e499]: 87/100
+            - generic [ref=e503]:
+              - generic [ref=e504]: Cân bằng cơ thể
+              - generic [ref=e505]: 92/100
+            - generic [ref=e509]:
+              - generic [ref=e510]: Biên độ chuyển động
+              - generic [ref=e511]: 74/100
+            - generic [ref=e515]:
+              - generic [ref=e516]: Đồng bộ nhịp thở
+              - generic [ref=e517]: 81/100
+        - generic [ref=e520]:
+          - generic [ref=e521]:
+            - img [ref=e522]
+            - generic [ref=e525]:
+              - generic [ref=e526]: "87"
+              - generic [ref=e527]: / 100
+          - generic [ref=e528]:
+            - generic [ref=e529]: "Điểm tổng thể: Tốt"
+            - generic [ref=e530]: Động tác của bạn đạt chất lượng tốt. Cần cải thiện thêm góc khuỷu tay và tốc độ xuống để đạt điểm Xuất sắc.
+        - generic [ref=e531]:
+          - generic [ref=e532]: Phân tích theo khung hình
+          - generic [ref=e533]:
+            - generic [ref=e534]: "92"
+            - generic [ref=e537]: "88"
+            - generic [ref=e540]: "75"
+            - generic [ref=e543]: "87"
+            - generic [ref=e546]: "91"
+            - generic [ref=e549]: "83"
+            - generic [ref=e552]: "89"
+            - generic [ref=e555]: "78"
+            - generic [ref=e558]: "90"
+            - generic [ref=e561]: "85"
+    - generic [ref=e564]:
+      - generic [ref=e565]:
+        - img [ref=e567]
+        - generic [ref=e577]: Nhận dạng 33 điểm khớp
+        - paragraph [ref=e578]: AI phân tích toàn bộ bộ xương với 33 điểm khớp theo thời gian thực, độ chính xác 97%
+      - generic [ref=e579]:
+        - img [ref=e581]
+        - generic [ref=e585]: So sánh chuẩn kỹ thuật
+        - paragraph [ref=e586]: Tự động so sánh động tác của bạn với cơ sở dữ liệu 10,000+ video chuẩn từ HLV hàng đầu
+      - generic [ref=e587]:
+        - img [ref=e589]
+        - generic [ref=e591]: Báo cáo chi tiết tức thì
+        - paragraph [ref=e592]: Nhận báo cáo PDF đầy đủ trong 30 giây sau khi upload video, kèm hướng dẫn cải thiện
+      - generic [ref=e593]:
+        - img [ref=e595]
+        - generic [ref=e597]: Phản hồi từ AI Coach
+        - paragraph [ref=e598]: AI Coach phân tích lỗi kỹ thuật và đề xuất bài tập khắc phục phù hợp với trình độ của bạn
+    - generic [ref=e599]:
+      - generic [ref=e602]: "Free: 3 video phân tích/tháng"
+      - generic [ref=e603]:
+        - img [ref=e604]
+        - generic [ref=e606]: "Pro: 30 video/tháng + báo cáo PDF"
+      - generic [ref=e608]: "👑 Premium: Không giới hạn + AI Coach 1-1"
+  - generic [ref=e611]:
+    - generic [ref=e612]:
+      - generic [ref=e613]:
+        - img [ref=e614]
+        - generic [ref=e617]: Dành cho Huấn Luyện Viên
+      - heading "Studio Coach 360° — Xây Dựng Thương Hiệu Cá Nhân" [level=2] [ref=e618]
+      - paragraph [ref=e619]: Tạo thư viện video coaching chuyên nghiệp với công nghệ 360°. Thu hút học viên, tăng doanh thu và xây dựng thương hiệu HLV số một trong môn của bạn.
+    - generic [ref=e620]:
+      - generic [ref=e621]:
+        - generic [ref=e622]:
+          - img "Coach" [ref=e623]
+          - generic [ref=e624]:
+            - generic [ref=e625]: Nguyễn Minh Tuấn
+            - generic [ref=e626]: HLV Thể hình · Premium Coach
+        - generic [ref=e627]:
+          - generic [ref=e629]: 👑 Premium
+          - button "Upload video 360°" [ref=e630]:
+            - img [ref=e631]
+            - text: Upload video 360°
+      - generic [ref=e634]:
+        - button "Tổng quan" [ref=e635]:
+          - img [ref=e636]
+          - generic [ref=e638]: Tổng quan
+        - button "Video của tôi" [ref=e639]:
+          - img [ref=e640]
+          - generic [ref=e642]: Video của tôi
+        - button "Học viên" [ref=e643]:
+          - img [ref=e644]
+          - generic [ref=e649]: Học viên
+        - button "Cài đặt" [ref=e650]:
+          - img [ref=e651]
+          - generic [ref=e654]: Cài đặt
+      - generic [ref=e655]:
+        - generic [ref=e656]:
+          - generic [ref=e657]:
+            - generic [ref=e658]:
+              - generic [ref=e659]: Học viên active
+              - img [ref=e660]
+            - generic [ref=e665]: "156"
+            - generic [ref=e666]:
+              - img [ref=e667]
+              - text: +12 tháng này
+          - generic [ref=e670]:
+            - generic [ref=e671]:
+              - generic [ref=e672]: Lượt xem video
+              - img [ref=e673]
+            - generic [ref=e676]: 24.8K
+            - generic [ref=e677]:
+              - img [ref=e678]
+              - text: +34% so với tháng trước
+          - generic [ref=e681]:
+            - generic [ref=e682]:
+              - generic [ref=e683]: Thu nhập tháng này
+              - img [ref=e684]
+            - generic [ref=e686]: 12.4M đ
+            - generic [ref=e687]:
+              - img [ref=e688]
+              - text: +18% so với tháng trước
+          - generic [ref=e691]:
+            - generic [ref=e692]:
+              - generic [ref=e693]: Đánh giá trung bình
+              - img [ref=e694]
+            - generic [ref=e696]: 4.9★
+            - generic [ref=e697]:
+              - img [ref=e698]
+              - text: Từ 312 đánh giá
+        - generic [ref=e701]:
+          - generic [ref=e702]:
+            - generic [ref=e703]:
+              - heading "Video gần đây" [level=4] [ref=e704]
+              - button "Xem tất cả →" [ref=e705]
+            - generic [ref=e706]:
+              - generic [ref=e707] [cursor=pointer]:
+                - generic [ref=e708]:
+                  - img "Squat chuẩn kỹ thuật 360°" [ref=e709]
+                  - img [ref=e712]
+                  - generic [ref=e714]: 360°
+                - generic [ref=e715]:
+                  - generic [ref=e716]: Squat chuẩn kỹ thuật 360°
+                  - generic [ref=e717]:
+                    - generic [ref=e718]:
+                      - img [ref=e719]
+                      - generic [ref=e722]: 1,420
+                    - generic [ref=e723]:
+                      - img [ref=e724]
+                      - generic [ref=e726]: "87"
+                    - generic [ref=e727]:
+                      - img [ref=e728]
+                      - generic [ref=e731]: 4:32
+              - generic [ref=e732] [cursor=pointer]:
+                - generic [ref=e733]:
+                  - img "Deadlift form guide" [ref=e734]
+                  - img [ref=e737]
+                  - generic [ref=e739]: Tutorial
+                - generic [ref=e740]:
+                  - generic [ref=e741]: Deadlift form guide
+                  - generic [ref=e742]:
+                    - generic [ref=e743]:
+                      - img [ref=e744]
+                      - generic [ref=e747]: "980"
+                    - generic [ref=e748]:
+                      - img [ref=e749]
+                      - generic [ref=e751]: "64"
+                    - generic [ref=e752]:
+                      - img [ref=e753]
+                      - generic [ref=e756]: 6:18
+              - generic [ref=e757] [cursor=pointer]:
+                - generic [ref=e758]:
+                  - img "Warmup routine full body" [ref=e759]
+                  - img [ref=e762]
+                  - generic [ref=e764]: 360°
+                - generic [ref=e765]:
+                  - generic [ref=e766]: Warmup routine full body
+                  - generic [ref=e767]:
+                    - generic [ref=e768]:
+                      - img [ref=e769]
+                      - generic [ref=e772]: 2,310
+                    - generic [ref=e773]:
+                      - img [ref=e774]
+                      - generic [ref=e776]: "156"
+                    - generic [ref=e777]:
+                      - img [ref=e778]
+                      - generic [ref=e781]: 8:45
+              - generic [ref=e782] [cursor=pointer]:
+                - generic [ref=e783]:
+                  - img "Progressive overload tips" [ref=e784]
+                  - img [ref=e787]
+                  - generic [ref=e789]: Tips
+                - generic [ref=e790]:
+                  - generic [ref=e791]: Progressive overload tips
+                  - generic [ref=e792]:
+                    - generic [ref=e793]:
+                      - img [ref=e794]
+                      - generic [ref=e797]: "670"
+                    - generic [ref=e798]:
+                      - img [ref=e799]
+                      - generic [ref=e801]: "41"
+                    - generic [ref=e802]:
+                      - img [ref=e803]
+                      - generic [ref=e806]: 3:22
+          - generic [ref=e807]:
+            - heading "Upload Video 360°" [level=4] [ref=e808]
+            - generic [ref=e809] [cursor=pointer]:
+              - img "360 preview" [ref=e810]
+              - generic [ref=e811]:
+                - img [ref=e813]
+                - generic [ref=e816]: Kéo thả video 360° vào đây
+                - generic [ref=e817]: .mp4 · Equirectangular hoặc fisheye
+              - generic [ref=e818]:
+                - img [ref=e819]
+                - generic [ref=e822]: 360°
+            - generic [ref=e823]:
+              - generic [ref=e824]:
+                - generic [ref=e825]: Chất lượng xuất
+                - generic [ref=e826]:
+                  - generic [ref=e827]: 4K 360°
+                  - img [ref=e828]
+              - generic [ref=e833]:
+                - generic [ref=e834]: Chế độ xem
+                - generic [ref=e835]:
+                  - generic [ref=e836]: Equirectangular
+                  - img [ref=e837]
+              - generic [ref=e842]:
+                - generic [ref=e843]: Quyền xem
+                - generic [ref=e844]:
+                  - generic [ref=e845]: Học viên của tôi
+                  - img [ref=e846]
+    - generic [ref=e851]:
+      - generic [ref=e852]:
+        - img [ref=e854]
+        - generic [ref=e857]: Upload video 360°
+        - paragraph [ref=e858]: Hỗ trợ camera 360° chuyên dụng (GoPro Max, Insta360, Ricoh Theta). Học viên xem từ mọi góc độ để học kỹ thuật chuẩn nhất.
+        - generic [ref=e859]: Pro & Premium
+      - generic [ref=e860]:
+        - img [ref=e862]
+        - generic [ref=e866]: Annotation & Chú thích
+        - paragraph [ref=e867]: Thêm chú thích, mũi tên và điểm nhấn trực tiếp lên video 360° để hướng dẫn học viên rõ ràng hơn.
+        - generic [ref=e868]: Pro & Premium
+      - generic [ref=e869]:
+        - img [ref=e871]
+        - generic [ref=e873]: Analytics chi tiết
+        - paragraph [ref=e874]: Theo dõi ai xem video của bạn, thời gian xem, điểm drop-off. Tối ưu nội dung dựa trên dữ liệu thực.
+        - generic [ref=e875]: Premium
+      - generic [ref=e876]:
+        - img [ref=e878]
+        - generic [ref=e881]: Thư viện công khai
+        - paragraph [ref=e882]: Xây dựng thư viện video coaching cá nhân. Học viên tiềm năng xem trước để tin tưởng và đặt lịch với bạn.
+        - generic [ref=e883]: Tất cả gói
+  - generic [ref=e886]:
+    - generic [ref=e887]:
+      - generic [ref=e889]: 💎 Gói dịch vụ
+      - heading "Chọn Gói Phù Hợp Với Bạn" [level=2] [ref=e890]
+      - paragraph [ref=e891]: Bắt đầu miễn phí, nâng cấp khi sẵn sàng. Không ràng buộc, hủy bất cứ lúc nào.
+    - generic [ref=e893]:
+      - button "Học viên" [ref=e894]:
+        - img [ref=e895]
+        - text: Học viên
+      - button "Huấn luyện viên" [ref=e900]:
+        - img [ref=e901]
+        - text: Huấn luyện viên
+    - generic [ref=e903]:
+      - generic [ref=e904]: Hàng tháng
+      - button [ref=e905]
+      - generic [ref=e907]: Hàng năm
+    - generic [ref=e908]:
+      - generic [ref=e909]:
+        - generic [ref=e910]:
+          - generic [ref=e911]:
+            - img [ref=e913]
+            - generic [ref=e915]:
+              - generic [ref=e916]: Gói Thường
+              - generic [ref=e917]: Phù hợp cho người mới bắt đầu
+          - generic [ref=e919]: 0đ
+          - paragraph [ref=e920]: Miễn phí mãi mãi
+        - generic [ref=e921]:
+          - list [ref=e922]:
+            - listitem [ref=e923]:
+              - img [ref=e925]
+              - generic [ref=e927]: Tạo tài khoản học viên
+            - listitem [ref=e928]:
+              - img [ref=e930]
+              - generic [ref=e932]: Xem hồ sơ HLV
+            - listitem [ref=e933]:
+              - img [ref=e935]
+              - generic [ref=e937]: Tìm kiếm và lọc HLV theo môn học, trình độ, mục tiêu
+            - listitem [ref=e938]:
+              - img [ref=e940]
+              - generic [ref=e942]: Đặt lịch học
+            - listitem [ref=e943]:
+              - img [ref=e945]
+              - generic [ref=e947]: Lưu HLV yêu thích
+            - listitem [ref=e948]:
+              - img [ref=e950]
+              - generic [ref=e952]: Xem lịch sử buổi học
+            - listitem [ref=e953]:
+              - img [ref=e955]
+              - generic [ref=e957]: Nhận hỗ trợ cơ bản từ hệ thống
+            - listitem [ref=e958]:
+              - img [ref=e960]
+              - generic [ref=e963]: Upload video để nhận đánh giá
+            - listitem [ref=e964]:
+              - img [ref=e966]
+              - generic [ref=e969]: AI feedback kỹ thuật chi tiết
+            - listitem [ref=e970]:
+              - img [ref=e972]
+              - generic [ref=e975]: Lộ trình luyện tập cá nhân hóa
+          - button "Bắt đầu miễn phí" [ref=e976]
+      - generic [ref=e977]:
+        - generic [ref=e979]: Phổ biến nhất
+        - generic [ref=e980]:
+          - generic [ref=e981]:
+            - img [ref=e983]
+            - generic [ref=e985]:
+              - generic [ref=e986]: Gói Pro
+              - generic [ref=e987]: Phù hợp cho học viên muốn cải thiện nhanh hơn
+          - generic [ref=e988]:
+            - generic [ref=e989]: 99.000đ
+            - generic [ref=e990]: /tháng
+        - generic [ref=e991]:
+          - list [ref=e992]:
+            - listitem [ref=e993]:
+              - img [ref=e995]
+              - generic [ref=e997]: Bao gồm toàn bộ quyền lợi gói thường
+            - listitem [ref=e998]:
+              - img [ref=e1000]
+              - generic [ref=e1002]: Upload video để nhận đánh giá
+            - listitem [ref=e1003]:
+              - img [ref=e1005]
+              - generic [ref=e1007]: AI feedback kỹ thuật chi tiết hơn
+            - listitem [ref=e1008]:
+              - img [ref=e1010]
+              - generic [ref=e1012]: Theo dõi tiến bộ theo thời gian
+            - listitem [ref=e1013]:
+              - img [ref=e1015]
+              - generic [ref=e1017]: Gợi ý lỗi sai và cách sửa
+            - listitem [ref=e1018]:
+              - img [ref=e1020]
+              - generic [ref=e1022]: Lộ trình luyện tập cá nhân hóa
+            - listitem [ref=e1023]:
+              - img [ref=e1025]
+              - generic [ref=e1027]: Ưu tiên hỗ trợ
+            - listitem [ref=e1028]:
+              - img [ref=e1030]
+              - generic [ref=e1032]: Ưu tiên ghép với HLV phù hợp hơn
+          - button "Đăng ký Gói Pro" [ref=e1033]
+          - paragraph [ref=e1034]: Hủy bất cứ lúc nào · Không cần thẻ ngân hàng
+    - generic [ref=e1036]:
+      - generic [ref=e1037]:
+        - generic [ref=e1038]: 🎯
+        - generic [ref=e1039]: Thanh toán an toàn
+        - generic [ref=e1040]: Bảo vệ 100% qua cổng thanh toán quốc tế VNPay & Stripe
+      - generic [ref=e1041]:
+        - generic [ref=e1042]: 🔄
+        - generic [ref=e1043]: Hoàn tiền 7 ngày
+        - generic [ref=e1044]: Không hài lòng? Hoàn tiền 100% trong vòng 7 ngày đầu
+      - generic [ref=e1045]:
+        - generic [ref=e1046]: ⬆️
+        - generic [ref=e1047]: Nâng/hạ gói dễ dàng
+        - generic [ref=e1048]: Thay đổi gói bất cứ lúc nào, tính phí theo ngày sử dụng thực tế
+    - paragraph [ref=e1050]:
+      - text: Có câu hỏi về các gói dịch vụ?
+      - link "Liên hệ với chúng tôi →" [ref=e1051] [cursor=pointer]:
+        - /url: "#"
+  - generic [ref=e1053]:
+    - generic [ref=e1054]:
+      - generic [ref=e1056]: 💬 Câu chuyện thành công
+      - heading "Học Viên Nói Gì Về Chúng Tôi" [level=2] [ref=e1057]
+      - paragraph [ref=e1058]: Hơn 50,000 học viên đã thay đổi cuộc sống nhờ CoachFinder.
+    - generic [ref=e1059]:
+      - generic [ref=e1060]:
+        - img [ref=e1061]
+        - generic [ref=e1064]:
+          - img [ref=e1065]
+          - img [ref=e1067]
+          - img [ref=e1069]
+          - img [ref=e1071]
+          - img [ref=e1073]
+        - paragraph [ref=e1075]: "\"CoachFinder đã giúp tôi tìm được HLV hoàn hảo sau 3 năm loay hoay tự tập. Trong 4 tháng, tôi giảm 12kg và cơ bắp rõ ràng hơn hẳn. HLV Tuấn cực kỳ tận tâm và chuyên nghiệp!\""
+        - generic [ref=e1076]:
+          - generic [ref=e1077]: ✓
+          - generic [ref=e1078]: Giảm 12kg trong 4 tháng
+        - generic [ref=e1079]:
+          - generic [ref=e1081]: TC
+          - generic [ref=e1082]:
+            - generic [ref=e1083]: Trần Minh Châu
+            - generic [ref=e1084]: Học viên Pro · Thể hình
+      - generic [ref=e1085]:
+        - img [ref=e1086]
+        - generic [ref=e1089]:
+          - img [ref=e1090]
+          - img [ref=e1092]
+          - img [ref=e1094]
+          - img [ref=e1096]
+          - img [ref=e1098]
+        - paragraph [ref=e1100]: "\"Tôi đăng ký gói Premium và không hối hận chút nào. Kế hoạch dinh dưỡng cá nhân hóa kết hợp với yoga đã cải thiện sức khỏe của tôi đáng kể. HLV online 1-1 rất tiện lợi!\""
+        - generic [ref=e1101]:
+          - generic [ref=e1102]: ✓
+          - generic [ref=e1103]: Cải thiện sức khỏe toàn diện
+        - generic [ref=e1104]:
+          - generic [ref=e1106]: NL
+          - generic [ref=e1107]:
+            - generic [ref=e1108]: Nguyễn Phương Linh
+            - generic [ref=e1109]: Học viên Premium · Yoga
+      - generic [ref=e1110]:
+        - img [ref=e1111]
+        - generic [ref=e1114]:
+          - img [ref=e1115]
+          - img [ref=e1117]
+          - img [ref=e1119]
+          - img [ref=e1121]
+          - img [ref=e1123]
+        - paragraph [ref=e1125]: "\"Tôi bắt đầu với gói Free để thử. Sau buổi tập thử với HLV bóng đá, tôi ngay lập tức nâng cấp lên Pro. Giao diện app dễ dùng, đặt lịch chỉ mất 2 phút!\""
+        - generic [ref=e1126]:
+          - generic [ref=e1127]: ✓
+          - generic [ref=e1128]: Cải thiện kỹ thuật bóng đá
+        - generic [ref=e1129]:
+          - generic [ref=e1131]: LQ
+          - generic [ref=e1132]:
+            - generic [ref=e1133]: Lê Hồng Quân
+            - generic [ref=e1134]: Học viên Free · Bóng đá
+      - generic [ref=e1135]:
+        - img [ref=e1136]
+        - generic [ref=e1139]:
+          - img [ref=e1140]
+          - img [ref=e1142]
+          - img [ref=e1144]
+          - img [ref=e1146]
+          - img [ref=e1148]
+        - paragraph [ref=e1150]: "\"Nhờ CoachFinder, tôi hoàn thành marathon đầu tiên sau 6 tháng tập luyện có kế hoạch. HLV Bảo theo dõi từng buổi chạy và điều chỉnh kế hoạch linh hoạt. Xuất sắc!\""
+        - generic [ref=e1151]:
+          - generic [ref=e1152]: ✓
+          - generic [ref=e1153]: Hoàn thành marathon đầu tiên
+        - generic [ref=e1154]:
+          - generic [ref=e1156]: VT
+          - generic [ref=e1157]:
+            - generic [ref=e1158]: Võ Thị Thu Thảo
+            - generic [ref=e1159]: Học viên Premium · Chạy bộ
+      - generic [ref=e1160]:
+        - img [ref=e1161]
+        - generic [ref=e1164]:
+          - img [ref=e1165]
+          - img [ref=e1167]
+          - img [ref=e1169]
+          - img [ref=e1171]
+          - img [ref=e1173]
+        - paragraph [ref=e1175]: "\"Tìm HLV quyền anh ở Đà Nẵng khó lắm, nhưng CoachFinder có ngay 15+ lựa chọn. HLV của tôi tận nơi ở Đà Nẵng, lịch linh hoạt. Đặt lịch trực tiếp qua app rất nhanh.\""
+        - generic [ref=e1176]:
+          - generic [ref=e1177]: ✓
+          - generic [ref=e1178]: Thi đấu cấp tỉnh sau 8 tháng
+        - generic [ref=e1179]:
+          - generic [ref=e1181]: ĐK
+          - generic [ref=e1182]:
+            - generic [ref=e1183]: Đặng Văn Khoa
+            - generic [ref=e1184]: Học viên Pro · Quyền anh
+      - generic [ref=e1185]:
+        - img [ref=e1186]
+        - generic [ref=e1189]:
+          - img [ref=e1190]
+          - img [ref=e1192]
+          - img [ref=e1194]
+          - img [ref=e1196]
+          - img [ref=e1198]
+        - paragraph [ref=e1200]: "\"Con tôi từ sợ nước giờ đã bơi được 25m nhờ HLV bơi lội trên CoachFinder. HLV rất kiên nhẫn với trẻ em. Gói Premium còn có phân tích kỹ thuật video rất hay!\""
+        - generic [ref=e1201]:
+          - generic [ref=e1202]: ✓
+          - generic [ref=e1203]: Con từ sợ nước → bơi 25m
+        - generic [ref=e1204]:
+          - generic [ref=e1206]: BH
+          - generic [ref=e1207]:
+            - generic [ref=e1208]: Bùi Khánh Huyền
+            - generic [ref=e1209]: Học viên Premium · Bơi lội
+  - generic [ref=e1212]:
+    - img "CTA background" [ref=e1214]
+    - generic [ref=e1218]:
+      - generic [ref=e1219]:
+        - generic [ref=e1221]: 🚀 Sẵn sàng bắt đầu?
+        - heading "Hành Trình Của Bạn Bắt Đầu Hôm Nay" [level=2] [ref=e1222]
+        - paragraph [ref=e1223]: Đăng ký miễn phí ngay hôm nay. Tìm HLV phù hợp và đặt buổi tập thử trong vài phút. Hàng nghìn người đã thay đổi cuộc sống của họ — đến lượt bạn!
+        - generic [ref=e1224]:
+          - generic [ref=e1225]:
+            - generic [ref=e1226]: 🎯
+            - generic [ref=e1227]: Bắt đầu với 1 buổi thử miễn phí
+          - generic [ref=e1228]:
+            - generic [ref=e1229]: 🔒
+            - generic [ref=e1230]: Thanh toán an toàn, bảo mật 100%
+          - generic [ref=e1231]:
+            - generic [ref=e1232]: 📱
+            - generic [ref=e1233]: Ứng dụng iOS & Android sắp ra mắt
+        - generic [ref=e1234]:
+          - button "Đăng ký miễn phí" [ref=e1235]:
+            - text: Đăng ký miễn phí
+            - img [ref=e1236]
+          - button "Xem video giới thiệu" [ref=e1238]:
+            - img [ref=e1239]
+            - text: Xem video giới thiệu
+      - generic [ref=e1241]:
+        - generic [ref=e1242]:
+          - generic [ref=e1243]: "+120"
+          - generic [ref=e1244]: HLV mới tham gia
+          - generic [ref=e1245]: tháng này
+        - generic [ref=e1246]:
+          - generic [ref=e1247]: 98%
+          - generic [ref=e1248]: Buổi tập hoàn thành
+          - generic [ref=e1249]: hài lòng
+        - generic [ref=e1250]:
+          - generic [ref=e1251]: <2h
+          - generic [ref=e1252]: Thời gian phản hồi
+          - generic [ref=e1253]: trung bình
+        - generic [ref=e1254]:
+          - generic [ref=e1255]: 7 ngày
+          - generic [ref=e1256]: Hoàn tiền
+          - generic [ref=e1257]: bảo đảm
+  - contentinfo [ref=e1258]:
+    - generic [ref=e1259]:
+      - generic [ref=e1260]:
+        - generic [ref=e1261]:
+          - generic [ref=e1262]:
+            - img [ref=e1264]
+            - generic [ref=e1266]: CoachFinder
+          - paragraph [ref=e1267]: Nền tảng kết nối huấn luyện viên thể thao chuyên nghiệp với học viên trên toàn Việt Nam. Hãy bắt đầu hành trình thể thao của bạn ngay hôm nay.
+          - generic [ref=e1268]:
+            - generic [ref=e1269]:
+              - img [ref=e1270]
+              - generic [ref=e1273]: support@coachfinder.vn
+            - generic [ref=e1274]:
+              - img [ref=e1275]
+              - generic [ref=e1277]: 1800 9999 (Miễn phí)
+            - generic [ref=e1278]:
+              - img [ref=e1279]
+              - generic [ref=e1282]: TP. Hồ Chí Minh, Việt Nam
+          - generic [ref=e1283]:
+            - button "Facebook" [ref=e1284]:
+              - img [ref=e1285]
+            - button "Instagram" [ref=e1287]:
+              - img [ref=e1288]
+            - button "Youtube" [ref=e1291]:
+              - img [ref=e1292]
+        - generic [ref=e1295]:
+          - heading "Dịch vụ" [level=4] [ref=e1296]
+          - list [ref=e1297]:
+            - listitem [ref=e1298]:
+              - link "Tìm HLV" [ref=e1299] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e1300]:
+              - link "Đặt lịch tập" [ref=e1301] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e1302]:
+              - link "Gói dịch vụ" [ref=e1303] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e1304]:
+              - link "Cho HLV" [ref=e1305] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e1306]:
+              - link "API doanh nghiệp" [ref=e1307] [cursor=pointer]:
+                - /url: "#"
+        - generic [ref=e1308]:
+          - heading "Môn thể thao" [level=4] [ref=e1309]
+          - list [ref=e1310]:
+            - listitem [ref=e1311]:
+              - link "Thể hình & PT" [ref=e1312] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e1313]:
+              - link "Bóng đá" [ref=e1314] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e1315]:
+              - link "Bơi lội" [ref=e1316] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e1317]:
+              - link "Yoga & Pilates" [ref=e1318] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e1319]:
+              - link "Quyền anh" [ref=e1320] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e1321]:
+              - link "Bóng rổ" [ref=e1322] [cursor=pointer]:
+                - /url: "#"
+        - generic [ref=e1323]:
+          - heading "Công ty" [level=4] [ref=e1324]
+          - list [ref=e1325]:
+            - listitem [ref=e1326]:
+              - link "Về chúng tôi" [ref=e1327] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e1328]:
+              - link "Blog" [ref=e1329] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e1330]:
+              - link "Tuyển dụng" [ref=e1331] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e1332]:
+              - link "Đối tác" [ref=e1333] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e1334]:
+              - link "Báo chí" [ref=e1335] [cursor=pointer]:
+                - /url: "#"
+        - generic [ref=e1336]:
+          - heading "Hỗ trợ" [level=4] [ref=e1337]
+          - list [ref=e1338]:
+            - listitem [ref=e1339]:
+              - link "Trung tâm trợ giúp" [ref=e1340] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e1341]:
+              - link "Điều khoản dịch vụ" [ref=e1342] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e1343]:
+              - link "Chính sách bảo mật" [ref=e1344] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e1345]:
+              - link "Báo cáo lỗi" [ref=e1346] [cursor=pointer]:
+                - /url: "#"
+      - generic [ref=e1347]:
+        - generic [ref=e1348]:
+          - generic [ref=e1349]: "📱 Ứng dụng sắp ra mắt:"
+          - button "🍎 App Store" [ref=e1350]:
+            - generic [ref=e1351]: 🍎
+            - text: App Store
+          - button "🤖 Google Play" [ref=e1352]:
+            - generic [ref=e1353]: 🤖
+            - text: Google Play
+        - paragraph [ref=e1354]: © 2026 CoachFinder. Mọi quyền được bảo lưu.

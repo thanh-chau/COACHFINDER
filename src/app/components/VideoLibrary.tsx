@@ -7,6 +7,8 @@ import {
   Volume2, VolumeX, Maximize2, RotateCcw, Compass
 } from "lucide-react";
 import { Video360Player } from "./Video360Player";
+import { getSavedVideos, getVideo, getVideos, likeVideo, recordVideoPlaybackEvent, saveVideo, unlikeVideo, unsaveVideo } from "../api/videos";
+import type { VideoItem as ApiVideoItem } from "../types/video";
 
 // ─── Images ──────────────────────────────────────────────────────────────────
 const IMG = {
@@ -56,9 +58,58 @@ interface VideoItem {
   isFeatured?: boolean;
   isNew?: boolean;
   isHot?: boolean;
+  liked?: boolean;
+  saved?: boolean;
   tags: string[];
   description: string;
   uploadedAt: string;
+}
+
+function formatDuration(seconds: number | null) {
+  if (!seconds) return "00:00";
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return `${minutes}:${String(rest).padStart(2, "0")}`;
+}
+
+function formatViews(value: number) {
+  if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
+  return String(value);
+}
+
+function mapApiVideo(video: ApiVideoItem, index: number): VideoItem {
+  const rawCategory = (video.category || "").toLowerCase();
+  return {
+    id: video.id,
+    title: video.title,
+    coachName: video.coachName || "CoachFinder Coach",
+    coachAvatar: IMG.coach1,
+    coachVerified: true,
+    sport: video.category || "Thể thao",
+    sportEmoji: "🎬",
+    category: rawCategory.includes("yoga")
+      ? "yoga"
+      : rawCategory.includes("cardio") || rawCategory.includes("run")
+        ? "cardio"
+        : rawCategory.includes("boxing") || rawCategory.includes("martial")
+          ? "martial"
+          : "strength",
+    thumbnail: video.thumbnailUrl || IMG.gym,
+    duration: formatDuration(video.duration),
+    views: formatViews(video.viewCount),
+    likes: video.likes,
+    rating: 4.8,
+    level: video.difficulty === "ADVANCED" ? "Nâng cao" : video.difficulty === "INTERMEDIATE" ? "Trung cấp" : "Cơ bản",
+    is360: video.videoType === "VIDEO_360" || video.format === "360",
+    isFeatured: index === 0,
+    isNew: index < 3,
+    isHot: video.viewCount > 1000,
+    liked: video.liked,
+    saved: video.saved,
+    tags: video.tags,
+    description: video.description || "",
+    uploadedAt: video.uploadDate ? new Date(video.uploadDate).toLocaleDateString("vi-VN") : "",
+  };
 }
 
 const VIDEOS: VideoItem[] = [
@@ -446,8 +497,46 @@ function LevelBadge({ level }: { level: VideoItem["level"] }) {
 function VideoCard({ video, onClick, isLarge = false }: {
   video: VideoItem; onClick: () => void; isLarge?: boolean;
 }) {
-  const [liked, setLiked] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [liked, setLiked] = useState(!!video.liked);
+  const [saved, setSaved] = useState(!!video.saved);
+  const [likes, setLikes] = useState(video.likes);
+
+  useEffect(() => {
+    setLiked(!!video.liked);
+    setSaved(!!video.saved);
+    setLikes(video.likes);
+  }, [video.id, video.liked, video.saved, video.likes]);
+
+  const toggleSaved = async () => {
+    const next = !saved;
+    setSaved(next);
+    try {
+      await (next ? saveVideo(video.id) : unsaveVideo(video.id));
+      if (next) {
+        void recordVideoPlaybackEvent(video.id, {
+          eventType: "BOOKMARK",
+          positionSeconds: 0,
+          metadata: { source: "save-video" },
+        }).catch(() => undefined);
+      }
+    } catch {
+      setSaved(!next);
+    }
+  };
+
+  const toggleLiked = async () => {
+    const next = !liked;
+    setLiked(next);
+    setLikes(current => Math.max(0, current + (next ? 1 : -1)));
+    try {
+      const updated = await (next ? likeVideo(video.id) : unlikeVideo(video.id));
+      setLiked(updated.liked);
+      setLikes(updated.likes);
+    } catch {
+      setLiked(!next);
+      setLikes(current => Math.max(0, current + (next ? -1 : 1)));
+    }
+  };
 
   return (
     <div
@@ -508,7 +597,7 @@ function VideoCard({ video, onClick, isLarge = false }: {
                 {video.title}
               </h3>
               <button
-                onClick={e => { e.stopPropagation(); setSaved(s => !s); }}
+                onClick={e => { e.stopPropagation(); void toggleSaved(); }}
                 className="shrink-0 p-1 rounded-lg hover:bg-gray-100 transition-colors mt-0.5"
               >
                 <BookmarkPlus className={`w-4 h-4 ${saved ? "text-violet-500 fill-violet-100" : "text-gray-400"}`} />
@@ -537,11 +626,11 @@ function VideoCard({ video, onClick, isLarge = false }: {
                 <LevelBadge level={video.level} />
               </div>
               <button
-                onClick={e => { e.stopPropagation(); setLiked(l => !l); }}
+                onClick={e => { e.stopPropagation(); void toggleLiked(); }}
                 className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-colors ${liked ? "bg-red-50 text-red-500" : "text-gray-400 hover:bg-gray-50"}`}
               >
                 <Heart className={`w-3.5 h-3.5 ${liked ? "fill-red-500" : ""}`} />
-                <span style={{ fontSize: "0.7rem", fontWeight: 600 }}>{liked ? video.likes + 1 : video.likes}</span>
+                <span style={{ fontSize: "0.7rem", fontWeight: 600 }}>{likes}</span>
               </button>
             </div>
           </div>
@@ -558,9 +647,63 @@ function VideoDetail({ video, onClose, onVideoSelect }: {
   onVideoSelect: (v: VideoItem) => void;
 }) {
   const related = VIDEOS.filter(v => v.id !== video.id && (v.category === video.category || v.coachName === video.coachName)).slice(0, 4);
-  const [liked, setLiked] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [liked, setLiked] = useState(!!video.liked);
+  const [saved, setSaved] = useState(!!video.saved);
+  const [likes, setLikes] = useState(video.likes);
   const [showUploader, setShowUploader] = useState(false);
+
+  useEffect(() => {
+    setLiked(!!video.liked);
+    setSaved(!!video.saved);
+    setLikes(video.likes);
+  }, [video.id, video.liked, video.saved, video.likes]);
+
+  useEffect(() => {
+    void recordVideoPlaybackEvent(video.id, {
+      eventType: "START",
+      positionSeconds: 0,
+      metadata: { source: "learner-video-detail" },
+    }).catch(() => undefined);
+
+    return () => {
+      void recordVideoPlaybackEvent(video.id, {
+        eventType: "PAUSE",
+        positionSeconds: 0,
+        metadata: { source: "learner-video-detail-unmount" },
+      }).catch(() => undefined);
+    };
+  }, [video.id]);
+
+  const toggleSaved = async () => {
+    const next = !saved;
+    setSaved(next);
+    try {
+      await (next ? saveVideo(video.id) : unsaveVideo(video.id));
+      if (next) {
+        void recordVideoPlaybackEvent(video.id, {
+          eventType: "BOOKMARK",
+          positionSeconds: 0,
+          metadata: { source: "save-video" },
+        }).catch(() => undefined);
+      }
+    } catch {
+      setSaved(!next);
+    }
+  };
+
+  const toggleLiked = async () => {
+    const next = !liked;
+    setLiked(next);
+    setLikes(current => Math.max(0, current + (next ? 1 : -1)));
+    try {
+      const updated = await (next ? likeVideo(video.id) : unlikeVideo(video.id));
+      setLiked(updated.liked);
+      setLikes(updated.likes);
+    } catch {
+      setLiked(!next);
+      setLikes(current => Math.max(0, current + (next ? -1 : 1)));
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 backdrop-blur-sm p-4 pt-6">
@@ -633,15 +776,15 @@ function VideoDetail({ video, onClose, onVideoSelect }: {
               {/* Action buttons */}
               <div className="flex items-center gap-2 mt-3 flex-wrap">
                 <button
-                  onClick={() => setLiked(l => !l)}
+                  onClick={() => void toggleLiked()}
                   className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border transition-all ${liked ? "bg-red-50 border-red-200 text-red-500" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}
                   style={{ fontSize: "0.8rem", fontWeight: 600 }}
                 >
                   <Heart className={`w-4 h-4 ${liked ? "fill-red-500" : ""}`} />
-                  {liked ? video.likes + 1 : video.likes}
+                  {likes}
                 </button>
                 <button
-                  onClick={() => setSaved(s => !s)}
+                  onClick={() => void toggleSaved()}
                   className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border transition-all ${saved ? "bg-violet-50 border-violet-200 text-violet-600" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}
                   style={{ fontSize: "0.8rem", fontWeight: 600 }}
                 >
@@ -809,8 +952,65 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
   const [selectedVideo, setSelectedVideo] = useState<VideoItem | null>(null);
   const [show360Only, setShow360Only] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [videos, setVideos] = useState<VideoItem[]>(VIDEOS);
+  const [showSavedOnly, setShowSavedOnly] = useState(false);
+  const [loadingSaved, setLoadingSaved] = useState(false);
+  const [videoNotice, setVideoNotice] = useState<string | null>(null);
 
-  const filtered = VIDEOS.filter(v => {
+  const loadVideos = useCallback(() => {
+    setVideoNotice(null);
+    getVideos()
+      .then((items) => {
+        if (items.length > 0) {
+          setVideos(items.map(mapApiVideo));
+        }
+      })
+      .catch(() => {
+        setVideos(VIDEOS);
+        setVideoNotice("Dang hien thi video mau vi API danh sach video chua tai duoc.");
+      });
+  }, []);
+
+  useEffect(() => {
+    loadVideos();
+  }, [loadVideos]);
+
+  const loadSavedVideos = async () => {
+    const next = !showSavedOnly;
+    setShowSavedOnly(next);
+    if (!next) {
+      loadVideos();
+      return;
+    }
+
+    setLoadingSaved(true);
+    setVideoNotice(null);
+    try {
+      const savedItems = await getSavedVideos();
+      setVideos(savedItems.map(mapApiVideo));
+    } catch (err) {
+      setVideoNotice(err instanceof Error ? err.message : "Khong tai duoc video da luu.");
+    } finally {
+      setLoadingSaved(false);
+    }
+  };
+
+  const openVideoDetail = async (video: VideoItem) => {
+    setSelectedVideo(video);
+    const numericId = Number(video.id);
+    if (!Number.isFinite(numericId)) return;
+
+    try {
+      const detail = await getVideo(numericId);
+      const mapped = mapApiVideo(detail, 0);
+      setSelectedVideo(mapped);
+      setVideos(prev => prev.map(item => item.id === mapped.id ? mapped : item));
+    } catch {
+      // Keep the selected list item open if the detail endpoint fails.
+    }
+  };
+
+  const filtered = videos.filter(v => {
     const matchCat = activeCategory === "all" || v.category === activeCategory;
     const matchSearch = !searchQuery || v.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       v.coachName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -819,16 +1019,21 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
     return matchCat && matchSearch && match360;
   });
 
-  const featured = VIDEOS.find(v => v.isFeatured)!;
+  const featured = videos.find(v => v.isFeatured) || videos[0] || VIDEOS[0];
 
   return (
     <div className="space-y-5">
+      {videoNotice && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-amber-700" style={{ fontSize: "0.78rem", fontWeight: 600 }}>
+          {videoNotice}
+        </div>
+      )}
 
       {/* ── Stats bar ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { icon: "🎬", label: "Tổng video",    value: "128",  sub: "từ HLV chuyên nghiệp" },
-          { icon: "🌐", label: "Video 360°",    value: "54",   sub: "xem được trực tiếp"  },
+          { icon: "🎬", label: "Tổng video",    value: String(videos.length),  sub: "từ HLV chuyên nghiệp" },
+          { icon: "🌐", label: "Video 360°",    value: String(videos.filter(video => video.is360).length),   sub: "xem được trực tiếp"  },
           { icon: "👁️", label: "Lượt xem",      value: "184K", sub: "cộng đồng CoachFinder"  },
           { icon: "⭐", label: "Đánh giá TB",   value: "4.8",  sub: "từ học viên"         },
         ].map(s => (
@@ -892,14 +1097,14 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
 
             <div className="flex items-center gap-3 flex-wrap">
               <button
-                onClick={() => setSelectedVideo(featured)}
+                onClick={() => void openVideoDetail(featured)}
                 className="flex items-center gap-2 px-5 py-2.5 bg-white text-gray-900 rounded-xl hover:bg-gray-100 transition-colors"
                 style={{ fontWeight: 700, fontSize: "0.88rem" }}
               >
                 <Play className="w-4 h-4" /> Xem ngay
               </button>
               <button
-                onClick={() => setSelectedVideo(featured)}
+                onClick={() => void openVideoDetail(featured)}
                 className="flex items-center gap-2 px-5 py-2.5 bg-violet-500/20 border border-violet-400/40 text-violet-300 rounded-xl hover:bg-violet-500/30 transition-colors"
                 style={{ fontWeight: 600, fontSize: "0.88rem" }}
               >
@@ -911,7 +1116,7 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
           {/* Right: mini preview */}
           <div className="lg:w-80 xl:w-96 w-full shrink-0">
             <div className="relative rounded-2xl overflow-hidden shadow-2xl cursor-pointer group" style={{ aspectRatio: "16/9" }}
-              onClick={() => setSelectedVideo(featured)}>
+              onClick={() => void openVideoDetail(featured)}>
               <img src={featured.thumbnail} alt={featured.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
               <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors flex items-center justify-center">
                 <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm border-2 border-white/40 flex items-center justify-center">
@@ -963,6 +1168,16 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
           <span className="hidden sm:inline">Chỉ 360°</span>
         </button>
 
+        <button
+          onClick={() => void loadSavedVideos()}
+          disabled={loadingSaved}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all disabled:opacity-70 ${showSavedOnly ? "bg-emerald-500 border-emerald-500 text-white" : "bg-white border-gray-200 text-gray-600 hover:border-emerald-300"}`}
+          style={{ fontSize: "0.82rem", fontWeight: 600 }}
+        >
+          <BookmarkPlus className="w-4 h-4" />
+          <span className="hidden sm:inline">{loadingSaved ? "Đang tải..." : "Đã lưu"}</span>
+        </button>
+
         {/* View toggle */}
         <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
           <button
@@ -1008,6 +1223,7 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
         <div style={{ fontSize: "0.85rem" }} className="text-gray-500">
           Hiển thị <span style={{ fontWeight: 700 }} className="text-gray-900">{filtered.length}</span> video
           {show360Only && <span className="ml-1 text-violet-500">· chỉ 360°</span>}
+          {showSavedOnly && <span className="ml-1 text-emerald-500">· video đã lưu</span>}
           {searchQuery && <span className="ml-1">cho "<span className="text-gray-900 font-semibold">{searchQuery}</span>"</span>}
         </div>
 
@@ -1025,7 +1241,7 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
       {viewMode === "grid" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
           {filtered.map(v => (
-            <VideoCard key={v.id} video={v} onClick={() => setSelectedVideo(v)} />
+            <VideoCard key={v.id} video={v} onClick={() => void openVideoDetail(v)} />
           ))}
         </div>
       ) : (
@@ -1034,7 +1250,7 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
             <div
               key={v.id}
               className="flex gap-4 bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md hover:border-violet-200 transition-all cursor-pointer group"
-              onClick={() => setSelectedVideo(v)}
+              onClick={() => void openVideoDetail(v)}
             >
               <div className="relative w-40 sm:w-48 shrink-0 rounded-xl overflow-hidden" style={{ aspectRatio: "16/9" }}>
                 <img src={v.thumbnail} alt={v.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
@@ -1106,7 +1322,7 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
         <VideoDetail
           video={selectedVideo}
           onClose={() => setSelectedVideo(null)}
-          onVideoSelect={v => setSelectedVideo(v)}
+          onVideoSelect={v => void openVideoDetail(v)}
         />
       )}
 

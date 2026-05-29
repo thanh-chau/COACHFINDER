@@ -5,7 +5,7 @@ import {
   CalendarDays, MessageCircle, Zap, Globe, ArrowRight,
   Dumbbell, Users, TrendingUp, Flame, Search
 } from "lucide-react";
-import { getMyBookings } from "../api/bookings";
+import { cancelBooking, getMyBookings } from "../api/bookings";
 import type { BookingListItem } from "../types/booking";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -58,6 +58,7 @@ interface Session {
   status: SessionStatus;
   price: number;
   note: string;
+  cancellationReason?: string;
   meetLink?: string;
   rating?: number;
 }
@@ -125,15 +126,26 @@ function bookingToSession(item: BookingListItem): Session {
     startTime: item.startTime,
     endTime: item.endTime,
     coach: coachName,
-    coachAvatar: pickCoachAvatar(coachName),
+    coachAvatar: item.coachAvatar || pickCoachAvatar(coachName),
     sport,
     emoji: SPORT_EMOJIS[sport] || "🏋️",
     mode,
     location,
     status: statusMap[item.status || "PENDING"] || "pending",
     price: item.price || 0,
-    note: item.status === "COMPLETED" ? "Buổi học đã hoàn thành" : "",
+    note: item.status === "CANCELLED" && item.cancellationReason
+      ? `Lý do hủy: ${item.cancellationReason}`
+      : item.status === "COMPLETED" ? "Buổi học đã hoàn thành" : "",
+    cancellationReason: item.cancellationReason,
   };
+}
+
+function sessionStartDateTime(session: Session) {
+  return new Date(`${session.date}T${session.startTime}`);
+}
+
+function canCancelBefore24h(session: Session) {
+  return sessionStartDateTime(session).getTime() - Date.now() >= 24 * 60 * 60 * 1000;
 }
 
 // ─── Session detail modal ─────────────────────────────────────────────────────
@@ -145,19 +157,39 @@ function SessionModal({
 }: {
   session: Session;
   onClose: () => void;
-  onCancel: (id: number) => void;
+  onCancel: (id: number, reason: string) => Promise<void>;
   onRate: (id: number, rating: number) => void;
 }) {
   const [cancelStep, setCancelStep] = useState<"idle" | "confirm" | "done">("idle");
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelError, setCancelError] = useState("");
+  const [cancelling, setCancelling] = useState(false);
   const [hoverRating, setHoverRating] = useState(0);
   const [rated, setRated] = useState(!!session.rating);
   const [myRating, setMyRating] = useState(session.rating ?? 0);
   const color = sc(session.sport);
   const stCfg = STATUS_CFG[session.status];
 
-  const handleCancel = () => {
-    onCancel(session.id);
-    setCancelStep("done");
+  const handleCancel = async () => {
+    const reason = cancelReason.trim();
+    setCancelError("");
+    if (!reason) {
+      setCancelError("Vui lòng nhập lý do hủy lịch.");
+      return;
+    }
+    if (!canCancelBefore24h(session)) {
+      setCancelError("Chỉ có thể hủy lịch trước giờ tập ít nhất 24 tiếng.");
+      return;
+    }
+    setCancelling(true);
+    try {
+      await onCancel(session.id, reason);
+      setCancelStep("done");
+    } catch (reasonError) {
+      setCancelError(reasonError instanceof Error ? reasonError.message : "Không thể hủy lịch lúc này.");
+    } finally {
+      setCancelling(false);
+    }
   };
 
   const handleRate = (r: number) => {
@@ -289,9 +321,17 @@ function SessionModal({
               <p style={{ fontSize: "0.78rem", lineHeight: 1.6 }} className="text-gray-600 mb-3">
                 Huỷ trước 24h sẽ được hoàn tiền 100%. Huỷ muộn hơn sẽ không được hoàn tiền.
               </p>
+              <textarea
+                value={cancelReason}
+                onChange={event => setCancelReason(event.target.value)}
+                placeholder="Nhập lý do hủy lịch..."
+                className="w-full min-h-20 rounded-xl border border-red-100 bg-white px-3 py-2.5 outline-none focus:border-red-300 text-gray-700 mb-2"
+                style={{ fontSize: "0.82rem" }}
+              />
+              {cancelError && <p className="text-red-500 mb-2" style={{ fontSize: "0.76rem", fontWeight: 600 }}>{cancelError}</p>}
               <div className="flex gap-2">
-                <button onClick={() => setCancelStep("idle")} className="flex-1 py-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors" style={{ fontSize: "0.82rem", fontWeight: 600 }}>Giữ lịch</button>
-                <button onClick={handleCancel} className="flex-1 py-2 rounded-xl bg-red-500 text-white hover:bg-red-600 transition-colors" style={{ fontSize: "0.82rem", fontWeight: 700 }}>Huỷ lịch</button>
+                <button disabled={cancelling} onClick={() => setCancelStep("idle")} className="flex-1 py-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-60" style={{ fontSize: "0.82rem", fontWeight: 600 }}>Giữ lịch</button>
+                <button disabled={cancelling} onClick={handleCancel} className="flex-1 py-2 rounded-xl bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-60" style={{ fontSize: "0.82rem", fontWeight: 700 }}>{cancelling ? "Đang hủy..." : "Huỷ lịch"}</button>
               </div>
             </div>
           )}
@@ -634,9 +674,14 @@ export function TrainingSchedule({ onNavigate }: TrainingScheduleProps) {
     return cleanup;
   }, []);
 
-  const activeSessions = useMemo(() =>
-    sessions.filter(s => s.status !== "cancelled"),
+  const visibleSessions = useMemo(() =>
+    sessions.filter(s => sessionStartDateTime(s).getTime() >= Date.now()),
     [sessions]
+  );
+
+  const activeSessions = useMemo(() =>
+    visibleSessions.filter(s => s.status !== "cancelled"),
+    [visibleSessions]
   );
 
   // Stats
@@ -650,9 +695,9 @@ export function TrainingSchedule({ onNavigate }: TrainingScheduleProps) {
 
   // Filtered list
   const filteredList = useMemo(() => {
-    const list = filterStatus === "all" ? activeSessions : sessions.filter(s => s.status === filterStatus);
+    const list = filterStatus === "all" ? activeSessions : visibleSessions.filter(s => s.status === filterStatus);
     return [...list].sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
-  }, [sessions, filterStatus, activeSessions]);
+  }, [visibleSessions, filterStatus, activeSessions]);
 
   // Group list by date
   const groupedList = useMemo(() => {
@@ -664,8 +709,9 @@ export function TrainingSchedule({ onNavigate }: TrainingScheduleProps) {
     return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
   }, [filteredList]);
 
-  const handleCancel = (id: number) => {
-    setSessions(prev => prev.map(s => s.id === id ? { ...s, status: "cancelled" } : s));
+  const handleCancel = async (id: number, reason: string) => {
+    await cancelBooking(id, reason);
+    setSessions(prev => prev.map(s => s.id === id ? { ...s, status: "cancelled", cancellationReason: reason, note: `Lý do hủy: ${reason}` } : s));
     setTimeout(() => setSessionModal(null), 1200);
   };
 

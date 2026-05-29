@@ -1,0 +1,89 @@
+- generic [ref=e3]:
+  - generic [ref=e6]:
+    - link "CoachFinder" [ref=e7] [cursor=pointer]:
+      - /url: /
+      - img [ref=e9]
+      - generic [ref=e15]: CoachFinder
+    - generic [ref=e16]:
+      - generic [ref=e19]: "Nền tảng HLV thể thao #1 Việt Nam"
+      - heading "Chào mừng trở lại, CoachFinder đang chờ bạn" [level=2] [ref=e20]:
+        - text: Chào mừng trở lại,
+        - text: CoachFinder đang chờ bạn
+      - paragraph [ref=e21]: Tiếp tục luyện tập, theo dõi tiến độ và kết nối với HLV của bạn.
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - img [ref=e25]
+          - generic [ref=e35]: AI phân tích động tác 33 điểm khớp
+        - generic [ref=e36]:
+          - img [ref=e38]
+          - generic [ref=e40]: Video 360° từ HLV hàng đầu
+        - generic [ref=e41]:
+          - img [ref=e43]
+          - generic [ref=e45]: HLV được xác minh & chứng nhận
+        - generic [ref=e46]:
+          - img [ref=e48]
+          - generic [ref=e50]: 50,000+ học viên tin dùng
+    - generic [ref=e51]:
+      - paragraph [ref=e52]: "\"CoachFinder giúp tôi tìm được HLV tennis phù hợp trong 10 phút. Sau 3 tháng kỹ thuật cải thiện rõ rệt!\""
+      - generic [ref=e53]:
+        - generic [ref=e54]: NT
+        - generic [ref=e55]:
+          - generic [ref=e56]: Nguyễn Thanh
+          - generic [ref=e57]: Học viên Tennis · TP. HCM
+        - generic [ref=e58]:
+          - img [ref=e59]
+          - img [ref=e61]
+          - img [ref=e63]
+          - img [ref=e65]
+          - img [ref=e67]
+  - generic [ref=e69]:
+    - generic [ref=e70]:
+      - link "Trang chủ" [ref=e71] [cursor=pointer]:
+        - /url: /
+        - img [ref=e72]
+        - generic [ref=e74]: Trang chủ
+      - generic [ref=e75]:
+        - button "Đăng nhập" [ref=e76]
+        - button "Đăng ký" [ref=e77]
+    - generic [ref=e79]:
+      - generic [ref=e80]:
+        - heading "Đăng nhập" [level=1] [ref=e81]
+        - paragraph [ref=e82]: Chào mừng trở lại! Vui lòng nhập thông tin của bạn.
+      - generic [ref=e83]:
+        - button "G Google" [ref=e84]:
+          - generic [ref=e85]: G
+          - text: Google
+        - button "f Facebook" [ref=e86]:
+          - generic [ref=e87]: f
+          - text: Facebook
+      - generic [ref=e90]: hoặc đăng nhập bằng email
+      - generic [ref=e92]:
+        - generic [ref=e93]:
+          - generic [ref=e94]: Email
+          - generic [ref=e95]:
+            - img [ref=e96]
+            - textbox "ban@email.com" [ref=e99]
+        - generic [ref=e100]:
+          - generic [ref=e101]: Mật khẩu
+          - generic [ref=e102]:
+            - img [ref=e103]
+            - textbox "Nhập mật khẩu" [ref=e106]
+            - button [ref=e107]:
+              - img [ref=e108]
+        - generic [ref=e111]:
+          - generic [ref=e112] [cursor=pointer]:
+            - checkbox "Ghi nhớ đăng nhập" [ref=e113]
+            - generic [ref=e114]: Ghi nhớ đăng nhập
+          - button "Quên mật khẩu?" [ref=e115]
+        - button "Dat lai mat khau bang OTP" [ref=e116]
+        - button "Đăng nhập →" [ref=e117]
+      - paragraph [ref=e118]:
+        - text: Chưa có tài khoản?
+        - button "Đăng ký ngay" [ref=e119]
+    - paragraph [ref=e121]:
+      - text: © 2026 CoachFinder ·
+      - link "Bảo mật" [ref=e122] [cursor=pointer]:
+        - /url: "#"
+      - text: ·
+      - link "Điều khoản" [ref=e123] [cursor=pointer]:
+        - /url: "#"

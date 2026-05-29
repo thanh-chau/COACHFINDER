@@ -1,5 +1,7 @@
 import { Star, MapPin, BadgeCheck, Heart } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getFeaturedCoaches } from "../api/coaches";
+import type { Coach } from "../types/coach";
 
 const COACH1 = "https://images.unsplash.com/photo-1750698545009-679820502908?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtYWxlJTIwZml0bmVzcyUyMGNvYWNoJTIwcG9ydHJhaXQlMjBwcm9mZXNzaW9uYWx8ZW58MXx8fHwxNzcyNjM1NTg1fDA&ixlib=rb-4.1.0&q=80&w=1080";
 const COACH2 = "https://images.unsplash.com/photo-1672829985408-2191772a9bf1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmZW1hbGUlMjBzcG9ydHMlMjBjb2FjaCUyMHBvcnRyYWl0JTIwc21pbGluZ3xlbnwxfHx8fDE3NzI2MzU1ODV8MA&ixlib=rb-4.1.0&q=80&w=1080";
@@ -73,8 +75,46 @@ const coaches = [
   },
 ];
 
+function mapApiCoach(coach: Coach, index: number) {
+  const fallback = coaches[index % coaches.length];
+  return {
+    id: coach.id,
+    name: coach.fullName || fallback.name,
+    title: coach.category ? `HLV ${coach.category}` : fallback.title,
+    avatar: coach.avatar || fallback.avatar,
+    rating: coach.rating ?? fallback.rating,
+    reviews: coach.reviewCount ?? fallback.reviews,
+    location: coach.location || fallback.location,
+    price: typeof coach.price === "number" ? `${coach.price.toLocaleString("vi-VN")}Ä‘/giá»` : fallback.price,
+    tags: coach.category ? [coach.category] : fallback.tags,
+    experience: fallback.experience,
+    badge: fallback.badge,
+    badgeColor: fallback.badgeColor,
+    students: fallback.students,
+    verified: true,
+  };
+}
+
 export function FeaturedCoaches() {
   const [liked, setLiked] = useState<number[]>([]);
+  const [displayCoaches, setDisplayCoaches] = useState(coaches);
+  const [usingFallback, setUsingFallback] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    getFeaturedCoaches()
+      .then((items) => {
+        if (!mounted || items.length === 0) return;
+        setDisplayCoaches(items.slice(0, 4).map(mapApiCoach));
+        setUsingFallback(false);
+      })
+      .catch(() => {
+        if (mounted) setUsingFallback(true);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const toggleLike = (id: number) => {
     setLiked((prev) => prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]);
@@ -103,7 +143,7 @@ export function FeaturedCoaches() {
 
         {/* Coach cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {coaches.map((coach) => (
+          {displayCoaches.map((coach) => (
             <div
               key={coach.id}
               className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-gray-100 group"

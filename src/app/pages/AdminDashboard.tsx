@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import {
   LayoutDashboard,
@@ -25,7 +25,21 @@ import { AdminTransactions } from "../components/AdminTransactions";
 import { AdminSubscriptions } from "../components/AdminSubscriptions";
 import { AdminUsers } from "../components/AdminUsers";
 import { AdminFinance } from "../components/AdminFinance";
+import { NotificationBell } from "../components/NotificationBell";
 import { clearAuthSession, getAuthSession } from "../utils/authSession";
+import { logoutAccount } from "../api/auth";
+import { DashboardOverview, fetchAdminOverview } from "../api/admin";
+import {
+  fetchAdminPlatformSettings,
+  updateAdminCommissionRates,
+  updateAdminSubscriptionPrices,
+} from "../api/platformSettings";
+import { getNotificationUnreadCount } from "../api/notifications";
+import type {
+  AdminCommissionSettings,
+  AdminPlatformInfo,
+  AdminSubscriptionPrices,
+} from "../types/platformSettings";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Tổng quan", id: "overview" },
@@ -77,6 +91,8 @@ const quickStats = [
 export function AdminDashboard() {
   const [activeNav, setActiveNav] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [overview, setOverview] = useState<DashboardOverview | null>(null);
+  const [notificationCount, setNotificationCount] = useState(0);
   const navigate = useNavigate();
   const session = getAuthSession();
   const adminName = session?.fullName?.trim() || session?.username || "Quản trị viên";
@@ -86,10 +102,65 @@ export function AdminDashboard() {
     .map(part => part.charAt(0))
     .join("")
     .toUpperCase();
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await logoutAccount();
+    } catch {
+      // Local session cleanup is still required if the server logout request fails.
+    }
     clearAuthSession();
     navigate("/auth");
   };
+
+  useEffect(() => {
+    fetchAdminOverview()
+      .then(setOverview)
+      .catch((error) => console.error(error));
+  }, []);
+
+  useEffect(() => {
+    getNotificationUnreadCount()
+      .then((result) => setNotificationCount(result.unreadCount))
+      .catch(() => setNotificationCount(0));
+  }, []);
+
+  const formatCompactMoney = (value?: number) => {
+    const amount = value || 0;
+    if (amount >= 1000000) return `${(amount / 1000000).toFixed(1)}M đ`;
+    if (amount >= 1000) return `${Math.round(amount / 1000)}K đ`;
+    return `${amount.toLocaleString("vi-VN")}đ`;
+  };
+
+  const dynamicNavItems = navItems.map((item) => {
+    if (item.id === "users") {
+      return { ...item, badge: overview ? String(overview.totalUsers) : undefined };
+    }
+    if (item.id === "transactions") {
+      return { ...item, badge: overview ? String(overview.todayTransactions || overview.totalTransactions) : undefined };
+    }
+    return item;
+  });
+
+  const dynamicQuickStats = [
+    {
+      label: "Doanh thu hôm nay",
+      value: formatCompactMoney(overview?.todayRevenue),
+      icon: DollarSign,
+      color: "text-emerald-400",
+    },
+    {
+      label: "Giao dịch hôm nay",
+      value: (overview?.todayTransactions || 0).toLocaleString("vi-VN"),
+      icon: Activity,
+      color: "text-blue-400",
+    },
+    {
+      label: "Tổng người dùng",
+      value: (overview?.totalUsers || 0).toLocaleString("vi-VN"),
+      icon: Users,
+      color: "text-violet-400",
+    },
+  ];
 
   const pageTitles: Record<
     string,
@@ -101,15 +172,15 @@ export function AdminDashboard() {
     },
     users: {
       title: "Quản lý người dùng",
-      sub: "12,453 học viên · 2,847 HLV · 12 chờ duyệt",
+      sub: "Dữ liệu người dùng từ hệ thống",
     },
     transactions: {
       title: "Giao dịch học phí",
-      sub: "8,234 giao dịch tháng 3 · Hoa hồng: 67.8M đ",
+      sub: "Dữ liệu giao dịch học phí từ hệ thống",
     },
     subscriptions: {
       title: "Gói đăng ký",
-      sub: "Free/Pro/Premium · Starter/Pro Coach/Elite Coach",
+      sub: "Dữ liệu gói đăng ký từ hệ thống",
     },
     finance: {
       title: "Báo cáo tài chính",
@@ -214,7 +285,7 @@ export function AdminDashboard() {
 
         {/* Quick stats in sidebar */}
         <div className="px-4 py-3 border-b border-white/[0.06] space-y-1.5">
-          {quickStats.map((s) => (
+          {dynamicQuickStats.map((s) => (
             <div
               key={s.label}
               className="flex items-center justify-between px-2 py-1.5 rounded-lg bg-white/5"
@@ -248,7 +319,7 @@ export function AdminDashboard() {
           >
             Quản lý
           </div>
-          {navItems.map(({ icon: Icon, label, id, badge }) => (
+          {dynamicNavItems.map(({ icon: Icon, label, id, badge }) => (
             <button
               key={id}
               onClick={() => {
@@ -373,10 +444,7 @@ export function AdminDashboard() {
               />
             </div>
             {/* Alerts */}
-            <button className="relative p-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-100 transition-colors">
-              <Bell className="w-[18px] h-[18px] text-gray-500" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white" />
-            </button>
+            <NotificationBell />
             {/* Admin badge */}
             <div className="hidden sm:flex items-center gap-2 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
               <Shield className="w-4 h-4 text-rose-500" />
@@ -410,8 +478,268 @@ export function AdminDashboard() {
   );
 }
 
-// ── Settings placeholder ───────────────────────────────────────────────────────
 function AdminSettings() {
+  const [commission, setCommission] = useState<AdminCommissionSettings>({
+    starter: 0,
+    proCoach: 0,
+    eliteCoach: 0,
+  });
+  const [prices, setPrices] = useState<AdminSubscriptionPrices>({
+    trainee: { free: 0, pro: 0, premium: 0 },
+    coach: { starter: 0, proCoach: 0, eliteCoach: 0 },
+  });
+  const [platformInfo, setPlatformInfo] = useState<AdminPlatformInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [savingCommission, setSavingCommission] = useState(false);
+  const [savingPrices, setSavingPrices] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+
+    fetchAdminPlatformSettings()
+      .then((settings) => {
+        if (!mounted) return;
+        setCommission(settings.commissionRates);
+        setPrices(settings.subscriptionPrices);
+        setPlatformInfo(settings.platformInfo);
+        setError(null);
+      })
+      .catch((err) => {
+        if (!mounted) return;
+        setError(err instanceof Error ? err.message : "Khong tai duoc cai dat nen tang.");
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const formatNumber = (value?: number | null) => (value ?? 0).toLocaleString("vi-VN");
+
+  const saveCommission = async () => {
+    setSavingCommission(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const updated = await updateAdminCommissionRates(commission);
+      setCommission(updated);
+      setMessage("Da luu ti le hoa hong.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Luu ti le hoa hong that bai.");
+    } finally {
+      setSavingCommission(false);
+    }
+  };
+
+  const savePrices = async () => {
+    setSavingPrices(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const updated = await updateAdminSubscriptionPrices(prices);
+      setPrices(updated);
+      setMessage("Da luu gia goi dang ky.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Luu gia goi that bai.");
+    } finally {
+      setSavingPrices(false);
+    }
+  };
+
+  const commissionRows = [
+    { label: "Starter", key: "starter" as const, value: commission.starter, color: "border-gray-200", accent: "text-gray-600" },
+    { label: "Pro Coach", key: "proCoach" as const, value: commission.proCoach, color: "border-blue-200", accent: "text-blue-600" },
+    { label: "Elite Coach", key: "eliteCoach" as const, value: commission.eliteCoach, color: "border-violet-200", accent: "text-violet-600" },
+  ];
+
+  const traineePriceRows = [
+    { label: "Free", key: "free" as const, value: prices.trainee.free },
+    { label: "Pro", key: "pro" as const, value: prices.trainee.pro },
+    { label: "Premium", key: "premium" as const, value: prices.trainee.premium },
+  ];
+
+  const coachPriceRows = [
+    { label: "Starter", key: "starter" as const, value: prices.coach.starter },
+    { label: "Pro Coach", key: "proCoach" as const, value: prices.coach.proCoach },
+    { label: "Elite Coach", key: "eliteCoach" as const, value: prices.coach.eliteCoach },
+  ];
+
+  const platformRows = platformInfo
+    ? [
+        { label: "Ten nen tang", value: platformInfo.platformName },
+        { label: "Phien ban", value: platformInfo.version },
+        { label: "Moi truong", value: platformInfo.environment },
+        { label: "Mui gio", value: platformInfo.timezone },
+        { label: "Tong nguoi dung", value: formatNumber(platformInfo.totalUsers) },
+        { label: "Uptime thang nay", value: `${platformInfo.monthlyUptime}%` },
+        { label: "So du vi admin", value: `${formatNumber(platformInfo.adminWalletBalance)}d` },
+        {
+          label: "Cap nhat gan nhat",
+          value: platformInfo.lastUpdatedAt
+            ? new Date(platformInfo.lastUpdatedAt).toLocaleString("vi-VN")
+            : "-",
+        },
+      ]
+    : [{ label: "Trang thai", value: loading ? "Dang tai" : "Chua co du lieu" }];
+
+  return (
+    <div className="space-y-5 max-w-3xl">
+      <div style={{ fontWeight: 800, fontSize: "1.1rem" }} className="text-gray-900">
+        Cai dat nen tang
+      </div>
+
+      {loading && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-gray-500" style={{ fontSize: "0.85rem" }}>
+          Dang tai cai dat...
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-red-50 border border-red-100 text-red-600 rounded-2xl px-4 py-3" style={{ fontSize: "0.85rem", fontWeight: 600 }}>
+          {error}
+        </div>
+      )}
+
+      {message && (
+        <div className="bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-2xl px-4 py-3" style={{ fontSize: "0.85rem", fontWeight: 600 }}>
+          {message}
+        </div>
+      )}
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-50">
+          <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900">Ti le hoa hong</div>
+          <div style={{ fontSize: "0.78rem" }} className="text-gray-400 mt-0.5">Dieu chinh hoa hong theo goi HLV</div>
+        </div>
+        <div className="p-5 space-y-4">
+          {commissionRows.map((row) => (
+            <div key={row.key} className={`flex items-center justify-between p-4 rounded-xl border-2 ${row.color} bg-gray-50`}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: "0.9rem" }} className="text-gray-800">{row.label}</div>
+                <div style={{ fontSize: "0.75rem" }} className="text-gray-500">Hoa hong tren moi giao dich</div>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  value={row.value}
+                  min={0}
+                  max={100}
+                  disabled={loading || savingCommission}
+                  onChange={(event) => setCommission(prev => ({ ...prev, [row.key]: Number(event.target.value) }))}
+                  className={`w-20 text-center py-2 px-3 border-2 rounded-xl outline-none font-bold ${row.color} bg-white disabled:opacity-60`}
+                  style={{ fontSize: "1rem" }}
+                />
+                <span style={{ fontSize: "0.85rem", fontWeight: 700 }} className={row.accent}>%</span>
+              </div>
+            </div>
+          ))}
+          <button
+            onClick={saveCommission}
+            disabled={loading || savingCommission}
+            className="px-5 py-2.5 bg-gray-900 text-white rounded-xl hover:bg-gray-800 disabled:opacity-60 transition-colors"
+            style={{ fontSize: "0.85rem", fontWeight: 700 }}
+          >
+            {savingCommission ? "Dang luu..." : "Luu thay doi"}
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-50">
+          <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900">Gia goi dang ky</div>
+          <div style={{ fontSize: "0.78rem" }} className="text-gray-400 mt-0.5">Cap nhat gia goi hoc vien va HLV</div>
+        </div>
+        <div className="p-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <div style={{ fontWeight: 700, fontSize: "0.85rem" }} className="text-gray-700 mb-3">Goi hoc vien</div>
+              {traineePriceRows.map((row) => (
+                <PriceInputRow
+                  key={row.key}
+                  label={row.label}
+                  value={row.value}
+                  disabled={loading || savingPrices}
+                  onChange={(value) => setPrices(prev => ({ ...prev, trainee: { ...prev.trainee, [row.key]: value } }))}
+                />
+              ))}
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: "0.85rem" }} className="text-gray-700 mb-3">Goi HLV</div>
+              {coachPriceRows.map((row) => (
+                <PriceInputRow
+                  key={row.key}
+                  label={row.label}
+                  value={row.value}
+                  disabled={loading || savingPrices}
+                  onChange={(value) => setPrices(prev => ({ ...prev, coach: { ...prev.coach, [row.key]: value } }))}
+                />
+              ))}
+            </div>
+          </div>
+          <button
+            onClick={savePrices}
+            disabled={loading || savingPrices}
+            className="mt-2 px-5 py-2.5 bg-gray-900 text-white rounded-xl hover:bg-gray-800 disabled:opacity-60 transition-colors"
+            style={{ fontSize: "0.85rem", fontWeight: 700 }}
+          >
+            {savingPrices ? "Dang luu..." : "Luu thay doi"}
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900 mb-4">Thong tin nen tang</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {platformRows.map((row) => (
+            <div key={row.label} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl gap-3">
+              <span style={{ fontSize: "0.82rem" }} className="text-gray-500">{row.label}</span>
+              <span style={{ fontSize: "0.85rem", fontWeight: 700 }} className="text-gray-800 text-right">{row.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PriceInputRow({
+  label,
+  value,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  disabled: boolean;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between mb-3">
+      <span style={{ fontSize: "0.85rem", fontWeight: 600 }} className="text-gray-700">{label}</span>
+      <div className="flex items-center gap-1.5">
+        <input
+          type="number"
+          value={value}
+          min={0}
+          disabled={disabled}
+          onChange={(event) => onChange(Number(event.target.value))}
+          className="w-28 text-right py-1.5 px-3 border-2 border-gray-200 rounded-xl outline-none text-gray-800 bg-gray-50 disabled:opacity-60"
+          style={{ fontSize: "0.85rem" }}
+        />
+        <span style={{ fontSize: "0.8rem" }} className="text-gray-400">d/th</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Settings placeholder ───────────────────────────────────────────────────────
+function AdminSettingsPlaceholder() {
   return (
     <div className="space-y-5 max-w-3xl">
       <div

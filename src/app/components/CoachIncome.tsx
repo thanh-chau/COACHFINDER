@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   DollarSign, TrendingUp, TrendingDown, ArrowUpRight,
   Calendar, Clock, Download, Search, Filter,
@@ -13,6 +13,10 @@ import {
   CartesianGrid, Tooltip, BarChart, Bar, PieChart, Pie, Cell, Legend,
   LineChart, Line,
 } from "recharts";
+import { coachWorkspaceApi } from "../api/coachWorkspace";
+import type { CoachIncomeOverview, CoachTopStudent } from "../types/coachWorkspace";
+import type { WalletTransaction } from "../types/wallet";
+import { WalletPanel } from "./WalletPanel";
 
 // ─── Avatars ──────────────────────────────────────────────────────────────────
 const AVT = {
@@ -125,11 +129,17 @@ function CustomTooltip({ active, payload, label }:any) {
 }
 
 // ─── Overview Tab ─────────────────────────────────────────────────────────────
-function OverviewTab() {
+function OverviewTab({
+  monthlyData = MONTHLY_DATA,
+  topStudents = TOP_STUDENTS,
+}: {
+  monthlyData?: MonthlyIncomeRow[];
+  topStudents?: TopStudentRow[];
+}) {
   const [period,setPeriod] = useState<"6m"|"12m">("12m");
-  const data = period==="6m" ? MONTHLY_DATA.slice(-6) : MONTHLY_DATA;
-  const curMonth = MONTHLY_DATA[MONTHLY_DATA.length-1];
-  const prevMonth= MONTHLY_DATA[MONTHLY_DATA.length-2];
+  const data = period==="6m" ? monthlyData.slice(-6) : monthlyData;
+  const curMonth = monthlyData[monthlyData.length-1] ?? MONTHLY_DATA[MONTHLY_DATA.length-1];
+  const prevMonth= monthlyData[monthlyData.length-2] ?? curMonth;
   const growthGross = ((curMonth.gross-prevMonth.gross)/prevMonth.gross*100).toFixed(1);
   const growthNet   = ((curMonth.net  -prevMonth.net  )/prevMonth.net  *100).toFixed(1);
 
@@ -245,7 +255,7 @@ function OverviewTab() {
           <div style={{fontWeight:700,fontSize:"0.95rem"}} className="text-gray-900 mb-1">Số buổi dạy</div>
           <div style={{fontSize:"0.75rem"}} className="text-gray-400 mb-4">6 tháng gần nhất</div>
           <ResponsiveContainer width="100%" height={160}>
-            <BarChart data={MONTHLY_DATA.slice(-6)} margin={{top:5,right:5,left:-20,bottom:0}}>
+            <BarChart data={monthlyData.slice(-6)} margin={{top:5,right:5,left:-20,bottom:0}}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false}/>
               <XAxis dataKey="month" tick={{fontSize:10,fill:"#9ca3af"}} axisLine={false} tickLine={false}/>
               <YAxis tick={{fontSize:10,fill:"#9ca3af"}} axisLine={false} tickLine={false}/>
@@ -269,7 +279,7 @@ function OverviewTab() {
           </span>
         </div>
         <div className="space-y-2">
-          {TOP_STUDENTS.map((s,i)=>(
+          {topStudents.map((s,i)=>(
             <div key={s.name} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors">
               <span style={{fontWeight:800,fontSize:"0.85rem",width:20,textAlign:"center"}}
                 className={i===0?"text-amber-400":i===1?"text-gray-400":i===2?"text-orange-400":"text-gray-300"}>
@@ -291,7 +301,7 @@ function OverviewTab() {
               <div className="w-20 hidden sm:block">
                 <div className="h-1.5 bg-gray-100 rounded-full">
                   <div className="h-1.5 rounded-full bg-gradient-to-r from-blue-400 to-indigo-500"
-                    style={{width:`${(s.revenue/TOP_STUDENTS[0].revenue*100).toFixed(0)}%`}}/>
+                    style={{width:`${(s.revenue/Math.max(topStudents[0]?.revenue || 1, 1)*100).toFixed(0)}%`}}/>
                 </div>
               </div>
             </div>
@@ -338,7 +348,7 @@ function OverviewTab() {
 }
 
 // ─── Transactions Tab ─────────────────────────────────────────────────────────
-function TransactionsTab() {
+function TransactionsTab({ transactions = TRANSACTIONS }: { transactions?: Tx[] }) {
   const [search,setSearch] = useState("");
   const [filter,setFilter] = useState<"all"|TxStatus|string>("all");
   const [typeFilter,setTypeFilter] = useState("Tất cả");
@@ -346,7 +356,7 @@ function TransactionsTab() {
 
   const types = ["Tất cả","Buổi lẻ","Gói 8 buổi","Gói tháng","Gói 3 tháng"];
 
-  const filtered = TRANSACTIONS.filter(t=>{
+  const filtered = transactions.filter(t=>{
     if(search&&!t.student.toLowerCase().includes(search.toLowerCase())&&
        !t.package.toLowerCase().includes(search.toLowerCase())) return false;
     if(filter!=="all"&&t.status!==filter) return false;
@@ -492,9 +502,17 @@ function TransactionsTab() {
 }
 
 // ─── Payout Tab ───────────────────────────────────────────────────────────────
-function PayoutTab() {
+function PayoutTab({
+  availableBalance = BALANCE_AVAIL,
+  pendingBalance = BALANCE_PENDING,
+  payouts = PAYOUTS,
+}: {
+  availableBalance?: number;
+  pendingBalance?: number;
+  payouts?: PayoutRow[];
+}) {
   const [step,setStep] = useState<"idle"|"confirm"|"done">("idle");
-  const [amount,setAmount] = useState("15600000");
+  const [amount,setAmount] = useState(String(availableBalance));
 
   return (
     <div className="space-y-4 max-w-2xl mx-auto">
@@ -504,11 +522,11 @@ function PayoutTab() {
         <div className="absolute -bottom-8 -left-4 w-40 h-40 rounded-full bg-blue-500/10"/>
         <div className="relative">
           <div style={{fontSize:"0.78rem",fontWeight:600}} className="text-gray-400 uppercase tracking-wide mb-1">Số dư khả dụng</div>
-          <div style={{fontWeight:800,fontSize:"2rem",lineHeight:1}} className="text-white mb-4">{fmt(BALANCE_AVAIL)}</div>
+          <div style={{fontWeight:800,fontSize:"2rem",lineHeight:1}} className="text-white mb-4">{fmt(availableBalance)}</div>
           <div className="flex items-center gap-4 flex-wrap">
             <div className="bg-white/10 rounded-xl px-3 py-2">
               <div style={{fontSize:"0.65rem"}} className="text-gray-400">Đang chờ xử lý</div>
-              <div style={{fontWeight:700,fontSize:"0.88rem"}} className="text-amber-300">{fmt(BALANCE_PENDING)}</div>
+              <div style={{fontWeight:700,fontSize:"0.88rem"}} className="text-amber-300">{fmt(pendingBalance)}</div>
             </div>
             <div className="bg-white/10 rounded-xl px-3 py-2">
               <div style={{fontSize:"0.65rem"}} className="text-gray-400">Ngân hàng liên kết</div>
@@ -537,11 +555,11 @@ function PayoutTab() {
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" style={{fontSize:"0.82rem"}}>đ</span>
             </div>
             <div className="flex gap-2 mt-2">
-              {[5000000,10000000,BALANCE_AVAIL].map(v=>(
+              {[5000000,10000000,availableBalance].map(v=>(
                 <button key={v} onClick={()=>setAmount(String(v))}
                   className={`px-3 py-1.5 rounded-lg border transition-colors ${Number(amount)===v?"border-blue-500 bg-blue-50 text-blue-600":"border-gray-200 text-gray-500 hover:border-blue-300"}`}
                   style={{fontSize:"0.73rem",fontWeight:600}}>
-                  {v===BALANCE_AVAIL?"Tất cả":fmtM(v)}
+                  {v===availableBalance?"Tất cả":fmtM(v)}
                 </button>
               ))}
             </div>
@@ -563,8 +581,8 @@ function PayoutTab() {
               Tiền sẽ được chuyển trong <strong>1–2 ngày làm việc</strong>. Yêu cầu tối thiểu <strong>500,000đ</strong>.
             </p>
           </div>
-          <button onClick={()=>setStep("confirm")} disabled={Number(amount)<500000||Number(amount)>BALANCE_AVAIL}
-            className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 transition-all ${Number(amount)>=500000&&Number(amount)<=BALANCE_AVAIL?"bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 shadow-md shadow-blue-200":"bg-gray-100 text-gray-400 cursor-not-allowed"}`}
+          <button onClick={()=>setStep("confirm")} disabled={Number(amount)<500000||Number(amount)>availableBalance}
+            className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 transition-all ${Number(amount)>=500000&&Number(amount)<=availableBalance?"bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 shadow-md shadow-blue-200":"bg-gray-100 text-gray-400 cursor-not-allowed"}`}
             style={{fontSize:"0.9rem",fontWeight:700}}>
             <ArrowDown className="w-4 h-4"/> Rút {Number(amount)>0?fmt(Number(amount)):""}
           </button>
@@ -579,7 +597,7 @@ function PayoutTab() {
               {label:"Số tiền rút",   value:fmt(Number(amount)), big:true},
               {label:"Tài khoản",     value:"VCB ****8819 – Trần Văn Đức"},
               {label:"Thời gian",     value:"1–2 ngày làm việc"},
-              {label:"Số dư còn lại", value:fmt(BALANCE_AVAIL-Number(amount))},
+              {label:"Số dư còn lại", value:fmt(availableBalance-Number(amount))},
             ].map(({label,value,big})=>(
               <div key={label} className="flex justify-between py-1.5 border-b border-gray-50">
                 <span style={{fontSize:"0.8rem"}} className="text-gray-500">{label}</span>
@@ -613,7 +631,7 @@ function PayoutTab() {
       <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
         <div style={{fontWeight:700,fontSize:"0.95rem"}} className="text-gray-900 mb-4">Lịch sử rút tiền</div>
         <div className="space-y-2.5">
-          {PAYOUTS.map(p=>(
+          {payouts.map(p=>(
             <div key={p.ref} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
               <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
                 <Banknote className="w-4 h-4 text-emerald-500"/>
@@ -728,10 +746,52 @@ type IncomeTab = "overview" | "transactions" | "payout" | "plan";
 
 export function CoachIncome() {
   const [tab, setTab] = useState<IncomeTab>("overview");
+  const [overview, setOverview] = useState<CoachIncomeOverview | null>(null);
+  const [monthlyData, setMonthlyData] = useState<MonthlyIncomeRow[]>(MONTHLY_DATA);
+  const [transactions, setTransactions] = useState<Tx[]>(TRANSACTIONS);
+  const [topStudents, setTopStudents] = useState<TopStudentRow[]>(TOP_STUDENTS);
+  const [payouts, setPayouts] = useState<PayoutRow[]>(PAYOUTS);
+  const [usingFallback, setUsingFallback] = useState(false);
+
+  useEffect(() => {
+    Promise.all([
+      coachWorkspaceApi.getIncomeOverview(),
+      coachWorkspaceApi.getMonthlyChart(),
+      coachWorkspaceApi.getIncomeTransactions(),
+      coachWorkspaceApi.getTopStudents(),
+      coachWorkspaceApi.getPayouts(),
+    ])
+      .then(([overviewData, chartData, transactionData, studentData, payoutData]) => {
+        setOverview(overviewData);
+        if (chartData.length > 0) {
+          setMonthlyData(chartData.map((point) => ({
+            month: point.period,
+            gross: point.value,
+            net: Math.round(point.value * 0.88),
+            sessions: point.count,
+            students: point.count,
+          })));
+        }
+        if (transactionData.length > 0) {
+          setTransactions(transactionData.map(mapTransaction));
+        }
+        if (studentData.length > 0) {
+          setTopStudents(studentData.map(mapTopStudent));
+        }
+        if (payoutData.length > 0) {
+          setPayouts(payoutData.map(mapPayout));
+        }
+        setUsingFallback(false);
+      })
+      .catch(() => {
+        setOverview(null);
+        setUsingFallback(true);
+      });
+  }, []);
 
   const TABS: { id: IncomeTab; label: string; emoji: string; badge?: string }[] = [
     { id:"overview",     label:"Tổng quan",      emoji:"📊" },
-    { id:"transactions", label:"Giao dịch",       emoji:"📋", badge:`${TRANSACTIONS.filter(t=>t.status==="pending").length}` },
+    { id:"transactions", label:"Giao dịch",       emoji:"📋", badge:`${transactions.filter(t=>t.status==="pending").length}` },
     { id:"payout",       label:"Rút tiền",        emoji:"💸" },
     { id:"plan",         label:"Gói HLV",         emoji:"⭐" },
   ];
@@ -748,7 +808,7 @@ export function CoachIncome() {
           <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2 flex items-center gap-2">
             <DollarSign className="w-4 h-4 text-emerald-500"/>
             <div>
-              <div style={{fontWeight:800,fontSize:"1rem"}} className="text-emerald-600">15,600,000đ</div>
+              <div style={{fontWeight:800,fontSize:"1rem"}} className="text-emerald-600">{fmt(overview?.availableBalance ?? BALANCE_AVAIL)}</div>
               <div style={{fontSize:"0.62rem"}} className="text-emerald-400">Khả dụng</div>
             </div>
           </div>
@@ -758,6 +818,11 @@ export function CoachIncome() {
           </button>
         </div>
       </div>
+      {usingFallback && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-amber-700" style={{ fontSize: "0.78rem", fontWeight: 600 }}>
+          Dang hien thi du lieu mau cho cac widget can aggregate backend: income overview, monthly chart, transactions, top students, payouts.
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm w-fit">
@@ -776,10 +841,63 @@ export function CoachIncome() {
       </div>
 
       {/* Content */}
-      {tab==="overview"     && <OverviewTab/>}
-      {tab==="transactions" && <TransactionsTab/>}
-      {tab==="payout"       && <PayoutTab/>}
+      {tab==="overview"     && <OverviewTab monthlyData={monthlyData} topStudents={topStudents}/>}
+      {tab==="transactions" && <TransactionsTab transactions={transactions}/>}
+      {tab==="payout"       && <WalletPanel mode="coach" allowWithdraw allowBankAccount />}
       {tab==="plan"         && <PlanTab/>}
     </div>
   );
+}
+
+type MonthlyIncomeRow = typeof MONTHLY_DATA[number];
+type TopStudentRow = typeof TOP_STUDENTS[number];
+type PayoutRow = typeof PAYOUTS[number];
+
+function mapStatus(status: string | null): TxStatus {
+  if (status === "REJECTED") return "refunded";
+  if (status === "PROCESSING" || status === "PENDING") return "pending";
+  return "paid";
+}
+
+function formatDate(value: string) {
+  return new Date(value).toLocaleDateString("vi-VN");
+}
+
+function mapTransaction(tx: WalletTransaction): Tx {
+  const gross = Math.abs(tx.amount || 0);
+  const commission = tx.type === "BOOKING_COMMISSION" ? gross : 0;
+  return {
+    id: `tx${tx.id}`,
+    date: formatDate(tx.createdAt),
+    student: tx.description || tx.referenceType || "Giao dịch ví",
+    avatar: AVT.a,
+    type: tx.type,
+    package: tx.description || tx.referenceType || "Giao dịch",
+    gross,
+    commission,
+    net: Math.max(0, gross - commission),
+    status: mapStatus(tx.withdrawalStatus),
+    method: tx.bankName || "Ví CoachFinder",
+    note: tx.adminNote || undefined,
+  };
+}
+
+function mapPayout(tx: WalletTransaction): PayoutRow {
+  return {
+    amount: Math.abs(tx.amount || 0),
+    date: formatDate(tx.createdAt),
+    method: tx.bankName || "Ngân hàng",
+    ref: tx.referenceId || `WD-${tx.id}`,
+  };
+}
+
+function mapTopStudent(student: CoachTopStudent, index: number): TopStudentRow {
+  return {
+    name: student.traineeName,
+    avatar: [AVT.a, AVT.b, AVT.c][index % 3],
+    revenue: student.revenue,
+    sessions: student.sessions,
+    rating: 5,
+    pkg: "Học viên",
+  };
 }

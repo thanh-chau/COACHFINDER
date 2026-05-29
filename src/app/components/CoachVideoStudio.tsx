@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   Upload, Play, Pause, Video, Globe, Grid3X3, List,
   Search, MoreHorizontal, Eye, Clock, Users,
@@ -10,6 +10,9 @@ import {
   CheckCircle2, TrendingUp, Zap, Award,
 } from "lucide-react";
 import { Video360Player } from "./Video360Player";
+import { deleteCoachVideo, getCoachSubmissions, getCoachVideoAnalytics, getVideos, reviewCoachSubmission, updateCoachVideo, uploadCoachVideo } from "../api/videos";
+import type { CoachVideoSubmission, VideoAnalytics, VideoItem } from "../types/video";
+import { getAuthSession } from "../utils/authSession";
 
 // ─── Avatars & Thumbnails ────────────────────────────────────────────────────
 const AVT = {
@@ -89,6 +92,68 @@ interface CoachVideo {
   assignedStudents: string[];
   notes: string;
   submissions: StudentSubmission[];
+  file?: File;
+}
+
+function formatDuration(seconds: number | null) {
+  if (!seconds) return "00:00";
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return `${minutes}:${String(rest).padStart(2, "0")}`;
+}
+
+function mapSubmission(submission: CoachVideoSubmission): StudentSubmission {
+  const score = submission.totalScore ?? 0;
+  return {
+    id: String(submission.id),
+    studentName: submission.traineeName,
+    studentAvatar: AVT.minh_anh,
+    thumbnail: SUB.squat_s,
+    duration: "00:00",
+    uploadDate: new Date(submission.submittedAt).toLocaleDateString("vi-VN"),
+    status: submission.status === "REVIEWED" ? "reviewed" : submission.status === "APPROVED" ? "approved" : "pending",
+    scores: submission.totalScore == null ? undefined : {
+      posture: score,
+      technique: score,
+      rhythm: score,
+      power: score,
+    },
+    coachFeedback: submission.feedback || "",
+    timestamps: [],
+  };
+}
+
+function mapApiVideo(video: VideoItem, submissions: CoachVideoSubmission[]): CoachVideo {
+  const ownSubmissions = submissions.filter((submission) => submission.videoId === video.id);
+  const assignedStudents = Array.from(new Set(
+    ownSubmissions
+      .map((submission) => submission.traineeName)
+      .filter(Boolean),
+  ));
+  return {
+    id: String(video.id),
+    title: video.title,
+    description: video.description || "",
+    thumbnail: video.thumbnailUrl || REF.gym360,
+    duration: formatDuration(video.duration),
+    durationSec: video.duration || 0,
+    type: video.videoType === "VIDEO_360" || video.format === "360" ? "360" : "normal",
+    category: video.category || "Thể hình",
+    tags: video.tags || [],
+    visibility: video.visibility === "PUBLIC" ? "public" : video.visibility === "PRIVATE" ? "private" : "students",
+    views: video.viewCount,
+    likes: video.likes,
+    uploadDate: video.uploadDate ? new Date(video.uploadDate).toLocaleDateString("vi-VN") : "",
+    fileSize: video.size ? `${(video.size / 1024 / 1024).toFixed(1)} MB` : "—",
+    resolution: video.resolution || "—",
+    assignedStudents,
+    notes: video.description || "",
+    submissions: ownSubmissions.map(mapSubmission),
+  };
+}
+
+function mapUploadedVideo(video: VideoItem): CoachVideo {
+  return mapApiVideo(video, []);
 }
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
@@ -450,7 +515,6 @@ const INITIAL_VIDEOS: CoachVideo[] = [
 ];
 
 const CATEGORIES = ["Tất cả","Thể hình","Yoga","Boxing","Cardio","Tennis","Bơi lội","CrossFit","Pilates"];
-const STUDENTS_LIST = ["Nguyễn Minh Anh","Trần Bảo Long","Lê Thúy Nga","Phạm Đức Hải","Võ Thị Hoa","Đặng Quốc Tuấn","Bùi Văn Nam"];
 
 const VIS_CFG = {
   public:   { icon: Globe2, label:"Công khai", bg:"bg-emerald-50", text:"text-emerald-600" },
@@ -581,7 +645,7 @@ function UploadZone({ onUpload }:{ onUpload:(v:Partial<CoachVideo>)=>void }) {
             onUpload({title:form.title,description:form.description,category:form.category,visibility:form.visibility,type:form.type,
               tags:form.tags.split(",").map(t=>t.trim()).filter(Boolean),notes:form.notes,thumbnail:preview,
               duration:"00:00",durationSec:0,views:0,likes:0,fileSize:`${(file.size/1024/1024/1024).toFixed(2)} GB`,
-              resolution:form.type==="360"?"5760×2880 (360°)":"1920×1080",uploadDate:"05/03/2026",assignedStudents:[],submissions:[]});
+              resolution:form.type==="360"?"5760×2880 (360°)":"1920×1080",uploadDate:"05/03/2026",assignedStudents:[],submissions:[],file});
             setStep("drop");setFile(null);
           }} className={`w-full py-3 rounded-xl transition-all ${form.title.trim()?"bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 shadow-lg shadow-blue-200":"bg-gray-100 text-gray-400 cursor-not-allowed"}`}
             style={{fontSize:"0.9rem",fontWeight:700}}>✅ Tải lên & Lưu</button>
@@ -1097,8 +1161,8 @@ function StudioStats({ videos }:{ videos:CoachVideo[] }) {
 }
 
 // ─── Video Card ────────────────────────────────────────────────────────────────
-function VideoCard({ v, onSelect, onDelete, selected, gridMode, onCompare }:{
-  v:CoachVideo; onSelect:()=>void; onDelete:()=>void; selected:boolean; gridMode:boolean; onCompare:()=>void;
+function VideoCard({ v, onSelect, onDelete, onEdit, selected, gridMode, onCompare }:{
+  v:CoachVideo; onSelect:()=>void; onDelete:()=>void; onEdit:()=>void; selected:boolean; gridMode:boolean; onCompare:()=>void;
 }) {
   const [menuOpen,setMenuOpen] = useState(false);
   const vis = VIS_CFG[v.visibility];
@@ -1134,7 +1198,7 @@ function VideoCard({ v, onSelect, onDelete, selected, gridMode, onCompare }:{
               <div className="absolute right-0 top-6 z-30 bg-white rounded-xl shadow-lg border border-gray-100 py-1.5 w-44" onClick={e=>e.stopPropagation()}>
                 {[
                   {icon:SplitSquareHorizontal,label:"Xem bài nộp",action:()=>{onCompare();setMenuOpen(false);}},
-                  {icon:Edit3,label:"Chỉnh sửa",action:()=>setMenuOpen(false)},
+                  {icon:Edit3,label:"Chỉnh sửa",action:()=>{onEdit();setMenuOpen(false);}},
                   {icon:Share2,label:"Chia sẻ link",action:()=>setMenuOpen(false)},
                   {icon:Download,label:"Tải về",action:()=>setMenuOpen(false)},
                   {icon:Copy,label:"Nhân bản",action:()=>setMenuOpen(false)},
@@ -1168,13 +1232,35 @@ function VideoCard({ v, onSelect, onDelete, selected, gridMode, onCompare }:{
 type StudioTab = "library"|"upload"|"compare"|"player360";
 
 export function CoachVideoStudio() {
-  const [videos,setVideos]       = useState<CoachVideo[]>(INITIAL_VIDEOS);
+  const [videos,setVideos]       = useState<CoachVideo[]>([]);
+  const [usingFallback,setUsingFallback] = useState(false);
   const [tab,setTab]             = useState<StudioTab>("library");
   const [gridMode,setGridMode]   = useState(true);
   const [search,setSearch]       = useState("");
   const [catFilter,setCatFilter] = useState("Tất cả");
   const [typeFilter,setTypeFilter] = useState<"all"|"normal"|"360">("all");
-  const [selectedId,setSelectedId] = useState<string|null>("v1");
+  const [selectedId,setSelectedId] = useState<string|null>(null);
+  const [selectedAnalytics,setSelectedAnalytics] = useState<VideoAnalytics|null>(null);
+  const [analyticsNotice,setAnalyticsNotice] = useState<string|null>(null);
+
+  useEffect(() => {
+    Promise.all([
+      getVideos(),
+      getCoachSubmissions().catch(() => []),
+    ])
+      .then(([videoItems, submissions]) => {
+        if (videoItems.length === 0) return;
+        const mapped = videoItems.map((video) => mapApiVideo(video, submissions));
+        setVideos(mapped);
+        setSelectedId(mapped[0]?.id ?? null);
+        setUsingFallback(false);
+      })
+      .catch(() => {
+        setVideos(INITIAL_VIDEOS);
+        setSelectedId(INITIAL_VIDEOS[0]?.id ?? null);
+        setUsingFallback(true);
+      });
+  }, []);
 
   const filtered = videos.filter(v=>{
     const q = search.toLowerCase();
@@ -1187,7 +1273,21 @@ export function CoachVideoStudio() {
   const selectedVideo = videos.find(v=>v.id===selectedId)??null;
   const totalPending  = videos.reduce((s,v)=>s+v.submissions.filter(sub=>sub.status==="pending").length,0);
 
-  const handleUpload = (partial:Partial<CoachVideo>) => {
+  useEffect(() => {
+    setSelectedAnalytics(null);
+    setAnalyticsNotice(null);
+    if (!selectedVideo) return;
+    const numericId = Number(selectedVideo.id);
+    if (!Number.isFinite(numericId)) return;
+
+    getCoachVideoAnalytics(numericId)
+      .then(setSelectedAnalytics)
+      .catch(() => {
+        setAnalyticsNotice("Chua tai duoc analytics rieng cho video nay; dang hien thi chi so tu danh sach video/submission.");
+      });
+  }, [selectedVideo?.id]);
+
+  const handleUpload = async (partial:Partial<CoachVideo>) => {
     const nv:CoachVideo = {
       id:`v${Date.now()}`, title:partial.title??"Video mới", description:partial.description??"",
       thumbnail:partial.thumbnail??REF.gym360, duration:"00:00", durationSec:0,
@@ -1198,20 +1298,91 @@ export function CoachVideoStudio() {
       notes:partial.notes??"", submissions:[],
     };
     setVideos(p=>[nv,...p]); setTab("library"); setSelectedId(nv.id);
+    const session = getAuthSession();
+    const coachId = session?.coachId ?? session?.userId;
+    if (!partial.file || !coachId) return;
+    try {
+      const uploaded = await uploadCoachVideo({
+        coachId,
+        title: nv.title,
+        format: nv.type === "360" ? "360" : "NORMAL",
+        resolution: nv.resolution,
+        tags: nv.tags,
+        videoType: nv.type === "360" ? "VIDEO_360" : "NORMAL",
+        file: partial.file,
+      });
+      const mapped = mapUploadedVideo(uploaded);
+      setVideos(prev => prev.map(item => item.id === nv.id ? mapped : item));
+      setSelectedId(mapped.id);
+    } catch {
+      // Keep the local optimistic video if upload API is unavailable.
+    }
   };
 
-  const handleSaveFeedback = (videoId:string,subId:string,scores:StudentSubmission["scores"],fb:string,ts:TimestampNote[]) => {
+  const handleDeleteVideo = async (videoId:string) => {
+    const previous = videos;
+    setVideos(p=>p.filter(x=>x.id!==videoId));
+    if (selectedId === videoId) setSelectedId(null);
+    const numericId = Number(videoId);
+    if (!Number.isFinite(numericId)) return;
+    try {
+      await deleteCoachVideo(numericId);
+    } catch {
+      setVideos(previous);
+      setSelectedId(videoId);
+    }
+  };
+
+  const handleEditVideo = async (video:CoachVideo) => {
+    const title = window.prompt("Tiêu đề video", video.title);
+    if (title === null) return;
+    const description = window.prompt("Mô tả video", video.description) ?? video.description;
+    const nextVideo = { ...video, title: title.trim() || video.title, description, notes: description };
+    setVideos(prev => prev.map(item => item.id === video.id ? nextVideo : item));
+    const numericId = Number(video.id);
+    if (!Number.isFinite(numericId)) return;
+    try {
+      const updated = await updateCoachVideo(numericId, {
+        title: nextVideo.title,
+        description: nextVideo.description,
+        visibility: nextVideo.visibility.toUpperCase(),
+        tags: nextVideo.tags,
+      });
+      setVideos(prev => prev.map(item => item.id === video.id ? mapUploadedVideo(updated) : item));
+    } catch {
+      setVideos(prev => prev.map(item => item.id === video.id ? video : item));
+    }
+  };
+
+  const handleSaveFeedback = async (videoId:string,subId:string,scores:StudentSubmission["scores"],fb:string,ts:TimestampNote[]) => {
+    const previous = videos;
     setVideos(prev=>prev.map(v=>{
       if(v.id!==videoId) return v;
       return { ...v, submissions: v.submissions.map(s=>
         s.id!==subId ? s : { ...s, scores, coachFeedback:fb, timestamps:ts, status:"reviewed" as SubStatus }
       )};
     }));
+    const numericId = Number(subId);
+    if (!Number.isFinite(numericId) || !scores) return;
+    try {
+      await reviewCoachSubmission(numericId, {
+        totalScore: Math.round(avgScore(scores)),
+        feedback: fb,
+        status: "REVIEWED",
+      });
+    } catch {
+      setVideos(previous);
+    }
   };
 
   return (
     <div className="flex flex-col gap-4 h-[calc(100vh-130px)]">
       <StudioStats videos={videos}/>
+      {usingFallback && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-amber-700" style={{ fontSize: "0.78rem", fontWeight: 600 }}>
+          Dang hien thi video va bai nop mau vi API video studio chua tai duoc.
+        </div>
+      )}
 
       {/* Tab bar */}
       <div className="shrink-0 flex items-center gap-2 flex-wrap">
@@ -1274,11 +1445,11 @@ export function CoachVideoStudio() {
                 <div className="flex flex-col items-center justify-center h-40 text-gray-200"><Film className="w-10 h-10 mb-2 opacity-30"/><span style={{fontSize:"0.85rem"}} className="text-gray-400">Không tìm thấy</span></div>
               ) : gridMode ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 pr-1">
-                  {filtered.map(v=><VideoCard key={v.id} v={v} gridMode onSelect={()=>setSelectedId(v.id)} onDelete={()=>setVideos(p=>p.filter(x=>x.id!==v.id))} selected={selectedId===v.id} onCompare={()=>{setSelectedId(v.id);setTab("compare");}}/>)}
+                  {filtered.map(v=><VideoCard key={v.id} v={v} gridMode onSelect={()=>setSelectedId(v.id)} onDelete={()=>handleDeleteVideo(v.id)} onEdit={()=>handleEditVideo(v)} selected={selectedId===v.id} onCompare={()=>{setSelectedId(v.id);setTab("compare");}}/>)}
                 </div>
               ) : (
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50">
-                  {filtered.map(v=><VideoCard key={v.id} v={v} gridMode={false} onSelect={()=>setSelectedId(v.id)} onDelete={()=>setVideos(p=>p.filter(x=>x.id!==v.id))} selected={selectedId===v.id} onCompare={()=>{setSelectedId(v.id);setTab("compare");}}/>)}
+                  {filtered.map(v=><VideoCard key={v.id} v={v} gridMode={false} onSelect={()=>setSelectedId(v.id)} onDelete={()=>handleDeleteVideo(v.id)} onEdit={()=>handleEditVideo(v)} selected={selectedId===v.id} onCompare={()=>{setSelectedId(v.id);setTab("compare");}}/>)}
                 </div>
               )}
             </div>
@@ -1324,6 +1495,31 @@ export function CoachVideoStudio() {
                         </span>
                       )}
                     </button>
+                  </div>
+
+                  <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span style={{fontWeight:700,fontSize:"0.82rem"}} className="text-blue-800">Analytics video</span>
+                      <TrendingUp className="w-4 h-4 text-blue-500"/>
+                    </div>
+                    {analyticsNotice&&(
+                      <div className="mb-2 text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2 py-1.5" style={{fontSize:"0.68rem",fontWeight:600}}>
+                        {analyticsNotice}
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        {label:"Views",value:selectedAnalytics?.views ?? selectedVideo.views},
+                        {label:"Likes",value:selectedAnalytics?.likes ?? selectedVideo.likes},
+                        {label:"Saved",value:selectedAnalytics?.saves ?? "—"},
+                        {label:"Avg score",value:selectedAnalytics?.averageScore ?? (selectedVideo.submissions.length ? avgScore(selectedVideo.submissions[0].scores) : "—")},
+                      ].map(item=>(
+                        <div key={item.label} className="bg-white rounded-lg px-2 py-2 border border-blue-100">
+                          <div className="text-gray-400" style={{fontSize:"0.62rem",fontWeight:700}}>{item.label}</div>
+                          <div className="text-gray-900" style={{fontSize:"0.9rem",fontWeight:800}}>{item.value}</div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Submissions preview */}
