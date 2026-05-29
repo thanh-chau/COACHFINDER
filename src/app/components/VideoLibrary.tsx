@@ -961,6 +961,36 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
             style={{ fontSize: "0.85rem" }}
           />
         </div>
+              <img src={featured.thumbnail} alt={featured.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm border-2 border-white/40 flex items-center justify-center">
+                  <Play className="w-7 h-7 text-white ml-1" />
+                </div>
+              </div>
+              {/* 360 badge */}
+              <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-violet-600/90 px-2.5 py-1.5 rounded-xl">
+                <Globe className="w-3.5 h-3.5 text-white" />
+                <span className="text-white" style={{ fontSize: "0.72rem", fontWeight: 700 }}>360°</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Search + Filter bar ── */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        {/* Search */}
+        <div className="relative flex-1">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Tìm kiếm video, HLV, môn thể thao..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition-all"
+            style={{ fontSize: "0.85rem" }}
+          />
+        </div>
 
         {/* Sort */}
         <select
@@ -991,33 +1021,6 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
           <BookmarkPlus className="w-4 h-4" />
           <span className="hidden sm:inline">{loadingSaved ? "Đang tải..." : "Đã lưu"}</span>
         </button>
-
-        {/* View toggle */}
-        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
-          <button
-            onClick={() => setViewMode("grid")}
-            className={`p-2 rounded-lg transition-all ${viewMode === "grid" ? "bg-white shadow-sm text-gray-900" : "text-gray-400 hover:text-gray-600"}`}
-          >
-            <Grid3X3 className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setViewMode("list")}
-            className={`p-2 rounded-lg transition-all ${viewMode === "list" ? "bg-white shadow-sm text-gray-900" : "text-gray-400 hover:text-gray-600"}`}
-          >
-            <List className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* ── Categories ── */}
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-        {CATEGORIES.map(cat => (
-          <button
-            key={cat.id}
-            onClick={() => setActiveCategory(cat.id)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl border whitespace-nowrap transition-all shrink-0 ${
-              activeCategory === cat.id
-                ? "bg-violet-500 border-violet-500 text-white shadow-md shadow-violet-200"
 
         {/* View toggle */}
         <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
