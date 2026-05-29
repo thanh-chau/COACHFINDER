@@ -147,12 +147,7 @@ export function AIVideoAnalysis() {
           </p>
         </div>
 
-        <div className="mb-8 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-left text-amber-100">
-          <div style={{ fontWeight: 800, fontSize: "0.88rem" }}>Marketing demo - backend AI analysis chua san sang</div>
-          <p className="mt-1 text-amber-100/80" style={{ fontSize: "0.78rem", lineHeight: 1.6 }}>
-            Phase 7 da dinh nghia API upload/analyze, history, detail va feedback. Noi dung ben duoi la preview tinh cho landing page.
-          </p>
-        </div>
+
 
         {/* Main mockup */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-20">

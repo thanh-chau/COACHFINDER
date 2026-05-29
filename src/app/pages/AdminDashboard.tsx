@@ -509,7 +509,7 @@ function AdminSettings() {
       })
       .catch((err) => {
         if (!mounted) return;
-        setError(err instanceof Error ? err.message : "Khong tai duoc cai dat nen tang.");
+        setError(err instanceof Error ? err.message : "Không tải được cài đặt nền tảng.");
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -529,9 +529,9 @@ function AdminSettings() {
     try {
       const updated = await updateAdminCommissionRates(commission);
       setCommission(updated);
-      setMessage("Da luu ti le hoa hong.");
+      setMessage("Đã lưu tỉ lệ hoa hồng.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Luu ti le hoa hong that bai.");
+      setError(err instanceof Error ? err.message : "Lưu tỉ lệ hoa hồng thất bại.");
     } finally {
       setSavingCommission(false);
     }
@@ -544,9 +544,9 @@ function AdminSettings() {
     try {
       const updated = await updateAdminSubscriptionPrices(prices);
       setPrices(updated);
-      setMessage("Da luu gia goi dang ky.");
+      setMessage("Đã lưu giá gói đăng ký.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Luu gia goi that bai.");
+      setError(err instanceof Error ? err.message : "Lưu giá gói thất bại.");
     } finally {
       setSavingPrices(false);
     }
@@ -572,31 +572,31 @@ function AdminSettings() {
 
   const platformRows = platformInfo
     ? [
-        { label: "Ten nen tang", value: platformInfo.platformName },
-        { label: "Phien ban", value: platformInfo.version },
-        { label: "Moi truong", value: platformInfo.environment },
-        { label: "Mui gio", value: platformInfo.timezone },
-        { label: "Tong nguoi dung", value: formatNumber(platformInfo.totalUsers) },
-        { label: "Uptime thang nay", value: `${platformInfo.monthlyUptime}%` },
-        { label: "So du vi admin", value: `${formatNumber(platformInfo.adminWalletBalance)}d` },
+        { label: "Tên nền tảng", value: platformInfo.platformName },
+        { label: "Phiên bản", value: platformInfo.version },
+        { label: "Môi trường", value: platformInfo.environment },
+        { label: "Múi giờ", value: platformInfo.timezone },
+        { label: "Tổng người dùng", value: formatNumber(platformInfo.totalUsers) },
+        { label: "Uptime tháng này", value: `${platformInfo.monthlyUptime}%` },
+        { label: "Số dư ví admin", value: `${formatNumber(platformInfo.adminWalletBalance)}đ` },
         {
-          label: "Cap nhat gan nhat",
+          label: "Cập nhật gần nhất",
           value: platformInfo.lastUpdatedAt
             ? new Date(platformInfo.lastUpdatedAt).toLocaleString("vi-VN")
             : "-",
         },
       ]
-    : [{ label: "Trang thai", value: loading ? "Dang tai" : "Chua co du lieu" }];
+    : [{ label: "Trạng thái", value: loading ? "Đang tải" : "Chưa có dữ liệu" }];
 
   return (
     <div className="space-y-5 max-w-3xl">
       <div style={{ fontWeight: 800, fontSize: "1.1rem" }} className="text-gray-900">
-        Cai dat nen tang
+        Cài đặt nền tảng
       </div>
 
       {loading && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-gray-500" style={{ fontSize: "0.85rem" }}>
-          Dang tai cai dat...
+          Đang tải cài đặt...
         </div>
       )}
 
@@ -614,15 +614,15 @@ function AdminSettings() {
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-50">
-          <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900">Ti le hoa hong</div>
-          <div style={{ fontSize: "0.78rem" }} className="text-gray-400 mt-0.5">Dieu chinh hoa hong theo goi HLV</div>
+          <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900">Tỉ lệ hoa hồng</div>
+          <div style={{ fontSize: "0.78rem" }} className="text-gray-400 mt-0.5">Điều chỉnh hoa hồng theo gói HLV</div>
         </div>
         <div className="p-5 space-y-4">
           {commissionRows.map((row) => (
             <div key={row.key} className={`flex items-center justify-between p-4 rounded-xl border-2 ${row.color} bg-gray-50`}>
               <div>
                 <div style={{ fontWeight: 700, fontSize: "0.9rem" }} className="text-gray-800">{row.label}</div>
-                <div style={{ fontSize: "0.75rem" }} className="text-gray-500">Hoa hong tren moi giao dich</div>
+                <div style={{ fontSize: "0.75rem" }} className="text-gray-500">Hoa hồng trên mỗi giao dịch</div>
               </div>
               <div className="flex items-center gap-3">
                 <input
@@ -645,20 +645,20 @@ function AdminSettings() {
             className="px-5 py-2.5 bg-gray-900 text-white rounded-xl hover:bg-gray-800 disabled:opacity-60 transition-colors"
             style={{ fontSize: "0.85rem", fontWeight: 700 }}
           >
-            {savingCommission ? "Dang luu..." : "Luu thay doi"}
+            {savingCommission ? "Đang lưu..." : "Lưu thay đổi"}
           </button>
         </div>
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-50">
-          <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900">Gia goi dang ky</div>
-          <div style={{ fontSize: "0.78rem" }} className="text-gray-400 mt-0.5">Cap nhat gia goi hoc vien va HLV</div>
+          <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900">Giá gói đăng ký</div>
+          <div style={{ fontSize: "0.78rem" }} className="text-gray-400 mt-0.5">Cập nhật giá gói học viên và HLV</div>
         </div>
         <div className="p-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <div style={{ fontWeight: 700, fontSize: "0.85rem" }} className="text-gray-700 mb-3">Goi hoc vien</div>
+              <div style={{ fontWeight: 700, fontSize: "0.85rem" }} className="text-gray-700 mb-3">Gói học viên</div>
               {traineePriceRows.map((row) => (
                 <PriceInputRow
                   key={row.key}
@@ -670,7 +670,7 @@ function AdminSettings() {
               ))}
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: "0.85rem" }} className="text-gray-700 mb-3">Goi HLV</div>
+              <div style={{ fontWeight: 700, fontSize: "0.85rem" }} className="text-gray-700 mb-3">Gói HLV</div>
               {coachPriceRows.map((row) => (
                 <PriceInputRow
                   key={row.key}
@@ -688,13 +688,13 @@ function AdminSettings() {
             className="mt-2 px-5 py-2.5 bg-gray-900 text-white rounded-xl hover:bg-gray-800 disabled:opacity-60 transition-colors"
             style={{ fontSize: "0.85rem", fontWeight: 700 }}
           >
-            {savingPrices ? "Dang luu..." : "Luu thay doi"}
+            {savingPrices ? "Đang lưu..." : "Lưu thay đổi"}
           </button>
         </div>
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900 mb-4">Thong tin nen tang</div>
+        <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900 mb-4">Thông tin nền tảng</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {platformRows.map((row) => (
             <div key={row.label} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl gap-3">

@@ -112,194 +112,7 @@ function mapApiVideo(video: ApiVideoItem, index: number): VideoItem {
   };
 }
 
-const VIDEOS: VideoItem[] = [
-  {
-    id: 1,
-    title: "Kỹ thuật Squat hoàn hảo — Toàn góc 360°",
-    coachName: "Trần Văn Đức",
-    coachAvatar: IMG.coach1,
-    coachVerified: true,
-    sport: "Thể hình",
-    sportEmoji: "💪",
-    category: "strength",
-    thumbnail: IMG.gym,
-    duration: "18:42",
-    views: "24.5K",
-    likes: 1842,
-    rating: 4.9,
-    level: "Trung cấp",
-    is360: true,
-    isFeatured: true,
-    isHot: true,
-    tags: ["squat", "powerlifting", "kỹ thuật", "360°"],
-    description: "Phân tích toàn diện kỹ thuật Squat từ mọi góc độ. Video 360° cho phép bạn xoay và quan sát chính xác vị trí cơ thể, góc gối, độ sâu và cách phân bổ trọng lượng.",
-    uploadedAt: "2 ngày trước",
-  },
-  {
-    id: 2,
-    title: "Smash cầu lông — Phân tích góc xoay tay",
-    coachName: "Nguyễn Minh Khoa",
-    coachAvatar: IMG.coach3,
-    coachVerified: true,
-    sport: "Cầu lông",
-    sportEmoji: "🏸",
-    category: "sports",
-    thumbnail: IMG.badminton,
-    duration: "12:15",
-    views: "18.2K",
-    likes: 1256,
-    rating: 4.8,
-    level: "Trung cấp",
-    is360: true,
-    isNew: true,
-    tags: ["cầu lông", "smash", "kỹ thuật", "360°"],
-    description: "Xem và học kỹ thuật smash cầu lông từ góc 360°. Quan sát chi tiết chuyển động cổ tay, xoay thân và bước chân.",
-    uploadedAt: "5 ngày trước",
-  },
-  {
-    id: 3,
-    title: "Yoga Flow buổi sáng — Đầy đủ 30 phút",
-    coachName: "Lê Thị Mai",
-    coachAvatar: IMG.coach2,
-    coachVerified: true,
-    sport: "Yoga",
-    sportEmoji: "🧘",
-    category: "yoga",
-    thumbnail: IMG.yoga,
-    duration: "30:00",
-    views: "41.8K",
-    likes: 3214,
-    rating: 5.0,
-    level: "Cơ bản",
-    is360: false,
-    isHot: true,
-    tags: ["yoga", "buổi sáng", "linh hoạt", "thư giãn"],
-    description: "Chuỗi yoga buổi sáng 30 phút giúp kéo căng toàn thân, tăng sự linh hoạt và tạo năng lượng tích cực cho ngày mới.",
-    uploadedAt: "1 tuần trước",
-  },
-  {
-    id: 4,
-    title: "Jab — Cross — Hook: Kỹ thuật đấm boxing cơ bản",
-    coachName: "Phạm Quốc Hùng",
-    coachAvatar: IMG.coach3,
-    coachVerified: false,
-    sport: "Boxing",
-    sportEmoji: "🥊",
-    category: "martial",
-    thumbnail: IMG.boxing,
-    duration: "22:30",
-    views: "15.6K",
-    likes: 987,
-    rating: 4.7,
-    level: "Cơ bản",
-    is360: true,
-    tags: ["boxing", "jab", "cross", "hook", "360°"],
-    description: "Học ba đòn đấm cơ bản trong boxing qua video 360°. Từng chuyển động đều được phân tích chi tiết từ nhiều góc độ.",
-    uploadedAt: "2 tuần trước",
-  },
-  {
-    id: 5,
-    title: "Kỹ thuật bơi tự do — Cách thở đúng",
-    coachName: "Đỗ Anh Tú",
-    coachAvatar: IMG.coach4,
-    coachVerified: true,
-    sport: "Bơi lội",
-    sportEmoji: "🏊",
-    category: "sports",
-    thumbnail: IMG.swimming,
-    duration: "25:18",
-    views: "9.3K",
-    likes: 654,
-    rating: 4.6,
-    level: "Cơ bản",
-    is360: false,
-    tags: ["bơi lội", "freestyle", "kỹ thuật thở"],
-    description: "Hướng dẫn kỹ thuật bơi tự do và cách thở đúng chuẩn. Video quay dưới nước và trên mặt nước cho góc nhìn toàn diện.",
-    uploadedAt: "3 tuần trước",
-  },
-  {
-    id: 6,
-    title: "Deadlift 100kg — Bài tập nâng cao",
-    coachName: "Trần Văn Đức",
-    coachAvatar: IMG.coach1,
-    coachVerified: true,
-    sport: "Thể hình",
-    sportEmoji: "🏋️",
-    category: "strength",
-    thumbnail: IMG.lifting,
-    duration: "15:45",
-    views: "32.1K",
-    likes: 2567,
-    rating: 4.9,
-    level: "Nâng cao",
-    is360: true,
-    isHot: true,
-    tags: ["deadlift", "powerlifting", "nâng cao", "360°"],
-    description: "Phân tích deadlift 100kg từ góc 360°. Học cách bảo vệ cột sống, kỹ thuật hít thở và cách phân bổ lực đúng chuẩn.",
-    uploadedAt: "1 tháng trước",
-  },
-  {
-    id: 7,
-    title: "Kỹ thuật chạy sprint — Tăng tốc đỉnh cao",
-    coachName: "Nguyễn Văn Long",
-    coachAvatar: IMG.coach4,
-    coachVerified: false,
-    sport: "Điền kinh",
-    sportEmoji: "🏃",
-    category: "cardio",
-    thumbnail: IMG.running,
-    duration: "11:20",
-    views: "7.8K",
-    likes: 521,
-    rating: 4.5,
-    level: "Trung cấp",
-    is360: false,
-    isNew: true,
-    tags: ["chạy", "sprint", "tốc độ"],
-    description: "Cải thiện kỹ thuật chạy sprint với các bài phân tích bước chân, góc cơ thể và nhịp thở.",
-    uploadedAt: "4 ngày trước",
-  },
-  {
-    id: 8,
-    title: "Đá bóng kỹ thuật — Sút bóng chuẩn xác",
-    coachName: "Hoàng Minh Đức",
-    coachAvatar: IMG.coach3,
-    coachVerified: true,
-    sport: "Bóng đá",
-    sportEmoji: "⚽",
-    category: "sports",
-    thumbnail: IMG.football,
-    duration: "19:55",
-    views: "28.4K",
-    likes: 2103,
-    rating: 4.8,
-    level: "Trung cấp",
-    is360: true,
-    tags: ["bóng đá", "sút bóng", "kỹ thuật", "360°"],
-    description: "Kỹ thuật sút bóng chính xác từ nhiều góc độ 360°. Phân tích tiếp cận bóng, đặt chân trụ và tư thế cơ thể.",
-    uploadedAt: "2 tuần trước",
-  },
-  {
-    id: 9,
-    title: "Đạp xe leo núi — Chinh phục dốc 30°",
-    coachName: "Lê Thị Mai",
-    coachAvatar: IMG.coach2,
-    coachVerified: true,
-    sport: "Đạp xe",
-    sportEmoji: "🚴",
-    category: "cardio",
-    thumbnail: IMG.cycling,
-    duration: "28:10",
-    views: "6.1K",
-    likes: 389,
-    rating: 4.6,
-    level: "Nâng cao",
-    is360: false,
-    tags: ["đạp xe", "leo núi", "nâng cao"],
-    description: "Kỹ thuật đạp xe leo núi với địa hình dốc cao. Tư thế cơ thể, cách đứng pedale và chiến lược tiêu hao năng lượng.",
-    uploadedAt: "5 ngày trước",
-  },
-];
+const VIDEOS: VideoItem[] = [];
 
 // ─── Panoramic 360° Viewer (CSS-based mock) ─────────────────────────────────
 function PanoramicViewer({ thumbnail, title }: { thumbnail: string; title: string }) {
@@ -641,12 +454,13 @@ function VideoCard({ video, onClick, isLarge = false }: {
 }
 
 // ─── Video Detail Modal ────────────────────────────────────────────────────────
-function VideoDetail({ video, onClose, onVideoSelect }: {
+function VideoDetail({ video, allVideos, onClose, onVideoSelect }: {
   video: VideoItem;
+  allVideos: VideoItem[];
   onClose: () => void;
   onVideoSelect: (v: VideoItem) => void;
 }) {
-  const related = VIDEOS.filter(v => v.id !== video.id && (v.category === video.category || v.coachName === video.coachName)).slice(0, 4);
+  const related = allVideos.filter(v => v.id !== video.id && (v.category === video.category || v.coachName === video.coachName)).slice(0, 4);
   const [liked, setLiked] = useState(!!video.liked);
   const [saved, setSaved] = useState(!!video.saved);
   const [likes, setLikes] = useState(video.likes);
@@ -967,7 +781,7 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
       })
       .catch(() => {
         setVideos(VIDEOS);
-        setVideoNotice("Dang hien thi video mau vi API danh sach video chua tai duoc.");
+        setVideoNotice("Đang hiển thị video mẫu vì API danh sách video chưa tải được.");
       });
   }, []);
 
@@ -989,7 +803,7 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
       const savedItems = await getSavedVideos();
       setVideos(savedItems.map(mapApiVideo));
     } catch (err) {
-      setVideoNotice(err instanceof Error ? err.message : "Khong tai duoc video da luu.");
+      setVideoNotice(err instanceof Error ? err.message : "Không tải được video đã lưu.");
     } finally {
       setLoadingSaved(false);
     }
@@ -1271,6 +1085,26 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
                       {v.title}
                     </h3>
                     {v.isHot && <span className="shrink-0 flex items-center gap-0.5 bg-orange-100 text-orange-600 px-2 py-0.5 rounded-lg" style={{ fontSize: "0.65rem", fontWeight: 700 }}>
+            >
+              <div className="relative w-40 sm:w-48 shrink-0 rounded-xl overflow-hidden" style={{ aspectRatio: "16/9" }}>
+                <img src={v.thumbnail} alt={v.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                {v.is360 && (
+                  <div className="absolute top-1.5 left-1.5 flex items-center gap-1 bg-violet-600/90 px-1.5 py-0.5 rounded-lg">
+                    <Globe className="w-2.5 h-2.5 text-white" />
+                    <span className="text-white" style={{ fontSize: "0.6rem", fontWeight: 700 }}>360°</span>
+                  </div>
+                )}
+                <div className="absolute bottom-1.5 right-1.5 bg-black/70 text-white px-1.5 py-0.5 rounded-md" style={{ fontSize: "0.65rem", fontWeight: 600 }}>
+                  {v.duration}
+                </div>
+              </div>
+              <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                <div>
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <h3 className="text-gray-900 line-clamp-2 group-hover:text-violet-600 transition-colors" style={{ fontWeight: 700, fontSize: "0.92rem" }}>
+                      {v.title}
+                    </h3>
+                    {v.isHot && <span className="shrink-0 flex items-center gap-0.5 bg-orange-100 text-orange-600 px-2 py-0.5 rounded-lg" style={{ fontSize: "0.65rem", fontWeight: 700 }}>
                       <Flame className="w-2.5 h-2.5" /> HOT
                     </span>}
                   </div>
@@ -1321,19 +1155,9 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
       {selectedVideo && (
         <VideoDetail
           video={selectedVideo}
+          allVideos={videos}
           onClose={() => setSelectedVideo(null)}
           onVideoSelect={v => void openVideoDetail(v)}
-        />
-      )}
-
-      {/* ── Upload 360° Modal ── */}
-      {showUploadModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setShowUploadModal(false)}>
-          <div className="w-full max-w-3xl bg-gray-950 rounded-3xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/10">
-              <div className="flex items-center gap-2">
-                <Globe className="w-4 h-4 text-violet-400" />
-                <span style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-white">Upload & Xem Video 360° — Three.js WebGL</span>
               </div>
               <button onClick={() => setShowUploadModal(false)} className="p-2 rounded-xl hover:bg-white/10 transition-colors">
                 <X className="w-5 h-5 text-gray-300" />

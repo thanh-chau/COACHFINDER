@@ -172,7 +172,7 @@ function PaymentModal({
       onPurchased();
       setStep("success");
     } catch (err) {
-      setPaymentError(err instanceof Error ? err.message : "Thanh toan that bai.");
+      setPaymentError(err instanceof Error ? err.message : "Thanh toán thất bại.");
     } finally {
       setLoading(false);
     }
@@ -476,7 +476,7 @@ export function LearnerSubscription() {
       })
       .catch((err) => {
         setPlans(PLANS);
-        setPlansError(err instanceof Error ? err.message : "Khong tai duoc goi dang ky.");
+        setPlansError(err instanceof Error ? err.message : "Không tải được gói đăng ký.");
       })
       .finally(() => setLoadingPlans(false));
   };
@@ -518,7 +518,7 @@ export function LearnerSubscription() {
 
       {loadingPlans && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-gray-500" style={{ fontSize: "0.85rem" }}>
-          Dang tai goi dang ky...
+          Đang tải gói đăng ký...
         </div>
       )}
 

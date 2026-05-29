@@ -64,7 +64,7 @@ export function AdminFinance() {
       setWithdrawRequests(withdrawResult || []);
       setWalletError("");
     } catch (error) {
-      setWalletError(error instanceof Error ? error.message : "Khong tai duoc yeu cau rut tien.");
+      setWalletError(error instanceof Error ? error.message : "Không tải được yêu cầu rút tiền.");
     }
   };
 
@@ -88,7 +88,7 @@ export function AdminFinance() {
   }, []);
 
   const reviewWithdraw = async (transactionId: number, action: "approve" | "reject") => {
-    const note = prompt(action === "approve" ? "Ghi chu phe duyet (optional)" : "Ly do tu choi");
+    const note = prompt(action === "approve" ? "Ghi chú phê duyệt (tùy chọn)" : "Lý do từ chối");
     if (action === "reject" && !note) return;
     setWalletActionId(transactionId);
     setWalletError("");
@@ -100,7 +100,7 @@ export function AdminFinance() {
       }
       await loadWalletReview();
     } catch (error) {
-      setWalletError(error instanceof Error ? error.message : "Khong the cap nhat yeu cau rut tien.");
+      setWalletError(error instanceof Error ? error.message : "Không thể cập nhật yêu cầu rút tiền.");
     } finally {
       setWalletActionId(null);
     }
@@ -279,13 +279,13 @@ export function AdminFinance() {
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-50 flex flex-col sm:flex-row sm:items-center gap-3">
           <div>
-            <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900">Duyet yeu cau rut tien</div>
+            <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900">Duyệt yêu cầu rút tiền</div>
             <div style={{ fontSize: "0.78rem" }} className="text-gray-400 mt-0.5">
-              Vi admin: {formatMoney(walletOverview?.wallet?.balance)} Â· {walletOverview?.totalTransactions || 0} giao dich
+              Ví admin: {formatMoney(walletOverview?.wallet?.balance)} · {walletOverview?.totalTransactions || 0} giao dịch
             </div>
           </div>
           <button onClick={() => void loadWalletReview()} className="sm:ml-auto rounded-xl border border-gray-200 px-3 py-2 text-gray-600 hover:bg-gray-50" style={{ fontSize: "0.78rem", fontWeight: 700 }}>
-            Tai lai
+            Tải lại
           </button>
         </div>
         {walletError && <div className="mx-5 mt-4 rounded-xl border border-red-100 bg-red-50 p-3 text-red-600" style={{ fontSize: "0.8rem" }}>{walletError}</div>}
@@ -293,14 +293,14 @@ export function AdminFinance() {
           <table className="w-full">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
-                {["Ma", "Nguoi rut", "Ngan hang", "So tien", "Trang thai", "Ngay tao", "Hanh dong"].map((h) => (
+                {["Mã", "Người rút", "Ngân hàng", "Số tiền", "Trạng thái", "Ngày tạo", "Hành động"].map((h) => (
                   <th key={h} className="px-5 py-3 text-left whitespace-nowrap" style={{ fontSize: "0.73rem", fontWeight: 700, color: "#6b7280" }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {withdrawRequests.length === 0 ? (
-                <tr><td colSpan={7} className="px-5 py-10 text-center text-gray-400">Khong co yeu cau rut tien dang cho duyet</td></tr>
+                <tr><td colSpan={7} className="px-5 py-10 text-center text-gray-400">Không có yêu cầu rút tiền đang chờ duyệt</td></tr>
               ) : withdrawRequests.map((request) => (
                 <tr key={request.transactionId} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-5 py-4 font-mono text-gray-400">WD-{request.transactionId}</td>
@@ -319,8 +319,8 @@ export function AdminFinance() {
                   <td className="px-5 py-4 text-gray-500" style={{ fontSize: "0.78rem" }}>{new Date(request.createdAt).toLocaleString("vi-VN")}</td>
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-2">
-                      <button disabled={walletActionId === request.transactionId} onClick={() => void reviewWithdraw(request.transactionId, "approve")} className="rounded-lg bg-emerald-500 px-3 py-2 text-white hover:bg-emerald-600 disabled:opacity-60" style={{ fontSize: "0.72rem", fontWeight: 700 }}>Duyet</button>
-                      <button disabled={walletActionId === request.transactionId} onClick={() => void reviewWithdraw(request.transactionId, "reject")} className="rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100 disabled:opacity-60" style={{ fontSize: "0.72rem", fontWeight: 700 }}>Tu choi</button>
+                      <button disabled={walletActionId === request.transactionId} onClick={() => void reviewWithdraw(request.transactionId, "approve")} className="rounded-lg bg-emerald-500 px-3 py-2 text-white hover:bg-emerald-600 disabled:opacity-60" style={{ fontSize: "0.72rem", fontWeight: 700 }}>Duyệt</button>
+                      <button disabled={walletActionId === request.transactionId} onClick={() => void reviewWithdraw(request.transactionId, "reject")} className="rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100 disabled:opacity-60" style={{ fontSize: "0.72rem", fontWeight: 700 }}>Từ chối</button>
                     </div>
                   </td>
                 </tr>

@@ -315,7 +315,7 @@ export function LearnerDashboard() {
           {bottomNav.map(({ icon: Icon, label, id }) => (
             <button
               key={id}
-              onClick={() => { if (id === "logout") logout(); }}
+              onClick={() => { if (id === "logout") logout(); else { setActiveNav(id); setSidebarOpen(false); } }}
               className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-gray-400 hover:bg-white/[0.06] hover:text-gray-200 transition-all duration-200"
             >
               <Icon className="w-[18px] h-[18px] shrink-0" />

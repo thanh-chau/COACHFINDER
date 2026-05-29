@@ -45,20 +45,7 @@ const COACH_AVT_1 = "https://images.unsplash.com/photo-1750698545009-67982050290
 const COACH_AVT_2 = "https://images.unsplash.com/photo-1679076875671-a30b4dbc6016?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200";
 const COACH_AVT_3 = "https://images.unsplash.com/photo-1660463527860-b66aebd362c9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200";
 
-const INITIAL_CONVERSATIONS: Conversation[] = [
-  {
-    id: "c1",
-    coach: { name: "Trần Văn Đức", sport: "Thể hình 💪", avatar: COACH_AVT_1, online: true, rating: 4.9, sessions: 18 },
-    lastMessage: "Tốt lắm! Nhớ tập warm-up 10 phút nhé em 🔥",
-    lastTime: "09:42",
-    unread: 2,
-    subscribed: true,
-    messages: [
-      { id: "m1", senderId: "coach", text: "Chào em Minh Anh! Buổi tập hôm qua cảm thấy thế nào?", time: "08:20", status: "read" },
-      { id: "m2", senderId: "learner", text: "Dạ chào anh! Em tập xong khá mệt nhưng cảm giác rất tốt ạ 😄", time: "08:35", status: "read" },
-    ],
-  },
-];
+const INITIAL_CONVERSATIONS: Conversation[] = [];
 
 const QUICK_REPLIES = ["Dạ vâng ạ! 👍", "Em hiểu rồi ạ", "Cảm ơn anh/chị!", "Khi nào thuận tiện?", "Em sẽ cố gắng 💪"];
 

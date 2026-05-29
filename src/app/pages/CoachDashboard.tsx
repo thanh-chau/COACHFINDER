@@ -327,8 +327,8 @@ export function CoachDashboard() {
         <div className="px-3 py-3 border-t border-white/[0.06] space-y-0.5">
           {[{ icon: Settings, label: "Cài đặt", id: "settings" }, { icon: LogOut, label: "Đăng xuất", id: "logout" }].map(({ icon: Icon, label, id }) => (
             <button
-              key={label}
-              onClick={() => { if (id === "logout") logout(); }}
+              key={id}
+              onClick={() => { if (id === "logout") logout(); else { setActiveNav(id); setSidebarOpen(false); } }}
               className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-gray-400 hover:bg-white/[0.06] hover:text-gray-200 transition-all duration-200"
             >
               <Icon className="w-[18px] h-[18px] shrink-0" />

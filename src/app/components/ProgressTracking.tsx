@@ -47,6 +47,55 @@ type ExerciseChartItem = {
   unit: string;
   history: Array<{ month: string; value: number }>;
   color: string;
+import { useEffect, useState } from "react";
+import {
+  TrendingUp, TrendingDown, Flame, Trophy, Target, Dumbbell,
+  Calendar, Clock, CheckCircle2, ChevronRight, ChevronDown,
+  ArrowUpRight, ArrowDownRight, Minus, Brain, Zap, Star,
+  BarChart2, Activity, Heart, Weight, Ruler, Award
+} from "lucide-react";
+import {
+  ResponsiveContainer, ComposedChart, AreaChart, Area, BarChart, Bar, LineChart, Line,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+  CartesianGrid, XAxis, YAxis, Tooltip, Cell
+} from "recharts";
+import {
+  createBodyMetric,
+  createExerciseProgress,
+  getAchievements,
+  getBodyMetrics,
+  getExerciseProgress,
+  getProgressHeatmap,
+  getProgressOverview,
+} from "../api/progress";
+import type {
+  Achievement,
+  BodyMetricEntry,
+  ExerciseProgressEntry,
+  ProgressOverview,
+} from "../types/progress";
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+type TimeRange = "week" | "month" | "3months" | "year";
+type MetricTab = "overview" | "body" | "exercise" | "ai";
+
+type BodyMetricChartRow = {
+  month: string;
+  weight: number;
+  fat: number;
+  muscle: number;
+  bmi: number;
+};
+
+type ExerciseChartItem = {
+  id: string;
+  name: string;
+  emoji: string;
+  current1RM: number;
+  prev1RM: number;
+  unit: string;
+  history: Array<{ month: string; value: number }>;
+  color: string;
 };
 
 type AchievementCard = {
@@ -59,134 +108,15 @@ type AchievementCard = {
 };
 
 // ─── Mock Data ───────────────────────────────────────────────────────────────
-const WEEKLY_DATA = [
-  { day: "T2", hours: 1.5, cal: 420, sessions: 1 },
-  { day: "T3", hours: 2,   cal: 580, sessions: 1 },
-  { day: "T4", hours: 0,   cal: 0,   sessions: 0 },
-  { day: "T5", hours: 1.5, cal: 450, sessions: 1 },
-  { day: "T6", hours: 2,   cal: 620, sessions: 1 },
-  { day: "T7", hours: 3,   cal: 850, sessions: 2 },
-  { day: "CN", hours: 1,   cal: 300, sessions: 1 },
-];
-
-const MONTHLY_DATA = [
-  { label: "T1", hours: 28, cal: 8400, sessions: 18 },
-  { label: "T2", hours: 32, cal: 9600, sessions: 20 },
-  { label: "T3", hours: 38, cal: 11400, sessions: 24 },
-  { label: "T4", hours: 35, cal: 10500, sessions: 22 },
-  { label: "T5", hours: 42, cal: 12600, sessions: 26 },
-  { label: "T6", hours: 40, cal: 12000, sessions: 25 },
-  { label: "T7", hours: 45, cal: 13500, sessions: 28 },
-  { label: "T8", hours: 38, cal: 11400, sessions: 24 },
-  { label: "T9", hours: 48, cal: 14400, sessions: 30 },
-  { label: "T10", hours: 44, cal: 13200, sessions: 27 },
-  { label: "T11", hours: 50, cal: 15000, sessions: 31 },
-  { label: "T12", hours: 46, cal: 13800, sessions: 29 },
-];
-
-const QUARTERLY_DATA = [
-  { label: "Tháng 1", hours: 28, cal: 8400, sessions: 18 },
-  { label: "Tháng 2", hours: 35, cal: 10500, sessions: 22 },
-  { label: "Tháng 3", hours: 48, cal: 14400, sessions: 30 },
-];
-
-const BODY_METRICS_HISTORY = [
-  { month: "T9",  weight: 72,   fat: 18, muscle: 35, bmi: 23.1 },
-  { month: "T10", weight: 71.5, fat: 17.2, muscle: 35.8, bmi: 22.9 },
-  { month: "T11", weight: 70.8, fat: 16.5, muscle: 36.2, bmi: 22.7 },
-  { month: "T12", weight: 70.2, fat: 15.8, muscle: 36.8, bmi: 22.5 },
-  { month: "T1",  weight: 69.5, fat: 15.2, muscle: 37.2, bmi: 22.3 },
-  { month: "T2",  weight: 69,   fat: 14.5, muscle: 37.8, bmi: 22.1 },
-  { month: "T3",  weight: 68.5, fat: 14,   muscle: 38.2, bmi: 22.0 },
-];
-
-const EXERCISE_PROGRESS = [
-  {
-    id: "squat", name: "Squat", emoji: "🦵",
-    current1RM: 100, prev1RM: 85, unit: "kg",
-    history: [
-      { month: "T10", value: 70 }, { month: "T11", value: 78 },
-      { month: "T12", value: 85 }, { month: "T1", value: 90 },
-      { month: "T2", value: 95 }, { month: "T3", value: 100 },
-    ],
-    color: "#10b981",
-  },
-  {
-    id: "bench", name: "Bench Press", emoji: "💪",
-    current1RM: 75, prev1RM: 65, unit: "kg",
-    history: [
-      { month: "T10", value: 50 }, { month: "T11", value: 55 },
-      { month: "T12", value: 60 }, { month: "T1", value: 65 },
-      { month: "T2", value: 70 }, { month: "T3", value: 75 },
-    ],
-    color: "#3b82f6",
-  },
-  {
-    id: "deadlift", name: "Deadlift", emoji: "🏋️",
-    current1RM: 120, prev1RM: 105, unit: "kg",
-    history: [
-      { month: "T10", value: 85 }, { month: "T11", value: 92 },
-      { month: "T12", value: 100 }, { month: "T1", value: 105 },
-      { month: "T2", value: 112 }, { month: "T3", value: 120 },
-    ],
-    color: "#f97316",
-  },
-  {
-    id: "ohp", name: "Overhead Press", emoji: "🙌",
-    current1RM: 50, prev1RM: 45, unit: "kg",
-    history: [
-      { month: "T10", value: 35 }, { month: "T11", value: 38 },
-      { month: "T12", value: 42 }, { month: "T1", value: 45 },
-      { month: "T2", value: 48 }, { month: "T3", value: 50 },
-    ],
-    color: "#8b5cf6",
-  },
-];
-
-const AI_SCORE_HISTORY = [
-  { month: "T10", squat: 68, bench: 62, deadlift: 55, avg: 62 },
-  { month: "T11", squat: 75, bench: 70, deadlift: 63, avg: 69 },
-  { month: "T12", squat: 80, bench: 76, deadlift: 70, avg: 75 },
-  { month: "T1",  squat: 85, bench: 80, deadlift: 74, avg: 80 },
-  { month: "T2",  squat: 90, bench: 83, deadlift: 78, avg: 84 },
-  { month: "T3",  squat: 92, bench: 85, deadlift: 82, avg: 87 },
-];
-
-const RADAR_DATA = [
-  { subject: "Sức mạnh", value: 85, fullMark: 100 },
-  { subject: "Sức bền", value: 72, fullMark: 100 },
-  { subject: "Linh hoạt", value: 68, fullMark: 100 },
-  { subject: "Kỹ thuật", value: 87, fullMark: 100 },
-  { subject: "Tốc độ", value: 75, fullMark: 100 },
-  { subject: "Phục hồi", value: 80, fullMark: 100 },
-];
-
-const ACHIEVEMENTS: AchievementCard[] = [
-  { id: 1, icon: "🔥", title: "Streak Master", desc: "14 ngày tập liên tiếp", date: "Hôm nay", unlocked: true },
-  { id: 2, icon: "🏆", title: "20 Sessions", desc: "Hoàn thành 20 buổi tập", date: "2 ngày trước", unlocked: true },
-  { id: 3, icon: "💪", title: "Squat Pro", desc: "Squat đạt 90+ AI score", date: "Tuần trước", unlocked: true },
-  { id: 4, icon: "🎯", title: "Perfect Form", desc: "3 bài tập đạt 85+ AI", date: "5 ngày trước", unlocked: true },
-  { id: 5, icon: "⚡", title: "Power Up", desc: "1RM tăng 15% trong 1 tháng", date: "10 ngày trước", unlocked: true },
-  { id: 6, icon: "🥇", title: "Century Club", desc: "Squat đạt 100kg", date: "Hôm nay", unlocked: true },
-  { id: 7, icon: "🌟", title: "50 Sessions", desc: "Hoàn thành 50 buổi tập", date: "Còn 26 buổi", unlocked: false },
-  { id: 8, icon: "💎", title: "Diamond Form", desc: "Tất cả bài đạt 95+ AI", date: "Còn 3 điểm", unlocked: false },
-];
-
-const WEEKLY_HEATMAP = [
-  [1, 0, 1, 1, 0, 2, 1],
-  [1, 1, 0, 1, 1, 1, 0],
-  [0, 1, 1, 0, 1, 2, 1],
-  [1, 1, 0, 1, 1, 1, 1],
-  [1, 0, 1, 1, 1, 2, 0],
-  [1, 1, 0, 1, 1, 1, 1],
-  [0, 1, 1, 1, 0, 2, 1],
-  [1, 1, 1, 0, 1, 1, 0],
-  [1, 0, 1, 1, 1, 2, 1],
-  [1, 1, 0, 1, 1, 1, 1],
-  [0, 1, 1, 0, 1, 2, 1],
-  [1, 1, 0, 1, 1, 1, 0],
-];
-
+const WEEKLY_DATA: any[] = [];
+const MONTHLY_DATA: any[] = [];
+const QUARTERLY_DATA: any[] = [];
+const BODY_METRICS_HISTORY: any[] = [];
+const EXERCISE_PROGRESS: any[] = [];
+const AI_SCORE_HISTORY: any[] = [];
+const RADAR_DATA: any[] = [];
+const ACHIEVEMENTS: AchievementCard[] = [];
+const WEEKLY_HEATMAP: number[][] = [];
 const DAY_LABELS = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -368,10 +298,10 @@ function HeatmapSection({ heatmap = WEEKLY_HEATMAP, streakDays = 14 }: { heatmap
   );
 }
 
-function TrainingChart({ timeRange }: { timeRange: TimeRange }) {
-  const data = timeRange === "week" ? WEEKLY_DATA
-    : timeRange === "3months" ? QUARTERLY_DATA
-    : MONTHLY_DATA;
+function TrainingChart({ timeRange, overview }: { timeRange: TimeRange; overview: ProgressOverview | null }) {
+  const data = timeRange === "week" ? (overview?.weeklySummary ?? WEEKLY_DATA)
+    : timeRange === "3months" ? (overview?.quarterlySummary ?? QUARTERLY_DATA)
+    : (overview?.monthlySummary ?? MONTHLY_DATA);
 
   const dataKey = timeRange === "week" ? "day" : "label";
 
@@ -409,7 +339,7 @@ function TrainingChart({ timeRange }: { timeRange: TimeRange }) {
             }}
           />
           <Bar key="bar-hours" dataKey="hours" fill="#f97316" radius={[6, 6, 0, 0]} maxBarSize={32} />
-          <Bar key="bar-cal" dataKey="cal" fill="#3b82f6" radius={[6, 6, 0, 0]} maxBarSize={32} />
+          <Bar key="bar-cal" dataKey="calories" fill="#3b82f6" radius={[6, 6, 0, 0]} maxBarSize={32} />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -743,7 +673,7 @@ function AchievementsSection({ achievements = ACHIEVEMENTS }: { achievements?: A
   );
 }
 
-// ─── Main Component ───────────────��──────────────────────────────────────────
+// ─── Main Component ──────────────────────────────────────────────────────────
 interface Props {
   onNavigate?: (view: string) => void;
 }
@@ -789,7 +719,7 @@ export function ProgressTracking({ onNavigate }: Props) {
       setAchievements(mapAchievements(achievementData));
       setApiError(null);
     } catch (error) {
-      setApiError(error instanceof Error ? error.message : "Khong the tai du lieu tien do.");
+      setApiError(error instanceof Error ? error.message : "Không thể tải dữ liệu tiến độ.");
     }
   };
 
@@ -808,10 +738,10 @@ export function ProgressTracking({ onNavigate }: Props) {
         muscleMass: bodyForm.muscleMass ? Number(bodyForm.muscleMass) : undefined,
         note: bodyForm.note.trim() || undefined,
       });
-      setActionNotice("Da luu chi so co the.");
+      setActionNotice("Đã lưu chỉ số cơ thể.");
       await loadProgress();
     } catch (error) {
-      setActionNotice(error instanceof Error ? error.message : "Khong luu duoc chi so co the.");
+      setActionNotice(error instanceof Error ? error.message : "Không lưu được chỉ số cơ thể.");
     } finally {
       setSavingProgress(false);
     }
@@ -820,7 +750,7 @@ export function ProgressTracking({ onNavigate }: Props) {
   const submitExerciseProgress = async () => {
     const value = Number(exerciseForm.value);
     if (!exerciseForm.exerciseName.trim() || !Number.isFinite(value)) {
-      setActionNotice("Vui long nhap ten bai tap va gia tri hop le.");
+      setActionNotice("Vui lòng nhập tên bài tập và giá trị hợp lệ.");
       return;
     }
     setSavingProgress(true);
@@ -832,10 +762,10 @@ export function ProgressTracking({ onNavigate }: Props) {
         value,
         unit: exerciseForm.unit.trim() || "kg",
       });
-      setActionNotice("Da luu tien do bai tap.");
+      setActionNotice("Đã lưu tiến độ bài tập.");
       await loadProgress();
     } catch (error) {
-      setActionNotice(error instanceof Error ? error.message : "Khong luu duoc tien do bai tap.");
+      setActionNotice(error instanceof Error ? error.message : "Không lưu được tiến độ bài tập.");
     } finally {
       setSavingProgress(false);
     }
@@ -907,7 +837,7 @@ export function ProgressTracking({ onNavigate }: Props) {
 
       {apiError && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-700" style={{ fontSize: "0.82rem", fontWeight: 600 }}>
-          Dang hien thi du lieu mau vi chua tai duoc API tien do.
+          Đang hiển thị dữ liệu mẫu vì chưa tải được API tiến độ.
         </div>
       )}
 
@@ -921,18 +851,18 @@ export function ProgressTracking({ onNavigate }: Props) {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <div className="flex items-center gap-2 mb-4">
             <Heart className="w-4 h-4 text-red-500" />
-            <div style={{ fontWeight: 800, fontSize: "0.95rem" }} className="text-gray-900">Cap nhat chi so co the</div>
+            <div style={{ fontWeight: 800, fontSize: "0.95rem" }} className="text-gray-900">Cập nhật chỉ số cơ thể</div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
             <input type="date" value={bodyForm.measuredAt} onChange={e => setBodyForm(p => ({ ...p, measuredAt: e.target.value }))} className="rounded-xl border border-gray-200 px-3 py-2.5 outline-none" style={{ fontSize: "0.82rem" }} />
-            <input type="number" placeholder="Can nang kg" value={bodyForm.weight} onChange={e => setBodyForm(p => ({ ...p, weight: e.target.value }))} className="rounded-xl border border-gray-200 px-3 py-2.5 outline-none" style={{ fontSize: "0.82rem" }} />
-            <input type="number" placeholder="Mo %" value={bodyForm.bodyFat} onChange={e => setBodyForm(p => ({ ...p, bodyFat: e.target.value }))} className="rounded-xl border border-gray-200 px-3 py-2.5 outline-none" style={{ fontSize: "0.82rem" }} />
-            <input type="number" placeholder="Co bap kg" value={bodyForm.muscleMass} onChange={e => setBodyForm(p => ({ ...p, muscleMass: e.target.value }))} className="rounded-xl border border-gray-200 px-3 py-2.5 outline-none" style={{ fontSize: "0.82rem" }} />
+            <input type="number" placeholder="Cân nặng kg" value={bodyForm.weight} onChange={e => setBodyForm(p => ({ ...p, weight: e.target.value }))} className="rounded-xl border border-gray-200 px-3 py-2.5 outline-none" style={{ fontSize: "0.82rem" }} />
+            <input type="number" placeholder="Mỡ %" value={bodyForm.bodyFat} onChange={e => setBodyForm(p => ({ ...p, bodyFat: e.target.value }))} className="rounded-xl border border-gray-200 px-3 py-2.5 outline-none" style={{ fontSize: "0.82rem" }} />
+            <input type="number" placeholder="Cơ bắp kg" value={bodyForm.muscleMass} onChange={e => setBodyForm(p => ({ ...p, muscleMass: e.target.value }))} className="rounded-xl border border-gray-200 px-3 py-2.5 outline-none" style={{ fontSize: "0.82rem" }} />
             <button onClick={submitBodyMetric} disabled={savingProgress} className="rounded-xl bg-red-500 px-4 py-2.5 text-white disabled:opacity-60" style={{ fontSize: "0.82rem", fontWeight: 800 }}>
-              {savingProgress ? "Dang luu..." : "Luu"}
+              {savingProgress ? "Đang lưu..." : "Lưu"}
             </button>
           </div>
-          <input value={bodyForm.note} onChange={e => setBodyForm(p => ({ ...p, note: e.target.value }))} placeholder="Ghi chu" className="mt-3 w-full rounded-xl border border-gray-200 px-3 py-2.5 outline-none" style={{ fontSize: "0.82rem" }} />
+          <input value={bodyForm.note} onChange={e => setBodyForm(p => ({ ...p, note: e.target.value }))} placeholder="Ghi chú" className="mt-3 w-full rounded-xl border border-gray-200 px-3 py-2.5 outline-none" style={{ fontSize: "0.82rem" }} />
         </div>
       )}
 
@@ -940,32 +870,21 @@ export function ProgressTracking({ onNavigate }: Props) {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <div className="flex items-center gap-2 mb-4">
             <Dumbbell className="w-4 h-4 text-orange-500" />
-            <div style={{ fontWeight: 800, fontSize: "0.95rem" }} className="text-gray-900">Cap nhat tien do bai tap</div>
+            <div style={{ fontWeight: 800, fontSize: "0.95rem" }} className="text-gray-900">Cập nhật tiến độ bài tập</div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
             <input type="date" value={exerciseForm.measuredAt} onChange={e => setExerciseForm(p => ({ ...p, measuredAt: e.target.value }))} className="rounded-xl border border-gray-200 px-3 py-2.5 outline-none" style={{ fontSize: "0.82rem" }} />
-            <input value={exerciseForm.exerciseName} onChange={e => setExerciseForm(p => ({ ...p, exerciseName: e.target.value }))} placeholder="Bai tap" className="rounded-xl border border-gray-200 px-3 py-2.5 outline-none" style={{ fontSize: "0.82rem" }} />
-            <input type="number" value={exerciseForm.value} onChange={e => setExerciseForm(p => ({ ...p, value: e.target.value }))} placeholder="Gia tri" className="rounded-xl border border-gray-200 px-3 py-2.5 outline-none" style={{ fontSize: "0.82rem" }} />
-            <input value={exerciseForm.unit} onChange={e => setExerciseForm(p => ({ ...p, unit: e.target.value }))} placeholder="Don vi" className="rounded-xl border border-gray-200 px-3 py-2.5 outline-none" style={{ fontSize: "0.82rem" }} />
+            <input value={exerciseForm.exerciseName} onChange={e => setExerciseForm(p => ({ ...p, exerciseName: e.target.value }))} placeholder="Bài tập" className="rounded-xl border border-gray-200 px-3 py-2.5 outline-none" style={{ fontSize: "0.82rem" }} />
+            <input type="number" value={exerciseForm.value} onChange={e => setExerciseForm(p => ({ ...p, value: e.target.value }))} placeholder="Giá trị" className="rounded-xl border border-gray-200 px-3 py-2.5 outline-none" style={{ fontSize: "0.82rem" }} />
+            <input value={exerciseForm.unit} onChange={e => setExerciseForm(p => ({ ...p, unit: e.target.value }))} placeholder="Đơn vị" className="rounded-xl border border-gray-200 px-3 py-2.5 outline-none" style={{ fontSize: "0.82rem" }} />
             <button onClick={submitExerciseProgress} disabled={savingProgress} className="rounded-xl bg-orange-500 px-4 py-2.5 text-white disabled:opacity-60" style={{ fontSize: "0.82rem", fontWeight: 800 }}>
-              {savingProgress ? "Dang luu..." : "Luu"}
+              {savingProgress ? "Đang lưu..." : "Lưu"}
             </button>
           </div>
         </div>
       )}
 
       {/* Tab content */}
-      {metricTab === "overview" && (
-        <div className="space-y-5">
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-            <div className="xl:col-span-2">
-              <TrainingChart timeRange={timeRange} />
-            </div>
-            <div>
-              <HeatmapSection heatmap={heatmap} streakDays={overview?.streakDays ?? 14} />
-            </div>
-          </div>
-          <AchievementsSection achievements={achievements} />
         </div>
       )}
 

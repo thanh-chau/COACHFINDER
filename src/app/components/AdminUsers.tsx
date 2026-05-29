@@ -167,6 +167,8 @@ export function AdminUsers() {
     rating: 5.0,
     verified: u.active,
     avatar: (u.fullName?.[0] || u.username?.[0] || "U").toUpperCase(),
+    verified: u.active,
+    avatar: (u.fullName?.[0] || u.username?.[0] || "U").toUpperCase(),
   }));
 
   const handleUpdateStatus = async (
@@ -175,14 +177,11 @@ export function AdminUsers() {
   ) => {
     if (
       confirm(
-        `Bạn có chắc chắn muốn ${currentActive ? "khóa" : "mở khóa"} tải khoản này?`,
+        `Bạn có chắc chắn muốn ${currentActive ? "khóa" : "mở khóa"} tài khoản này?`,
       )
     ) {
       try {
         await updateAdminUserStatus(idToUpdate, !currentActive);
-        loadUsers();
-      } catch (e) {
-        alert("Có lỗi xảy ra khi cập nhật!");
       }
     }
   };
@@ -193,19 +192,19 @@ export function AdminUsers() {
       const user = await fetchAdminUser(id);
       setSelectedUser(user);
     } catch (e) {
-      setUserActionError(e instanceof Error ? e.message : "Khong tai duoc chi tiet nguoi dung.");
+      setUserActionError(e instanceof Error ? e.message : "Không tải được chi tiết người dùng.");
     }
   };
 
   const handleDeleteUser = async (id: number) => {
-    if (!confirm("Ban co chac chan muon vo hieu hoa tai khoan nay?")) return;
+    if (!confirm("Bạn có chắc chắn muốn vô hiệu hóa tài khoản này?")) return;
     setUserActionError("");
     try {
       await deleteAdminUser(id);
       await loadUsers();
       await loadOverview();
     } catch (e) {
-      setUserActionError(e instanceof Error ? e.message : "Khong the vo hieu hoa tai khoan.");
+      setUserActionError(e instanceof Error ? e.message : "Không thể vô hiệu hóa tài khoản.");
     }
   };
 
