@@ -47,55 +47,6 @@ type ExerciseChartItem = {
   unit: string;
   history: Array<{ month: string; value: number }>;
   color: string;
-import { useEffect, useState } from "react";
-import {
-  TrendingUp, TrendingDown, Flame, Trophy, Target, Dumbbell,
-  Calendar, Clock, CheckCircle2, ChevronRight, ChevronDown,
-  ArrowUpRight, ArrowDownRight, Minus, Brain, Zap, Star,
-  BarChart2, Activity, Heart, Weight, Ruler, Award
-} from "lucide-react";
-import {
-  ResponsiveContainer, ComposedChart, AreaChart, Area, BarChart, Bar, LineChart, Line,
-  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  CartesianGrid, XAxis, YAxis, Tooltip, Cell
-} from "recharts";
-import {
-  createBodyMetric,
-  createExerciseProgress,
-  getAchievements,
-  getBodyMetrics,
-  getExerciseProgress,
-  getProgressHeatmap,
-  getProgressOverview,
-} from "../api/progress";
-import type {
-  Achievement,
-  BodyMetricEntry,
-  ExerciseProgressEntry,
-  ProgressOverview,
-} from "../types/progress";
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-type TimeRange = "week" | "month" | "3months" | "year";
-type MetricTab = "overview" | "body" | "exercise" | "ai";
-
-type BodyMetricChartRow = {
-  month: string;
-  weight: number;
-  fat: number;
-  muscle: number;
-  bmi: number;
-};
-
-type ExerciseChartItem = {
-  id: string;
-  name: string;
-  emoji: string;
-  current1RM: number;
-  prev1RM: number;
-  unit: string;
-  history: Array<{ month: string; value: number }>;
-  color: string;
 };
 
 type AchievementCard = {
