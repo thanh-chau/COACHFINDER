@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import {
   Send, Search, Phone, Video, MoreVertical, Paperclip, Smile,
-  Image, Lock, Crown, ChevronRight, Check, CheckCheck, Circle,
-  Star, Dumbbell, Clock, ArrowLeft, Info, X
+  Lock, Check, CheckCheck, ArrowLeft, Info, X
 } from "lucide-react";
 import {
   getConversationMessages,
