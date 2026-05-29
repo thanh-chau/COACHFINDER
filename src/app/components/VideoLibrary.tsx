@@ -1018,6 +1018,33 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
             className={`flex items-center gap-1.5 px-4 py-2 rounded-xl border whitespace-nowrap transition-all shrink-0 ${
               activeCategory === cat.id
                 ? "bg-violet-500 border-violet-500 text-white shadow-md shadow-violet-200"
+
+        {/* View toggle */}
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
+          <button
+            onClick={() => setViewMode("grid")}
+            className={`p-2 rounded-lg transition-all ${viewMode === "grid" ? "bg-white shadow-sm text-gray-900" : "text-gray-400 hover:text-gray-600"}`}
+          >
+            <Grid3X3 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setViewMode("list")}
+            className={`p-2 rounded-lg transition-all ${viewMode === "list" ? "bg-white shadow-sm text-gray-900" : "text-gray-400 hover:text-gray-600"}`}
+          >
+            <List className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* ── Categories ── */}
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        {CATEGORIES.map(cat => (
+          <button
+            key={cat.id}
+            onClick={() => setActiveCategory(cat.id)}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl border whitespace-nowrap transition-all shrink-0 ${
+              activeCategory === cat.id
+                ? "bg-violet-500 border-violet-500 text-white shadow-md shadow-violet-200"
                 : "bg-white border-gray-200 text-gray-600 hover:border-violet-300 hover:text-violet-600"
             }`}
             style={{ fontSize: "0.82rem", fontWeight: activeCategory === cat.id ? 700 : 500 }}
@@ -1040,6 +1067,14 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
           {showSavedOnly && <span className="ml-1 text-emerald-500">· video đã lưu</span>}
           {searchQuery && <span className="ml-1">cho "<span className="text-gray-900 font-semibold">{searchQuery}</span>"</span>}
         </div>
+        <button
+          onClick={() => setShowUploadModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-500 to-indigo-500 text-white rounded-xl hover:from-violet-600 hover:to-indigo-600 transition-all shadow-md shadow-violet-200"
+          style={{ fontSize: "0.82rem", fontWeight: 700 }}
+        >
+          <Upload className="w-4 h-4" />
+          Upload Video 360°
+        </button>
 
         <button
           onClick={() => setShowUploadModal(true)}
@@ -1065,26 +1100,6 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
               key={v.id}
               className="flex gap-4 bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md hover:border-violet-200 transition-all cursor-pointer group"
               onClick={() => void openVideoDetail(v)}
-            >
-              <div className="relative w-40 sm:w-48 shrink-0 rounded-xl overflow-hidden" style={{ aspectRatio: "16/9" }}>
-                <img src={v.thumbnail} alt={v.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                {v.is360 && (
-                  <div className="absolute top-1.5 left-1.5 flex items-center gap-1 bg-violet-600/90 px-1.5 py-0.5 rounded-lg">
-                    <Globe className="w-2.5 h-2.5 text-white" />
-                    <span className="text-white" style={{ fontSize: "0.6rem", fontWeight: 700 }}>360°</span>
-                  </div>
-                )}
-                <div className="absolute bottom-1.5 right-1.5 bg-black/70 text-white px-1.5 py-0.5 rounded-md" style={{ fontSize: "0.65rem", fontWeight: 600 }}>
-                  {v.duration}
-                </div>
-              </div>
-              <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
-                <div>
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <h3 className="text-gray-900 line-clamp-2 group-hover:text-violet-600 transition-colors" style={{ fontWeight: 700, fontSize: "0.92rem" }}>
-                      {v.title}
-                    </h3>
-                    {v.isHot && <span className="shrink-0 flex items-center gap-0.5 bg-orange-100 text-orange-600 px-2 py-0.5 rounded-lg" style={{ fontSize: "0.65rem", fontWeight: 700 }}>
             >
               <div className="relative w-40 sm:w-48 shrink-0 rounded-xl overflow-hidden" style={{ aspectRatio: "16/9" }}>
                 <img src={v.thumbnail} alt={v.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
