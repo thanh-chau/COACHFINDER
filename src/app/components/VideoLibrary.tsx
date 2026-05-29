@@ -907,22 +907,7 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
                 <Clock className="w-4 h-4" />
                 <span style={{ fontSize: "0.82rem" }}>{featured.duration}</span>
               </div>
-            </div>
-
-            <div className="flex items-center gap-3 flex-wrap">
-              <button
-                onClick={() => void openVideoDetail(featured)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-white text-gray-900 rounded-xl hover:bg-gray-100 transition-colors"
-                style={{ fontWeight: 700, fontSize: "0.88rem" }}
-              >
-                <Play className="w-4 h-4" /> Xem ngay
-              </button>
-              <button
-                onClick={() => void openVideoDetail(featured)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-violet-500/20 border border-violet-400/40 text-violet-300 rounded-xl hover:bg-violet-500/30 transition-colors"
-                style={{ fontWeight: 600, fontSize: "0.88rem" }}
-              >
-                <Globe className="w-4 h-4" /> Thử 360°
+   be className="w-4 h-4" /> Thử 360°
               </button>
             </div>
           </div>
@@ -931,35 +916,6 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
           <div className="lg:w-80 xl:w-96 w-full shrink-0">
             <div className="relative rounded-2xl overflow-hidden shadow-2xl cursor-pointer group" style={{ aspectRatio: "16/9" }}
               onClick={() => void openVideoDetail(featured)}>
-              <img src={featured.thumbnail} alt={featured.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-              <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm border-2 border-white/40 flex items-center justify-center">
-                  <Play className="w-7 h-7 text-white ml-1" />
-                </div>
-              </div>
-              {/* 360 badge */}
-              <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-violet-600/90 px-2.5 py-1.5 rounded-xl">
-                <Globe className="w-3.5 h-3.5 text-white" />
-                <span className="text-white" style={{ fontSize: "0.72rem", fontWeight: 700 }}>360°</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Search + Filter bar ── */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-        {/* Search */}
-        <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Tìm kiếm video, HLV, môn thể thao..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition-all"
-            style={{ fontSize: "0.85rem" }}
-          />
         </div>
               <img src={featured.thumbnail} alt={featured.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
               <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors flex items-center justify-center">
