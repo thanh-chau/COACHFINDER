@@ -836,6 +836,11 @@ export function ProgressTracking({ onNavigate }: Props) {
       )}
 
       {/* Tab content */}
+      {metricTab === "overview" && (
+        <div className="space-y-6">
+          <TrainingChart timeRange={timeRange} overview={overview} />
+          <HeatmapSection heatmap={heatmap} streakDays={overview?.streakDays ?? 0} />
+          <AchievementsSection achievements={achievements} />
         </div>
       )}
 
