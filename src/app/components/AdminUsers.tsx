@@ -167,8 +167,6 @@ export function AdminUsers() {
     rating: 5.0,
     verified: u.active,
     avatar: (u.fullName?.[0] || u.username?.[0] || "U").toUpperCase(),
-    verified: u.active,
-    avatar: (u.fullName?.[0] || u.username?.[0] || "U").toUpperCase(),
   }));
 
   const handleUpdateStatus = async (
@@ -182,6 +180,9 @@ export function AdminUsers() {
     ) {
       try {
         await updateAdminUserStatus(idToUpdate, !currentActive);
+        await loadUsers();
+      } catch (e) {
+        setUserActionError(e instanceof Error ? e.message : "Cập nhật trạng thái thất bại.");
       }
     }
   };
