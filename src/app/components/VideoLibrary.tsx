@@ -907,7 +907,22 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
                 <Clock className="w-4 h-4" />
                 <span style={{ fontSize: "0.82rem" }}>{featured.duration}</span>
               </div>
-   be className="w-4 h-4" /> Thử 360°
+            </div>
+
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                onClick={() => void openVideoDetail(featured)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-white text-gray-900 rounded-xl hover:bg-gray-100 transition-colors"
+                style={{ fontWeight: 700, fontSize: "0.88rem" }}
+              >
+                <Play className="w-4 h-4" /> Xem ngay
+              </button>
+              <button
+                onClick={() => void openVideoDetail(featured)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-violet-500/20 border border-violet-400/40 text-violet-300 rounded-xl hover:bg-violet-500/30 transition-colors"
+                style={{ fontWeight: 600, fontSize: "0.88rem" }}
+              >
+                <Globe className="w-4 h-4" /> Thử 360°
               </button>
             </div>
           </div>
@@ -916,7 +931,6 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
           <div className="lg:w-80 xl:w-96 w-full shrink-0">
             <div className="relative rounded-2xl overflow-hidden shadow-2xl cursor-pointer group" style={{ aspectRatio: "16/9" }}
               onClick={() => void openVideoDetail(featured)}>
-        </div>
               <img src={featured.thumbnail} alt={featured.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
               <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors flex items-center justify-center">
                 <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm border-2 border-white/40 flex items-center justify-center">
