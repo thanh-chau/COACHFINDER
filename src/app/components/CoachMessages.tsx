@@ -286,12 +286,126 @@ function InfoPanel({ conv, onClose }:{ conv:Conversation; onClose:()=>void }) {
       </div>
     </div>
   );
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const STATUS_DOT:Record<ConvStatus,string> = {
+  online:"bg-emerald-400", offline:"bg-gray-300", away:"bg-amber-400"
+};
+const STATUS_LBL:Record<ConvStatus,string> = {
+  online:"Đang online", offline:"Offline", away:"Vắng mặt"
+};
+
+// ─── Message Bubble ────────────────────────────────────────────────────────────
+function MsgBubble({ msg, isCoach }:{ msg:Message; isCoach:boolean }) {
+  const mine = isCoach ? msg.from==="coach" : msg.from==="student";
+  if (msg.type==="system") return (
+    <div className="flex justify-center">
+      <span className="bg-gray-100 text-gray-400 px-3 py-1 rounded-full" style={{fontSize:"0.68rem"}}>{msg.text}</span>
+    </div>
+  );
+  return (
+    <div className={`flex items-end gap-2 ${mine?"flex-row-reverse":"flex-row"}`}>
+      <div className={`max-w-xs lg:max-w-sm`}>
+        {msg.type==="file" ? (
+          <div className={`flex items-center gap-2.5 px-3 py-2.5 rounded-2xl ${mine?"bg-blue-500 rounded-br-sm":"bg-white border border-gray-200 rounded-bl-sm"}`}>
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${mine?"bg-white/20":"bg-blue-50"}`}>
+              <FileText className={`w-4 h-4 ${mine?"text-white":"text-blue-500"}`}/>
+            </div>
+            <div>
+              <div style={{fontSize:"0.78rem",fontWeight:600}} className={mine?"text-white":"text-gray-800"}>{msg.fileName}</div>
+              <div style={{fontSize:"0.65rem"}} className={mine?"text-blue-100":"text-gray-400"}>{msg.fileSize}</div>
+            </div>
+          </div>
+        ) : (
+          <div className={`px-3.5 py-2.5 rounded-2xl ${mine?"bg-blue-500 text-white rounded-br-sm":"bg-white border border-gray-100 shadow-sm text-gray-800 rounded-bl-sm"}`}
+            style={{fontSize:"0.85rem",lineHeight:1.6}}>
+            {msg.text}
+          </div>
+        )}
+        <div className={`flex items-center gap-1 mt-1 ${mine?"justify-end":"justify-start"}`}>
+          <span style={{fontSize:"0.62rem"}} className="text-gray-400">{msg.time}</span>
+          {mine && msg.status && (
+            msg.status==="read"
+              ? <CheckCheck className="w-3 h-3 text-blue-400"/>
+              : msg.status==="delivered"
+              ? <CheckCheck className="w-3 h-3 text-gray-300"/>
+              : <Check className="w-3 h-3 text-gray-300"/>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Student Info Panel ────────────────────────────────────────────────────────
+function InfoPanel({ conv, onClose }:{ conv:Conversation; onClose:()=>void }) {
+  return (
+    <div className="w-64 shrink-0 bg-white border-l border-gray-100 flex flex-col overflow-y-auto">
+      <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+        <span style={{fontWeight:700,fontSize:"0.88rem"}} className="text-gray-900">Hồ sơ học viên</span>
+        <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 text-gray-400"><X className="w-4 h-4"/></button>
+      </div>
+      <div className="p-4 text-center border-b border-gray-100">
+        <div className="relative inline-block mb-3">
+          <img src={conv.avatar} alt="" className="w-16 h-16 rounded-2xl object-cover"/>
+          <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${STATUS_DOT[conv.status]}`}/>
+        </div>
+        <div style={{fontWeight:700,fontSize:"0.95rem"}} className="text-gray-900">{conv.name}</div>
+        <div style={{fontSize:"0.75rem"}} className="text-gray-400 mt-0.5">{conv.sport} · Từ {conv.joined}</div>
+        <div className={`inline-flex items-center gap-1 mt-1.5 px-2.5 py-0.5 rounded-full ${conv.status==="online"?"bg-emerald-50 text-emerald-600":"bg-gray-100 text-gray-400"}`}
+          style={{fontSize:"0.68rem",fontWeight:600}}>
+          <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[conv.status]}`}/>{STATUS_LBL[conv.status]}
+        </div>
+      </div>
+      <div className="p-4 space-y-3">
+        <div style={{fontWeight:600,fontSize:"0.78rem"}} className="text-gray-500 uppercase tracking-wide">Thống kê</div>
+        {[
+          {icon:Calendar,  label:"Buổi đã tập",  value:conv.sessions+" buổi",   color:"text-blue-500"},
+          {icon:TrendingUp,label:"Tiến độ AI",    value:conv.progress+"/100",    color:"text-emerald-500"},
+        ].map(({icon:Icon,label,value,color})=>(
+          <div key={label} className="flex items-center justify-between py-1 border-b border-gray-50">
+            <div className="flex items-center gap-2">
+              <Icon className={`w-3.5 h-3.5 ${color}`}/>
+              <span style={{fontSize:"0.78rem"}} className="text-gray-500">{label}</span>
+            </div>
+            <span style={{fontSize:"0.82rem",fontWeight:700}} className="text-gray-800">{value}</span>
+          </div>
+        ))}
+        {/* Progress bar */}
+        <div>
+          <div className="flex justify-between mb-1.5">
+            <span style={{fontSize:"0.72rem"}} className="text-gray-400">Tiến độ</span>
+            <span style={{fontSize:"0.72rem",fontWeight:700}} className={conv.progress>=80?"text-emerald-500":"text-blue-500"}>{conv.progress}%</span>
+          </div>
+          <div className="h-2 bg-gray-100 rounded-full">
+            <div className={`h-2 rounded-full transition-all ${conv.progress>=80?"bg-emerald-400":"bg-blue-400"}`} style={{width:`${conv.progress}%`}}/>
+          </div>
+        </div>
+        {conv.nextSession&&(
+          <div className="bg-blue-50 rounded-xl p-3">
+            <div style={{fontSize:"0.7rem",fontWeight:600}} className="text-blue-500 mb-0.5 flex items-center gap-1"><Clock className="w-3 h-3"/>Buổi tập tiếp theo</div>
+            <div style={{fontSize:"0.82rem",fontWeight:700}} className="text-blue-700">{conv.nextSession}</div>
+          </div>
+        )}
+        <div className="space-y-1.5 pt-1">
+          {[
+            {icon:Video,    label:"Xem Video Studio",  color:"bg-blue-50 text-blue-600"},
+            {icon:Calendar, label:"Xem lịch học",       color:"bg-purple-50 text-purple-600"},
+            {icon:Award,    label:"Xem tiến độ",        color:"bg-emerald-50 text-emerald-600"},
+          ].map(({icon:Icon,label,color})=>(
+            <button key={label} className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl ${color} transition-colors hover:opacity-80`} style={{fontSize:"0.78rem",fontWeight:600}}>
+              <Icon className="w-3.5 h-3.5 shrink-0"/>{label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ─── Main Component ─────────────────────────────────────────────────────────────
 export function CoachMessages() {
   const [convs,setConvs]         = useState<Conversation[]>(INITIAL_CONVS);
-  const [activeId,setActiveId]   = useState<string>("c1");
   const [activeId,setActiveId]   = useState<string>("c1");
   const [text,setText]           = useState("");
   const [search,setSearch]       = useState("");
