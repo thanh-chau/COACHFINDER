@@ -91,7 +91,6 @@ interface Student {
   radarData: { subject: string; value: number }[];
 }
 
-    id: "s3", name: "Lê Thúy Nga", gender: "female", age: 31,
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const STUDENTS: Student[] = [];
 

@@ -952,13 +952,14 @@ export function CoachVideoStudio() {
       .catch(() => {
         // Fallback to mock analytics instead of showing error
         setSelectedAnalytics({
+          videoId: numericId,
           views: selectedVideo.views,
           likes: selectedVideo.likes,
           saves: 0,
+          submissions: selectedVideo.submissions.length,
+          pendingSubmissions: selectedVideo.submissions.filter(sub => sub.status === "pending").length,
           averageScore: 0,
-          completionRate: 0,
-          engagementRate: 0,
-        } as VideoAnalytics);
+        });
       });
   }, [selectedVideo?.id]);
 

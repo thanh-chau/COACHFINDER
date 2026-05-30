@@ -252,28 +252,6 @@ export function CoachDashboard() {
         <div className="flex items-center gap-3 px-5 h-16 border-b border-white/[0.06] shrink-0">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/20">
             <Dumbbell className="w-[18px] h-[18px] text-white" />
-    if (n >= 1000000) return (n / 1000000).toFixed(1) + "M";
-    return (n / 1000).toFixed(0) + "K";
-  };
-
-  return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
-
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/40 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
-      )}
-
-      {/* ── SIDEBAR ──────────────────────────────────────── */}
-      <aside className={`
-        fixed lg:relative z-40 flex flex-col h-full bg-gray-950 transition-transform duration-300 ease-in-out
-        ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
-      `} style={{ width: 256, minWidth: 256 }}>
-
-        {/* Logo */}
-        <div className="flex items-center gap-3 px-5 h-16 border-b border-white/[0.06] shrink-0">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/20">
-            <Dumbbell className="w-[18px] h-[18px] text-white" />
           </div>
           <span style={{ fontWeight: 800, fontSize: "1.15rem", letterSpacing: "-0.02em" }} className="text-white">
             Coach<span className="text-blue-400">Finder</span>

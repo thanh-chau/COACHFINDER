@@ -37,6 +37,8 @@ interface Conversation {
 }
 
 const INITIAL_CONVS: Conversation[] = [];
+const DEFAULT_CONVERSATION_AVATAR =
+  "https://images.unsplash.com/photo-1607286908165-b8b6a2874fc4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=80";
 
 const QUICK_REPLIES = [
   "OK thầy sẽ xem!","Buổi tới mình điều chỉnh nhé 💪","Form của em tốt lắm! 🎉",
@@ -65,7 +67,7 @@ function mapApiConversation(conversation: ApiConversation): Conversation {
   return {
     id: String(conversation.id),
     name: conversation.participantFullName || conversation.participantUsername,
-    avatar: conversation.participantAvatarUrl || AVT.a,
+    avatar: conversation.participantAvatarUrl || DEFAULT_CONVERSATION_AVATAR,
     sport: "Học viên",
     status: "offline",
     lastMsg: conversation.lastMessage || "Chưa có tin nhắn",
