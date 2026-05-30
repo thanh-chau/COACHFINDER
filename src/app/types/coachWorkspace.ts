@@ -45,6 +45,11 @@ export interface CoachStudentSummary {
   sessions: number;
   completedSessions: number;
   lastSessionDate: string | null;
+  weight: number | null;
+  height: number | null;
+  joinDate: string | null;
+  plan: string | null;
+  revenue: number;
 }
 
 export interface CoachStudentSession {
