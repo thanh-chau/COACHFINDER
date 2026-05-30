@@ -108,14 +108,14 @@ export function AdminFinance() {
 
   const monthlyData = monthly.map((m) => ({
     month: m.period,
-    commission: Math.round((m.commission || 0) / 1000000),
-    subscription: Math.round((m.subscriptionRevenue || 0) / 1000000),
-    booking: Math.round((m.bookingRevenue || 0) / 1000000),
-    total: Math.round((m.revenue || 0) / 1000000),
+    commission: Number(((m.commission || 0) / 1000000).toFixed(2)),
+    subscription: Number(((m.subscriptionRevenue || 0) / 1000000).toFixed(2)),
+    booking: Number(((m.bookingRevenue || 0) / 1000000).toFixed(2)),
+    total: Number(((m.revenue || 0) / 1000000).toFixed(2)),
   }));
   const sourceData = revenueBySource.map((s) => ({
     name: s.source.replaceAll("_", " "),
-    value: Math.round((s.revenue || 0) / 1000000),
+    value: Number(((s.revenue || 0) / 1000000).toFixed(2)),
   }));
   const totalSource = revenueBySource.reduce((sum, item) => sum + item.revenue, 0);
   const maxCommission = Math.max(...commissionByPlan.map((p) => p.commission), 1);
@@ -154,7 +154,7 @@ export function AdminFinance() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-        <div className="xl:col-span-2 bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+        <div className="xl:col-span-2 bg-white rounded-2xl p-5 border border-gray-100 shadow-sm min-w-0">
           <div className="mb-5">
             <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900">Doanh thu nền tảng theo tháng</div>
             <div style={{ fontSize: "0.78rem" }} className="text-gray-400">Tính từ wallet transactions (triệu đồng)</div>
@@ -172,7 +172,7 @@ export function AdminFinance() {
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm min-w-0">
           <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900 mb-1">Cơ cấu doanh thu</div>
           <div style={{ fontSize: "0.78rem" }} className="text-gray-400 mb-4">Phân bổ theo nguồn</div>
           <ResponsiveContainer width="100%" height={180}>
@@ -202,7 +202,7 @@ export function AdminFinance() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm min-w-0">
           <div className="mb-4">
             <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900">Xu hướng tổng doanh thu</div>
             <div style={{ fontSize: "0.78rem" }} className="text-gray-400">6 tháng gần nhất</div>
@@ -218,7 +218,7 @@ export function AdminFinance() {
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm min-w-0">
           <div className="mb-4">
             <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900">Hoa hồng theo gói HLV</div>
             <div style={{ fontSize: "0.78rem" }} className="text-gray-400">Dữ liệu từ giao dịch học phí</div>
