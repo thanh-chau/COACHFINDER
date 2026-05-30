@@ -93,6 +93,7 @@ interface CoachVideo {
   notes: string;
   submissions: StudentSubmission[];
   file?: File;
+  videoUrl?: string;
 }
 
 function formatDuration(seconds: number | null) {
@@ -135,6 +136,7 @@ function mapApiVideo(video: VideoItem, submissions: CoachVideoSubmission[]): Coa
     title: video.title,
     description: video.description || "",
     thumbnail: video.thumbnailUrl || REF.gym360,
+    videoUrl: video.videoUrl,
     duration: formatDuration(video.duration),
     durationSec: video.duration || 0,
     type: video.videoType === "VIDEO_360" || video.format === "360" ? "360" : "normal",
@@ -1463,15 +1465,21 @@ export function CoachVideoStudio() {
                     <span style={{fontSize:"0.7rem",fontWeight:600}} className="text-gray-400 uppercase tracking-wide">Chi tiết video</span>
                     <button onClick={()=>setSelectedId(null)} className="p-1 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white"><X className="w-4 h-4"/></button>
                   </div>
-                  <div className="relative rounded-xl overflow-hidden aspect-video mb-3">
-                    <img src={selectedVideo.thumbnail} alt="" className="w-full h-full object-cover"/>
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                      <div className="w-12 h-12 rounded-full bg-white/20 border-2 border-white/40 flex items-center justify-center cursor-pointer hover:bg-white/30">
-                        <Play className="w-6 h-6 text-white ml-0.5"/>
-                      </div>
-                    </div>
-                    {selectedVideo.type==="360"&&<div className="absolute top-2 left-2 flex items-center gap-1 bg-purple-600 text-white px-2 py-1 rounded-lg" style={{fontSize:"0.62rem",fontWeight:700}}><Globe className="w-3 h-3"/>360°</div>}
-                    <div className="absolute bottom-2 right-2 bg-black/70 text-white px-1.5 py-0.5 rounded" style={{fontSize:"0.65rem",fontWeight:700}}>{selectedVideo.duration}</div>
+                  <div className="relative rounded-xl overflow-hidden aspect-video mb-3 bg-black">
+                    {selectedVideo.videoUrl ? (
+                      <video src={selectedVideo.videoUrl} controls className="w-full h-full object-contain" />
+                    ) : (
+                      <>
+                        <img src={selectedVideo.thumbnail} alt="" className="w-full h-full object-cover"/>
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                          <div className="w-12 h-12 rounded-full bg-white/20 border-2 border-white/40 flex items-center justify-center cursor-pointer hover:bg-white/30">
+                            <Play className="w-6 h-6 text-white ml-0.5"/>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    {selectedVideo.type==="360"&&<div className="absolute top-2 left-2 flex items-center gap-1 bg-purple-600 text-white px-2 py-1 rounded-lg pointer-events-none" style={{fontSize:"0.62rem",fontWeight:700}}><Globe className="w-3 h-3"/>360°</div>}
+                    {!selectedVideo.videoUrl && <div className="absolute bottom-2 right-2 bg-black/70 text-white px-1.5 py-0.5 rounded pointer-events-none" style={{fontSize:"0.65rem",fontWeight:700}}>{selectedVideo.duration}</div>}
                   </div>
                   <div style={{fontWeight:700,fontSize:"0.88rem"}} className="text-white mb-1.5 leading-snug">{selectedVideo.title}</div>
                   <div className="flex gap-3 text-gray-400">
