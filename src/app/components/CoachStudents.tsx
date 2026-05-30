@@ -149,15 +149,30 @@ function durationBetween(start: string, end: string) {
   return `${endHour * 60 + endMinute - startHour * 60 - startMinute} phút`;
 }
 
+const ACTIVE_BOOKING_STATUSES = new Set(["PENDING", "CONFIRMED", "COMPLETED"]);
+const UPCOMING_BOOKING_STATUSES = new Set(["PENDING", "CONFIRMED"]);
+
+function isActiveBooking(status?: string | null) {
+  return ACTIVE_BOOKING_STATUSES.has(status || "");
+}
+
+function isUpcomingBooking(status?: string | null) {
+  return UPCOMING_BOOKING_STATUSES.has(status || "");
+}
+
 function buildStudents(trainees: Trainee[], bookings: BookingListItem[]) {
-  return trainees.map((trainee): Student => {
+  return trainees
+  .map((trainee): Student | null => {
     const traineeBookings = bookings
       .filter(item => normalizeName(item.traineeName || "") === normalizeName(trainee.fullName))
       .sort((left, right) => right.date.localeCompare(left.date));
+    const activeBookings = traineeBookings.filter(item => isActiveBooking(item.status));
+    if (activeBookings.length === 0) return null;
+
     const completed = traineeBookings.filter(item => item.status === "COMPLETED");
     const pending = traineeBookings.filter(item => item.status === "PENDING");
     const upcoming = traineeBookings
-      .filter(item => item.status === "PENDING" || item.status === "CONFIRMED")
+      .filter(item => isUpcomingBooking(item.status))
       .sort((left, right) => left.date.localeCompare(right.date))[0];
     const revenueNum = completed.reduce((sum, item) => sum + (item.price || 0), 0);
 
@@ -167,7 +182,7 @@ function buildStudents(trainees: Trainee[], bookings: BookingListItem[]) {
       age: trainee.age,
       avatar: trainee.avatar,
       plan: "Chưa có dữ liệu",
-      status: pending.length ? "pending" : traineeBookings.some(item => item.status !== "CANCELLED") ? "active" : "inactive",
+      status: pending.length ? "pending" : completed.length || upcoming ? "active" : "inactive",
       goal: trainee.goal || "Chưa cập nhật mục tiêu",
       sessions: completed.length,
       revenue: compactCurrency(revenueNum),
@@ -193,7 +208,8 @@ function buildStudents(trainees: Trainee[], bookings: BookingListItem[]) {
       notes: [],
       radarData: [],
     };
-  });
+  })
+  .filter((student): student is Student => student !== null);
 }
 
 function buildProgressHistory(sessions: number, score: number | null) {
@@ -256,23 +272,37 @@ function applyWorkspaceDetail(student: Student, detail: CoachStudentDetail): Stu
   };
 }
 
-function buildWorkspaceStudents(summaries: CoachStudentSummary[], progressList: CoachStudentProgress[]) {
+function buildWorkspaceStudents(
+  summaries: CoachStudentSummary[],
+  progressList: CoachStudentProgress[],
+  bookings: BookingListItem[] = [],
+) {
   const progressById = new Map(progressList.map(progress => [progress.traineeId, progress]));
 
-  return summaries.map((summary, index): Student => {
+  return summaries
+  .map((summary, index): Student | null => {
     const progress = progressById.get(summary.traineeId);
+    const studentBookings = bookings.filter(item => normalizeName(item.traineeName || "") === normalizeName(summary.fullName));
+    const activeBookings = studentBookings.filter(item => isActiveBooking(item.status));
+    const pendingBookings = activeBookings.filter(item => item.status === "PENDING");
+    const upcoming = activeBookings
+      .filter(item => isUpcomingBooking(item.status))
+      .sort((left, right) => left.date.localeCompare(right.date))[0];
     const aiScore = progress?.averageSubmissionScore === null || progress?.averageSubmissionScore === undefined
       ? null
       : Math.round(progress.averageSubmissionScore);
     const completedSessions = progress?.completedSessions ?? summary.completedSessions ?? 0;
     const totalSessions = progress?.totalSessions ?? summary.sessions ?? 0;
+    const hasCompletedHistory = completedSessions > 0 || summary.revenue > 0;
+
+    if (!hasCompletedHistory && activeBookings.length === 0) return null;
 
     return {
       id: String(summary.traineeId),
       name: summary.fullName,
       avatar: summary.avatar || AVT[index % AVT.length],
       plan: (summary.plan as Student["plan"]) || "Chưa có dữ liệu",
-      status: totalSessions > completedSessions ? "pending" : totalSessions > 0 ? "active" : "inactive",
+      status: pendingBookings.length ? "pending" : hasCompletedHistory || upcoming || totalSessions > 0 ? "active" : "inactive",
       goal: summary.goal || "Chưa cập nhật mục tiêu",
       sessions: completedSessions,
       revenue: summary.revenue > 0 ? (summary.revenue / 1000000).toFixed(1) + "M" : "0.0M",
@@ -291,7 +321,8 @@ function buildWorkspaceStudents(summaries: CoachStudentSummary[], progressList: 
       notes: [],
       radarData: buildRadarData(aiScore),
     };
-  });
+  })
+  .filter((student): student is Student => student !== null);
 }
 
 // ─── Student Card (grid view) ─────────────────────────────────────────────────
@@ -811,8 +842,11 @@ export function CoachStudents({ onNavigate }: CoachStudentsProps) {
     setLoading(true);
     setLoadError("");
 
-    coachWorkspaceApi.getStudents()
-      .then(async summaries => {
+    Promise.all([
+      coachWorkspaceApi.getStudents(),
+      getCoachCalendarBookings().catch(() => []),
+    ])
+      .then(async ([summaries, bookings]) => {
         const progressList = await Promise.all(
           summaries.map(summary =>
             coachWorkspaceApi.getStudentProgress(summary.traineeId).catch(() => null)
@@ -820,7 +854,8 @@ export function CoachStudents({ onNavigate }: CoachStudentsProps) {
         );
         return buildWorkspaceStudents(
           summaries,
-          progressList.filter((item): item is CoachStudentProgress => item !== null)
+          progressList.filter((item): item is CoachStudentProgress => item !== null),
+          bookings,
         );
       })
       .catch(async () => {

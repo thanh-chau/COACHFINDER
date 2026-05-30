@@ -84,6 +84,21 @@ function formatRelativeDate(value?: string | null) {
   return date.toLocaleDateString("vi-VN");
 }
 
+const ACTIVE_BOOKING_STATUSES = new Set(["PENDING", "CONFIRMED", "COMPLETED"]);
+const UPCOMING_BOOKING_STATUSES = new Set(["PENDING", "CONFIRMED"]);
+
+function normalizeName(name: string) {
+  return name.trim().toLocaleLowerCase();
+}
+
+function isActiveBooking(status?: string | null) {
+  return ACTIVE_BOOKING_STATUSES.has(status || "");
+}
+
+function isUpcomingBooking(status?: string | null) {
+  return UPCOMING_BOOKING_STATUSES.has(status || "");
+}
+
 function mapRevenueRows(rows: { period: string; value: number }[]): EarningsRow[] {
   return rows.slice(-6).map(row => ({
     month: row.period,
@@ -91,34 +106,47 @@ function mapRevenueRows(rows: { period: string; value: number }[]): EarningsRow[
   }));
 }
 
-function mapDashboardStudents(summaries: CoachStudentSummary[], progressList: CoachStudentProgress[]): DashboardStudentRow[] {
+function mapDashboardStudents(
+  summaries: CoachStudentSummary[],
+  progressList: CoachStudentProgress[],
+  bookings: BookingListItem[],
+): DashboardStudentRow[] {
   const progressById = new Map(progressList.map(item => [item.traineeId, item]));
   const avatars = [STUDENT_1, STUDENT_2, STUDENT_3];
   
   const sorted = [...summaries].sort((a, b) => (b.revenue || 0) - (a.revenue || 0));
 
-  return sorted.slice(0, 5).map((student, index) => {
+  return sorted
+  .map((student, index) => {
     const progress = progressById.get(student.traineeId);
+    const studentBookings = bookings.filter(item => normalizeName(item.traineeName || "") === normalizeName(student.fullName));
+    const activeBookings = studentBookings.filter(item => isActiveBooking(item.status));
+    const pendingBookings = activeBookings.filter(item => item.status === "PENDING");
+    const completedSessions = progress?.completedSessions ?? student.completedSessions ?? 0;
+    const hasCompletedHistory = completedSessions > 0 || student.revenue > 0;
+    if (!hasCompletedHistory && activeBookings.length === 0) return null;
+
     const score = progress?.averageSubmissionScore == null ? 0 : Math.round(progress.averageSubmissionScore);
 
     return {
       name: student.fullName,
       sport: student.goal || "Chưa cập nhật",
-      sessions: progress?.completedSessions ?? student.completedSessions ?? 0,
+      sessions: completedSessions,
       progress: score,
-      status: (student.sessions ?? 0) > (student.completedSessions ?? 0) ? "pending" : "active",
+      status: pendingBookings.length ? "pending" : "active",
       avatar: student.avatar || avatars[index % avatars.length],
       lastSession: student.lastSessionDate ? formatRelativeDate(student.lastSessionDate) : "Chưa có",
       paid: "API",
     };
-  });
+  })
+  .filter((student): student is DashboardStudentRow => student !== null);
 }
 
 function mapTodaySessions(bookings: BookingListItem[]): TodaySessionRow[] {
   const todayKey = new Date().toISOString().slice(0, 10);
   const source = bookings
-    .filter(item => item.date === todayKey)
-    .concat(bookings.filter(item => item.date !== todayKey && (item.status === "CONFIRMED" || item.status === "PENDING")))
+    .filter(item => item.date === todayKey && isActiveBooking(item.status))
+    .concat(bookings.filter(item => item.date !== todayKey && isUpcomingBooking(item.status)))
     .slice(0, 3);
   const avatars = [STUDENT_1, STUDENT_2, STUDENT_3];
 
@@ -211,15 +239,16 @@ export function CoachDashboard() {
       const mappedRevenue = mapRevenueRows(revenueRows);
       const mappedStudents = mapDashboardStudents(
         students,
-        progressRows.filter((item): item is CoachStudentProgress => item !== null)
+        progressRows.filter((item): item is CoachStudentProgress => item !== null),
+        bookings,
       );
       const mappedSessions = mapTodaySessions(bookings);
       const mappedPayments = mapRecentPayments(transactions);
 
       setEarningsRows(mappedRevenue);
-      setStudentRows(mappedStudents);
+      setStudentRows(mappedStudents.slice(0, 5));
       setSessionRows(mappedSessions);
-      setOverview(current => ({ ...current, todaySessions: mappedSessions.length }));
+      setOverview(current => ({ ...current, totalStudents: mappedStudents.length, todaySessions: mappedSessions.length }));
       setPaymentRows(mappedPayments);
       setLoadingOverview(false);
     });
