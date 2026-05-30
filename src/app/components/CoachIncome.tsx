@@ -85,41 +85,6 @@ const PAYOUTS = [
   { date:"01/03/2026", amount:12144000, status:"done",    method:"VCB ****8819", ref:"PO-20260301" },
   { date:"01/02/2026", amount:10824000, status:"done",    method:"VCB ****8819", ref:"PO-20260201" },
   { date:"01/01/2026", amount:12760000, status:"done",    method:"VCB ****8819", ref:"PO-20260101" },
-  id: string; date: string; student: string; avatar: string;
-  type: string; package: string; gross: number; commission: number; net: number;
-  status: TxStatus; method: string; note?: string;
-}
-
-const TRANSACTIONS: Tx[] = [
-  { id:"tx001", date:"05/03/2026", student:"Võ Thị Hoa",       avatar:AVT.a, type:"Buổi lẻ",    package:"Buổi tập Thể hình",   gross:454545, commission:54545, net:400000, status:"paid",    method:"MoMo" },
-  { id:"tx002", date:"05/03/2026", student:"Trần Bảo Long",    avatar:AVT.b, type:"Buổi lẻ",    package:"Buổi tập Thể hình",   gross:454545, commission:54545, net:400000, status:"paid",    method:"VNPAY" },
-  { id:"tx003", date:"04/03/2026", student:"Nguyễn Minh Anh",  avatar:AVT.a, type:"Gói 8 buổi", package:"Thể hình 8 buổi",     gross:3636364,commission:436364,net:3200000,status:"paid",    method:"Chuyển khoản" },
-  { id:"tx004", date:"04/03/2026", student:"Đặng Quốc Tuấn",   avatar:AVT.b, type:"Buổi lẻ",    package:"Buổi tập Thể hình",   gross:454545, commission:54545, net:400000, status:"paid",    method:"MoMo" },
-  { id:"tx005", date:"03/03/2026", student:"Lê Thúy Nga",      avatar:AVT.c, type:"Gói tháng",  package:"Thể hình tháng 3",    gross:4318182,commission:518182,net:3800000,status:"paid",    method:"VNPAY" },
-  { id:"tx006", date:"03/03/2026", student:"Phạm Đức Hải",     avatar:AVT.a, type:"Buổi lẻ",    package:"Buổi tập Boxing",     gross:454545, commission:54545, net:400000, status:"pending", method:"MoMo", note:"Chờ xác nhận" },
-  { id:"tx007", date:"02/03/2026", student:"Bùi Văn Nam",      avatar:AVT.b, type:"Gói 8 buổi", package:"Cardio 8 buổi",       gross:3636364,commission:436364,net:3200000,status:"paid",    method:"Chuyển khoản" },
-  { id:"tx008", date:"01/03/2026", student:"Võ Thị Hoa",       avatar:AVT.a, type:"Gói tháng",  package:"Yoga tháng 3",        gross:4318182,commission:518182,net:3800000,status:"paid",    method:"MoMo" },
-  { id:"tx009", date:"28/02/2026", student:"Nguyễn Minh Anh",  avatar:AVT.a, type:"Gói 3 tháng",package:"Thể hình Q1",         gross:11363636,commission:1363636,net:10000000,status:"paid", method:"Chuyển khoản" },
-  { id:"tx010", date:"27/02/2026", student:"Trần Bảo Long",    avatar:AVT.b, type:"Buổi lẻ",    package:"Buổi tập Thể hình",   gross:454545, commission:54545, net:400000, status:"paid",    method:"VNPAY" },
-  { id:"tx011", date:"26/02/2026", student:"Lê Thúy Nga",      avatar:AVT.c, type:"Buổi lẻ",    package:"Buổi tập Yoga",       gross:454545, commission:54545, net:400000, status:"paid",    method:"MoMo" },
-  { id:"tx012", date:"25/02/2026", student:"Đặng Quốc Tuấn",   avatar:AVT.b, type:"Gói 8 buổi", package:"Chạy bộ 8 buổi",     gross:3636364,commission:436364,net:3200000,status:"refunded",method:"Chuyển khoản", note:"Học viên hủy" },
-  { id:"tx013", date:"24/02/2026", student:"Phạm Đức Hải",     avatar:AVT.a, type:"Buổi lẻ",    package:"Buổi tập Boxing",     gross:454545, commission:54545, net:400000, status:"pending", method:"MoMo" },
-  { id:"tx014", date:"23/02/2026", student:"Bùi Văn Nam",      avatar:AVT.b, type:"Gói tháng",  package:"Cardio tháng 2",      gross:4318182,commission:518182,net:3800000,status:"paid",    method:"VNPAY" },
-  { id:"tx015", date:"22/02/2026", student:"Võ Thị Hoa",       avatar:AVT.a, type:"Buổi lẻ",    package:"Buổi tập Yoga",       gross:454545, commission:54545, net:400000, status:"paid",    method:"MoMo" },
-];
-
-const TOP_STUDENTS = [
-  { name:"Nguyễn Minh Anh", avatar:AVT.a, revenue:13200000, sessions:26, pkg:"Gói 3 tháng", rating:5.0 },
-  { name:"Võ Thị Hoa",      avatar:AVT.a, revenue:8200000,  sessions:22, pkg:"Gói tháng",   rating:4.9 },
-  { name:"Bùi Văn Nam",     avatar:AVT.b, revenue:7000000,  sessions:18, pkg:"Gói 8 buổi",  rating:4.8 },
-  { name:"Trần Bảo Long",   avatar:AVT.b, revenue:4400000,  sessions:12, pkg:"Buổi lẻ",     rating:4.7 },
-  { name:"Lê Thúy Nga",     avatar:AVT.c, revenue:4200000,  sessions:11, pkg:"Gói tháng",   rating:5.0 },
-];
-
-const PAYOUTS = [
-  { date:"01/03/2026", amount:12144000, status:"done",    method:"VCB ****8819", ref:"PO-20260301" },
-  { date:"01/02/2026", amount:10824000, status:"done",    method:"VCB ****8819", ref:"PO-20260201" },
-  { date:"01/01/2026", amount:12760000, status:"done",    method:"VCB ****8819", ref:"PO-20260101" },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
