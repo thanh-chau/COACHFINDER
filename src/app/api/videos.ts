@@ -63,7 +63,11 @@ export function uploadCoachVideo(request: {
   formData.append("title", request.title);
   formData.append("format", request.format);
   formData.append("resolution", request.resolution);
-  request.tags.forEach(tag => formData.append("tags", tag));
+  if (request.tags && request.tags.length > 0) {
+    request.tags.forEach(tag => formData.append("tags", tag));
+  } else {
+    formData.append("tags", "chung");
+  }
   formData.append("videoType", request.videoType);
   formData.append("file", request.file);
 
