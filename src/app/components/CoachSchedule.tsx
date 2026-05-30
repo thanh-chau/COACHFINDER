@@ -975,7 +975,7 @@ export function CoachSchedule({ onNavigate }: { onNavigate?: (v: string) => void
                               className="rounded-lg bg-blue-500 px-3 py-2 text-white hover:bg-blue-600 disabled:opacity-60"
                               style={{ fontSize: "0.72rem", fontWeight: 700 }}
                             >
-                              HoÃ n thÃ nh
+                              Hoàn thành
                             </button>
                             <button
                               type="button"
@@ -984,7 +984,7 @@ export function CoachSchedule({ onNavigate }: { onNavigate?: (v: string) => void
                               className="rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100 disabled:opacity-60"
                               style={{ fontSize: "0.72rem", fontWeight: 700 }}
                             >
-                              HLV há»§y
+                              HLV hủy
                             </button>
                           </div>
                         )}
