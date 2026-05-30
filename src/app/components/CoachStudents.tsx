@@ -328,6 +328,7 @@ const PLAN_CFG = {
   Free:    { bg: "bg-gray-100",    text: "text-gray-600" },
   Pro:     { bg: "bg-blue-100",    text: "text-blue-700" },
   Premium: { bg: "bg-purple-100",  text: "text-purple-700" },
+  "Cơ bản": { bg: "bg-gray-100", text: "text-gray-500" }, // <--- THÊM DÒNG NÀY
   "Chưa có dữ liệu": { bg: "bg-gray-100", text: "text-gray-500" },
 };
 
