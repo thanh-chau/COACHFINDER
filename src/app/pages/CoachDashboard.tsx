@@ -351,7 +351,7 @@ export function CoachDashboard() {
             <div style={{ fontSize: "0.78rem" }} className="text-gray-400 truncate">{new Date().toLocaleDateString("vi-VN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · {overview.todaySessions} buổi dạy hôm nay</div>
           </div>
           <div className="flex items-center gap-2.5">
-            <button className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:from-blue-600 hover:to-indigo-600 transition-all shadow-md shadow-blue-200" style={{ fontSize: "0.82rem", fontWeight: 700 }}>
+            <button onClick={() => setActiveNav("schedule")} className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:from-blue-600 hover:to-indigo-600 transition-all shadow-md shadow-blue-200" style={{ fontSize: "0.82rem", fontWeight: 700 }}>
               <Plus className="w-3.5 h-3.5" /> Thêm buổi dạy
             </button>
             <NotificationBell />
@@ -473,12 +473,19 @@ export function CoachDashboard() {
                           <div style={{ fontSize: "0.75rem" }} className="text-gray-500">{s.time} · {s.type}</div>
                         </div>
                         <div className="flex flex-col items-end gap-1.5 shrink-0">
+                      <div key={i} className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all ${s.status === "upcoming" ? "border-blue-200 bg-blue-50/40" : "border-gray-100 bg-gray-50 opacity-70"}`}>
+                        <img src={s.avatar} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div style={{ fontWeight: 600, fontSize: "0.9rem" }} className="text-gray-900">{s.student}</div>
+                          <div style={{ fontSize: "0.75rem" }} className="text-gray-500">{s.time} · {s.type}</div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1.5 shrink-0">
                           {s.status === "done" ? (
                             <span className="flex items-center gap-1 bg-gray-100 text-gray-500 px-2 py-1 rounded-lg" style={{ fontSize: "0.72rem", fontWeight: 600 }}>
                               <CheckCircle2 className="w-3 h-3" /> Hoàn thành
                             </span>
                           ) : (
-                            <button className="flex items-center gap-1.5 bg-blue-500 text-white px-3 py-1.5 rounded-lg hover:bg-blue-600 transition-colors" style={{ fontSize: "0.72rem", fontWeight: 700 }}>
+                            <button onClick={() => setActiveNav("schedule")} className="flex items-center gap-1.5 bg-blue-500 text-white px-3 py-1.5 rounded-lg hover:bg-blue-600 transition-colors" style={{ fontSize: "0.72rem", fontWeight: 700 }}>
                               <Play className="w-3 h-3" /> Bắt đầu
                             </button>
                           )}
@@ -530,13 +537,13 @@ export function CoachDashboard() {
                   <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="mb-4">Thao tác nhanh</div>
                   <div className="space-y-2.5">
                     {[
-                      { icon: Upload, label: "Upload Video 360°", color: "bg-blue-500", hot: true },
-                      { icon: Plus, label: "Tạo buổi tập mới", color: "bg-emerald-500" },
-                      { icon: Target, label: "Giao bài tập cho HV", color: "bg-purple-500" },
-                      { icon: BarChart2, label: "Xem Analytics chi tiết", color: "bg-amber-500" },
-                      { icon: Award, label: "Nâng cấp Elite Coach", color: "bg-gradient-to-r from-purple-500 to-violet-500" },
-                    ].map(({ icon: Icon, label, color, hot }) => (
-                      <button key={label} className="w-full flex items-center gap-3 bg-white/5 hover:bg-white/10 px-3.5 py-2.5 rounded-xl transition-colors text-left">
+                      { icon: Upload, label: "Upload Video 360°", color: "bg-blue-500", hot: true, nav: "studio" },
+                      { icon: Plus, label: "Tạo buổi tập mới", color: "bg-emerald-500", nav: "schedule" },
+                      { icon: Target, label: "Giao bài tập cho HV", color: "bg-purple-500", nav: "students" },
+                      { icon: BarChart2, label: "Xem Analytics chi tiết", color: "bg-amber-500", nav: "analytics" },
+                      { icon: Award, label: "Nâng cấp Elite Coach", color: "bg-gradient-to-r from-purple-500 to-violet-500", nav: "subscription" },
+                    ].map(({ icon: Icon, label, color, hot, nav }) => (
+                      <button key={label} onClick={() => setActiveNav(nav)} className="w-full flex items-center gap-3 bg-white/5 hover:bg-white/10 px-3.5 py-2.5 rounded-xl transition-colors text-left">
                         <div className={`w-7 h-7 rounded-lg ${color} flex items-center justify-center shrink-0`}>
                           <Icon className="w-3.5 h-3.5 text-white" />
                         </div>
@@ -605,7 +612,7 @@ export function CoachDashboard() {
                   <p style={{ fontSize: "0.8rem", lineHeight: 1.6 }} className="text-blue-100 mb-4">
                     Bạn đã upload {overview.totalVideos} video 360°. Học viên đã xem {overview.totalVideoViews} lần tháng này.
                   </p>
-                  <button className="w-full flex items-center justify-center gap-2 py-2.5 bg-white/15 hover:bg-white/25 border border-white/20 rounded-xl transition-colors" style={{ fontSize: "0.85rem", fontWeight: 600 }}>
+                  <button onClick={() => setActiveNav("studio")} className="w-full flex items-center justify-center gap-2 py-2.5 bg-white/15 hover:bg-white/25 border border-white/20 rounded-xl transition-colors" style={{ fontSize: "0.85rem", fontWeight: 600 }}>
                     <Upload className="w-4 h-4" /> Upload video mới
                   </button>
                 </div>
