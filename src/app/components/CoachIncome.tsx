@@ -19,73 +19,12 @@ import type { WalletTransaction } from "../types/wallet";
 import { WalletPanel } from "./WalletPanel";
 
 // ─── Avatars ──────────────────────────────────────────────────────────────────
-const AVT = {
-  a: "https://images.unsplash.com/photo-1607286908165-b8b6a2874fc4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=80",
-  b: "https://images.unsplash.com/photo-1755549476788-efd8bf819561?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=80",
-  c: "https://images.unsplash.com/photo-1660463527860-b66aebd362c9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=80",
-};
-
-// ─── Data ────────────────────────────────────────────────────────────────────
-const MONTHLY_DATA = [
-  { month:"T4/25",  gross:8500000,  net:7480000,  sessions:18, students:9  },
-  { month:"T5/25",  gross:9200000,  net:8096000,  sessions:20, students:10 },
-  { month:"T6/25",  gross:8900000,  net:7832000,  sessions:19, students:10 },
-  { month:"T7/25",  gross:10500000, net:9240000,  sessions:23, students:12 },
-  { month:"T8/25",  gross:11200000, net:9856000,  sessions:24, students:13 },
-  { month:"T9/25",  gross:9800000,  net:8624000,  sessions:21, students:12 },
-  { month:"T10/25", gross:9800000,  net:8624000,  sessions:21, students:11 },
-  { month:"T11/25", gross:11200000, net:9856000,  sessions:24, students:13 },
-  { month:"T12/25", gross:14500000, net:12760000, sessions:31, students:16 },
-  { month:"T1/26",  gross:12300000, net:10824000, sessions:26, students:14 },
-  { month:"T2/26",  gross:13800000, net:12144000, sessions:30, students:15 },
-  { month:"T3/26",  gross:17727273, net:15600000, sessions:35, students:17 },
-];
-
-const SOURCE_DATA = [
-  { name:"Buổi lẻ",      value:5600000,  color:"#3b82f6", pct:36 },
-  { name:"Gói 8 buổi",   value:4200000,  color:"#8b5cf6", pct:27 },
-  { name:"Gói tháng",    value:3800000,  color:"#10b981", pct:24 },
-  { name:"Gói 3 tháng",  value:2000000,  color:"#f59e0b", pct:13 },
-];
-
 type TxStatus = "paid" | "pending" | "refunded";
 interface Tx {
   id: string; date: string; student: string; avatar: string;
   type: string; package: string; gross: number; commission: number; net: number;
   status: TxStatus; method: string; note?: string;
 }
-
-const TRANSACTIONS: Tx[] = [
-  { id:"tx001", date:"05/03/2026", student:"Võ Thị Hoa",       avatar:AVT.a, type:"Buổi lẻ",    package:"Buổi tập Thể hình",   gross:454545, commission:54545, net:400000, status:"paid",    method:"MoMo" },
-  { id:"tx002", date:"05/03/2026", student:"Trần Bảo Long",    avatar:AVT.b, type:"Buổi lẻ",    package:"Buổi tập Thể hình",   gross:454545, commission:54545, net:400000, status:"paid",    method:"VNPAY" },
-  { id:"tx003", date:"04/03/2026", student:"Nguyễn Minh Anh",  avatar:AVT.a, type:"Gói 8 buổi", package:"Thể hình 8 buổi",     gross:3636364,commission:436364,net:3200000,status:"paid",    method:"Chuyển khoản" },
-  { id:"tx004", date:"04/03/2026", student:"Đặng Quốc Tuấn",   avatar:AVT.b, type:"Buổi lẻ",    package:"Buổi tập Thể hình",   gross:454545, commission:54545, net:400000, status:"paid",    method:"MoMo" },
-  { id:"tx005", date:"03/03/2026", student:"Lê Thúy Nga",      avatar:AVT.c, type:"Gói tháng",  package:"Thể hình tháng 3",    gross:4318182,commission:518182,net:3800000,status:"paid",    method:"VNPAY" },
-  { id:"tx006", date:"03/03/2026", student:"Phạm Đức Hải",     avatar:AVT.a, type:"Buổi lẻ",    package:"Buổi tập Boxing",     gross:454545, commission:54545, net:400000, status:"pending", method:"MoMo", note:"Chờ xác nhận" },
-  { id:"tx007", date:"02/03/2026", student:"Bùi Văn Nam",      avatar:AVT.b, type:"Gói 8 buổi", package:"Cardio 8 buổi",       gross:3636364,commission:436364,net:3200000,status:"paid",    method:"Chuyển khoản" },
-  { id:"tx008", date:"01/03/2026", student:"Võ Thị Hoa",       avatar:AVT.a, type:"Gói tháng",  package:"Yoga tháng 3",        gross:4318182,commission:518182,net:3800000,status:"paid",    method:"MoMo" },
-  { id:"tx009", date:"28/02/2026", student:"Nguyễn Minh Anh",  avatar:AVT.a, type:"Gói 3 tháng",package:"Thể hình Q1",         gross:11363636,commission:1363636,net:10000000,status:"paid", method:"Chuyển khoản" },
-  { id:"tx010", date:"27/02/2026", student:"Trần Bảo Long",    avatar:AVT.b, type:"Buổi lẻ",    package:"Buổi tập Thể hình",   gross:454545, commission:54545, net:400000, status:"paid",    method:"VNPAY" },
-  { id:"tx011", date:"26/02/2026", student:"Lê Thúy Nga",      avatar:AVT.c, type:"Buổi lẻ",    package:"Buổi tập Yoga",       gross:454545, commission:54545, net:400000, status:"paid",    method:"MoMo" },
-  { id:"tx012", date:"25/02/2026", student:"Đặng Quốc Tuấn",   avatar:AVT.b, type:"Gói 8 buổi", package:"Chạy bộ 8 buổi",     gross:3636364,commission:436364,net:3200000,status:"refunded",method:"Chuyển khoản", note:"Học viên hủy" },
-  { id:"tx013", date:"24/02/2026", student:"Phạm Đức Hải",     avatar:AVT.a, type:"Buổi lẻ",    package:"Buổi tập Boxing",     gross:454545, commission:54545, net:400000, status:"pending", method:"MoMo" },
-  { id:"tx014", date:"23/02/2026", student:"Bùi Văn Nam",      avatar:AVT.b, type:"Gói tháng",  package:"Cardio tháng 2",      gross:4318182,commission:518182,net:3800000,status:"paid",    method:"VNPAY" },
-  { id:"tx015", date:"22/02/2026", student:"Võ Thị Hoa",       avatar:AVT.a, type:"Buổi lẻ",    package:"Buổi tập Yoga",       gross:454545, commission:54545, net:400000, status:"paid",    method:"MoMo" },
-];
-
-const TOP_STUDENTS = [
-  { name:"Nguyễn Minh Anh", avatar:AVT.a, revenue:13200000, sessions:26, pkg:"Gói 3 tháng", rating:5.0 },
-  { name:"Võ Thị Hoa",      avatar:AVT.a, revenue:8200000,  sessions:22, pkg:"Gói tháng",   rating:4.9 },
-  { name:"Bùi Văn Nam",     avatar:AVT.b, revenue:7000000,  sessions:18, pkg:"Gói 8 buổi",  rating:4.8 },
-  { name:"Trần Bảo Long",   avatar:AVT.b, revenue:4400000,  sessions:12, pkg:"Buổi lẻ",     rating:4.7 },
-  { name:"Lê Thúy Nga",     avatar:AVT.c, revenue:4200000,  sessions:11, pkg:"Gói tháng",   rating:5.0 },
-];
-
-const PAYOUTS = [
-  { date:"01/03/2026", amount:12144000, status:"done",    method:"VCB ****8819", ref:"PO-20260301" },
-  { date:"01/02/2026", amount:10824000, status:"done",    method:"VCB ****8819", ref:"PO-20260201" },
-  { date:"01/01/2026", amount:12760000, status:"done",    method:"VCB ****8819", ref:"PO-20260101" },
-];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n:number) => n.toLocaleString("vi-VN") + "đ";
@@ -128,8 +67,8 @@ function CustomTooltip({ active, payload, label }:any) {
 
 // ─── Overview Tab ─────────────────────────────────────────────────────────────
 function OverviewTab({
-  monthlyData = MONTHLY_DATA,
-  topStudents = TOP_STUDENTS,
+  monthlyData = [],
+  topStudents = [],
   transactions = [],
 }: {
   monthlyData?: MonthlyIncomeRow[];
@@ -313,7 +252,7 @@ function OverviewTab({
         <div className="flex items-center justify-between mb-4">
           <div>
             <div style={{fontWeight:700,fontSize:"0.95rem"}} className="text-gray-900">Top học viên đóng góp</div>
-            <div style={{fontSize:"0.75rem"}} className="text-gray-400">Theo doanh thu lũy kế 2025–2026</div>
+            <div style={{fontSize:"0.75rem"}} className="text-gray-400">Theo doanh thu lũy kế</div>
           </div>
           <span className="text-blue-500 flex items-center gap-1" style={{fontSize:"0.8rem",fontWeight:600}}>
             Tất cả <ChevronRight className="w-3.5 h-3.5"/>
@@ -393,7 +332,7 @@ function OverviewTab({
 }
 
 // ─── Transactions Tab ─────────────────────────────────────────────────────────
-function TransactionsTab({ transactions = TRANSACTIONS }: { transactions?: Tx[] }) {
+function TransactionsTab({ transactions = [] }: { transactions?: Tx[] }) {
   const [search,setSearch] = useState("");
   const [filter,setFilter] = useState<"all"|TxStatus|string>("all");
   const [typeFilter,setTypeFilter] = useState("Tất cả");
@@ -540,7 +479,7 @@ function TransactionsTab({ transactions = TRANSACTIONS }: { transactions?: Tx[] 
 function PayoutTab({
   availableBalance = 0,
   pendingBalance = 0,
-  payouts = PAYOUTS,
+  payouts = [],
 }: {
   availableBalance?: number;
   pendingBalance?: number;
@@ -627,14 +566,14 @@ export function CoachIncome() {
       coachWorkspaceApi.getIncomeOverview(),
       coachWorkspaceApi.getMonthlyChart(),
       coachWorkspaceApi.getIncomeTransactions(),
-      coachWorkspaceApi.getTopStudents(),
+      coachWorkspaceApi.getStudents(),
       coachWorkspaceApi.getPayouts(),
     ])
       .then(([overviewData, chartData, transactionData, studentData, payoutData]) => {
         setOverview(overviewData);
         setMonthlyData(chartData?.length ? chartData.map((p: any) => ({ month: p.period, gross: p.value, net: Math.round(p.value * 0.88), sessions: p.count, students: p.count })) : []);
         setTransactions(transactionData?.length ? transactionData.map(mapTransaction) : []);
-        setTopStudents(studentData?.length ? studentData.map(mapTopStudent) : []);
+        setTopStudents(studentData?.length ? studentData.sort((a,b)=>(b.revenue||0)-(a.revenue||0)).slice(0, 5).map(mapTopStudent) : []);
         setPayouts(payoutData?.length ? payoutData.map(mapPayout) : []);
         setUsingFallback(false);
       })
@@ -685,9 +624,15 @@ export function CoachIncome() {
   );
 }
 
-type MonthlyIncomeRow = typeof MONTHLY_DATA[number];
-type TopStudentRow = typeof TOP_STUDENTS[number];
-type PayoutRow = typeof PAYOUTS[number];
+type MonthlyIncomeRow = { month: string; gross: number; net: number; sessions: number; students: number; };
+type TopStudentRow = { name: string; avatar: string; revenue: number; sessions: number; rating: number; pkg: string; };
+type PayoutRow = { amount: number; date: string; method: string; ref: string; };
+
+const AVT = {
+  a: "https://images.unsplash.com/photo-1607286908165-b8b6a2874fc4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=100",
+  b: "https://images.unsplash.com/photo-1755549476788-efd8bf819561?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=100",
+  c: "https://images.unsplash.com/photo-1660463527860-b66aebd362c9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=100",
+};
 
 function mapStatus(status: string | null): TxStatus {
   if (status === "REJECTED") return "refunded";
@@ -727,13 +672,14 @@ function mapPayout(tx: WalletTransaction): PayoutRow {
   };
 }
 
-function mapTopStudent(student: CoachTopStudent, index: number): TopStudentRow {
+import type { CoachStudentSummary } from "../types/coachWorkspace";
+function mapTopStudent(student: CoachStudentSummary, index: number): TopStudentRow {
   return {
-    name: student.traineeName,
-    avatar: [AVT.a, AVT.b, AVT.c][index % 3],
-    revenue: student.revenue,
-    sessions: student.sessions,
+    name: student.fullName,
+    avatar: student.avatar || [AVT.a, AVT.b, AVT.c][index % 3],
+    revenue: student.revenue || 0,
+    sessions: student.completedSessions || 0,
     rating: 5,
-    pkg: "Học viên",
+    pkg: student.plan || "Học viên",
   };
 }

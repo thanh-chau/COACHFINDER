@@ -14,8 +14,9 @@ import type { CoachSchedule as PublishedCoachSchedule } from "../types/coach";
 import { getAuthSession, updateAuthSession } from "../utils/authSession";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const TODAY_STR = "2026-03-05";
-const TODAY = new Date("2026-03-05T00:00:00");
+const _today = new Date();
+const TODAY_STR = _today.toISOString().split("T")[0];
+const TODAY = new Date(_today.getFullYear(), _today.getMonth(), _today.getDate());
 
 const DAYS_SHORT = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 const DAYS_FULL = ["Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ Nhật"];
@@ -41,7 +42,6 @@ const AVATARS: Record<string, string> = {
 // ─── Types ────────────────────────────────────────────────────────────────────
 type SessionStatus = "upcoming" | "completed" | "cancelled" | "pending";
 type SessionMode   = "Online" | "Offline";
-
 interface CoachSession {
   id: string;
   date: string;          // "YYYY-MM-DD"

@@ -159,362 +159,6 @@ function mapUploadedVideo(video: VideoItem): CoachVideo {
 }
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
-const INITIAL_VIDEOS: CoachVideo[] = [
-  // ── Thể hình ──────────────────────────────────────────────────────────────
-  { id:"v1", title:"Squat – Form chuẩn từ A→Z",
-    description:"Phân tích Squat chi tiết: góc đầu gối, độ sâu, lưng, Low Bar vs High Bar.",
-    thumbnail:REF.squat, duration:"12:34", durationSec:754,
-    type:"normal", category:"Thể hình", tags:["squat","legs","form"],
-    visibility:"students", views:347, likes:89, uploadDate:"28/02/2026",
-    fileSize:"1.2 GB", resolution:"1920×1080",
-    assignedStudents:["Nguyễn Minh Anh","Trần Bảo Long","Võ Thị Hoa"],
-    notes:"Video chính về squat – yêu cầu xem trước buổi học",
-    submissions: [
-      { id:"s1a", studentName:"Nguyễn Minh Anh", studentAvatar:AVT.minh_anh,
-        thumbnail:SUB.squat_s, duration:"02:14", uploadDate:"01/03/2026",
-        status:"pending",
-        scores:{ posture:6, technique:7, rhythm:8, power:6 },
-        coachFeedback:"", timestamps:[] },
-      { id:"s1b", studentName:"Trần Bảo Long", studentAvatar:AVT.bao_long,
-        thumbnail:SUB.squat_s, duration:"01:58", uploadDate:"02/03/2026",
-        status:"reviewed",
-        scores:{ posture:5, technique:5, rhythm:6, power:7 },
-        coachFeedback:"Đầu gối hơi cúi vào trong ở cuối phase xuống. Cần bung gối ra ngoài hơn.", timestamps:[{time:"0:18","note":"Đầu gối valgus – cần sửa"}] },
-      { id:"s1c", studentName:"Võ Thị Hoa", studentAvatar:AVT.thi_hoa,
-        thumbnail:SUB.squat_s, duration:"02:30", uploadDate:"03/03/2026",
-        status:"approved",
-        scores:{ posture:9, technique:8, rhythm:9, power:8 },
-        coachFeedback:"Form rất tốt! Độ sâu đạt chuẩn, lưng thẳng đẹp.", timestamps:[] },
-    ]},
-
-  { id:"v2", title:"Deadlift 360° – Phân tích bar path",
-    description:"Video 360° Deadlift. Xoay góc nhìn để kiểm tra lưng thẳng, bar path sát người.",
-    thumbnail:REF.deadlift, duration:"08:15", durationSec:495,
-    type:"360", category:"Thể hình", tags:["deadlift","360","powerlifting"],
-    visibility:"students", views:512, likes:134, uploadDate:"01/03/2026",
-    fileSize:"3.8 GB", resolution:"5760×2880 (360°)",
-    assignedStudents:["Đặng Quốc Tuấn","Trần Bảo Long"],
-    notes:"Video 360° – dùng headset VR để trải nghiệm tốt nhất",
-    submissions: [
-      { id:"s2a", studentName:"Đặng Quốc Tuấn", studentAvatar:AVT.quoc_tuan,
-        thumbnail:SUB.deadlift_s, duration:"01:45", uploadDate:"03/03/2026",
-        status:"pending",
-        scores:{ posture:7, technique:6, rhythm:7, power:8 },
-        coachFeedback:"", timestamps:[] },
-      { id:"s2b", studentName:"Trần Bảo Long", studentAvatar:AVT.bao_long,
-        thumbnail:SUB.deadlift_s, duration:"02:01", uploadDate:"04/03/2026",
-        status:"reviewed",
-        scores:{ posture:5, technique:5, rhythm:6, power:7 },
-        coachFeedback:"Lưng bị tròn khi qua đầu gối. Hông cần kéo ra sau nhiều hơn.", timestamps:[{time:"0:22","note":"Lưng tròn – nguy hiểm"}] },
-    ]},
-
-  { id:"v3", title:"Bench Press – 3 lỗi thường gặp & cách sửa",
-    description:"Phân tích 3 lỗi kỹ thuật Bench Press: arch quá mức, grip sai, bar path lệch.",
-    thumbnail:REF.bench, duration:"09:47", durationSec:587,
-    type:"normal", category:"Thể hình", tags:["bench press","chest","correction"],
-    visibility:"public", views:1203, likes:287, uploadDate:"25/02/2026",
-    fileSize:"890 MB", resolution:"1920×1080",
-    assignedStudents:["Nguyễn Minh Anh","Bùi Văn Nam"],
-    notes:"Video công khai",
-    submissions: [
-      { id:"s3a", studentName:"Nguyễn Minh Anh", studentAvatar:AVT.minh_anh,
-        thumbnail:SUB.bench_s, duration:"01:52", uploadDate:"27/02/2026",
-        status:"approved",
-        scores:{ posture:8, technique:8, rhythm:9, power:7 },
-        coachFeedback:"Kỹ thuật tốt, tiếp tục duy trì!", timestamps:[] },
-      { id:"s3b", studentName:"Bùi Văn Nam", studentAvatar:AVT.van_nam,
-        thumbnail:SUB.bench_s, duration:"02:05", uploadDate:"28/02/2026",
-        status:"pending",
-        scores:{ posture:6, technique:6, rhythm:7, power:8 },
-        coachFeedback:"", timestamps:[] },
-    ]},
-
-  { id:"v4", title:"Shoulder Press – OHP an toàn",
-    description:"Overhead Press không đau vai: vị trí khuỷu tay, core bracing, bar path.",
-    thumbnail:REF.shoulder, duration:"07:22", durationSec:442,
-    type:"normal", category:"Thể hình", tags:["shoulder","OHP","safety"],
-    visibility:"students", views:198, likes:56, uploadDate:"20/02/2026",
-    fileSize:"720 MB", resolution:"1920×1080",
-    assignedStudents:["Trần Bảo Long","Đặng Quốc Tuấn"],
-    notes:"Quan trọng cho học viên mới",
-    submissions: [
-      { id:"s4a", studentName:"Trần Bảo Long", studentAvatar:AVT.bao_long,
-        thumbnail:SUB.squat_s, duration:"01:38", uploadDate:"22/02/2026",
-        status:"reviewed",
-        scores:{ posture:7, technique:6, rhythm:7, power:6 },
-        coachFeedback:"Khuỷu tay bị flare ra quá nhiều, cần tucked vào ~45°.", timestamps:[{time:"0:31","note":"Flare khuỷu – cần sửa"}] },
-    ]},
-
-  { id:"v5", title:"Pull-up – Lộ trình 0→10 rep",
-    description:"Negative, band assisted, full pull-up. Progression 8 tuần.",
-    thumbnail:REF.pullup, duration:"15:08", durationSec:908,
-    type:"normal", category:"Thể hình", tags:["pullup","back","progression"],
-    visibility:"students", views:423, likes:112, uploadDate:"15/02/2026",
-    fileSize:"1.4 GB", resolution:"1920×1080",
-    assignedStudents:["Nguyễn Minh Anh","Trần Bảo Long"],
-    notes:"Học viên cần xem nhiều lần",
-    submissions: [
-      { id:"s5a", studentName:"Nguyễn Minh Anh", studentAvatar:AVT.minh_anh,
-        thumbnail:SUB.squat_s, duration:"01:10", uploadDate:"17/02/2026",
-        status:"approved",
-        scores:{ posture:9, technique:9, rhythm:8, power:9 },
-        coachFeedback:"Xuất sắc! Full ROM, dead hang đúng chuẩn.", timestamps:[] },
-    ]},
-
-  // ── Yoga ──────────────────────────────────────────────────────────────────
-  { id:"y1", title:"Yoga – Chuỗi Flexibility buổi sáng",
-    description:"12 pose kéo dãn toàn thân: Cat-Cow, Forward Fold, Pigeon, Downward Dog.",
-    thumbnail:REF.yoga_flex, duration:"20:00", durationSec:1200,
-    type:"normal", category:"Yoga", tags:["flexibility","morning","stretch"],
-    visibility:"public", views:892, likes:234, uploadDate:"27/02/2026",
-    fileSize:"1.8 GB", resolution:"1920×1080",
-    assignedStudents:["Lê Thúy Nga","Võ Thị Hoa"],
-    notes:"Video phổ biến nhất kênh",
-    submissions: [
-      { id:"sy1a", studentName:"Lê Thúy Nga", studentAvatar:AVT.thuy_nga,
-        thumbnail:SUB.yoga_s, duration:"04:20", uploadDate:"28/02/2026",
-        status:"pending",
-        scores:{ posture:7, technique:7, rhythm:8, power:6 },
-        coachFeedback:"", timestamps:[] },
-      { id:"sy1b", studentName:"Võ Thị Hoa", studentAvatar:AVT.thi_hoa,
-        thumbnail:SUB.yoga_s, duration:"05:10", uploadDate:"01/03/2026",
-        status:"reviewed",
-        scores:{ posture:8, technique:9, rhythm:9, power:7 },
-        coachFeedback:"Pigeon pose rất đẹp! Forward Fold cần thả vai hơn.", timestamps:[{time:"2:45","note":"Vai bị gồng – thả xuống"}] },
-    ]},
-
-  { id:"y2", title:"Yoga Warrior Series 360°",
-    description:"Warrior I, II, III quay 360°. Xoay góc kiểm tra alignment toàn thân.",
-    thumbnail:REF.yoga_warrior, duration:"14:30", durationSec:870,
-    type:"360", category:"Yoga", tags:["warrior","alignment","360"],
-    visibility:"students", views:445, likes:118, uploadDate:"22/02/2026",
-    fileSize:"4.1 GB", resolution:"5760×2880 (360°)",
-    assignedStudents:["Lê Thúy Nga"],
-    notes:"360° giúp kiểm tra tư thế rất tốt",
-    submissions: [
-      { id:"sy2a", studentName:"Lê Thúy Nga", studentAvatar:AVT.thuy_nga,
-        thumbnail:SUB.yoga_s, duration:"03:00", uploadDate:"24/02/2026",
-        status:"reviewed",
-        scores:{ posture:8, technique:7, rhythm:8, power:7 },
-        coachFeedback:"Warrior II cần duỗi thẳng tay hơn, nhìn về phía trước.", timestamps:[{time:"1:20",note:"Tay Warrior II chưa thẳng"}] },
-    ]},
-
-  { id:"y3", title:"Yoga – Thiền & Pranayama",
-    description:"Nadi Shodhana, Kapalabhati, Ujjayi. Thiền 10 phút giảm stress.",
-    thumbnail:REF.yoga_med, duration:"18:45", durationSec:1125,
-    type:"normal", category:"Yoga", tags:["meditation","pranayama","breathing"],
-    visibility:"students", views:321, likes:87, uploadDate:"18/02/2026",
-    fileSize:"1.6 GB", resolution:"1920×1080",
-    assignedStudents:["Lê Thúy Nga","Võ Thị Hoa","Nguyễn Minh Anh"],
-    notes:"Gửi cho học viên hay bị stress",
-    submissions: [] },
-
-  // ── Boxing ────────────────────────────────────────────────────────────────
-  { id:"b1", title:"Boxing – Jab & Cross kỹ thuật cơ bản",
-    description:"Tư thế tay, xoay hông, bước chân, recoil. Demo chậm → nhanh → bag work.",
-    thumbnail:REF.boxing_punch, duration:"10:22", durationSec:622,
-    type:"normal", category:"Boxing", tags:["jab","cross","technique"],
-    visibility:"students", views:567, likes:143, uploadDate:"26/02/2026",
-    fileSize:"950 MB", resolution:"1920×1080",
-    assignedStudents:["Phạm Đức Hải","Bùi Văn Nam"],
-    notes:"Bài cơ bản – học viên mới bắt buộc xem",
-    submissions: [
-      { id:"sb1a", studentName:"Phạm Đức Hải", studentAvatar:AVT.duc_hai,
-        thumbnail:SUB.boxing_s, duration:"01:30", uploadDate:"27/02/2026",
-        status:"pending",
-        scores:{ posture:6, technique:6, rhythm:7, power:7 },
-        coachFeedback:"", timestamps:[] },
-      { id:"sb1b", studentName:"Bùi Văn Nam", studentAvatar:AVT.van_nam,
-        thumbnail:SUB.boxing_s, duration:"01:48", uploadDate:"28/02/2026",
-        status:"reviewed",
-        scores:{ posture:5, technique:5, rhythm:5, power:8 },
-        coachFeedback:"Cross chưa xoay hông đủ, tay bảo vệ mặt bị hạ xuống sau khi đấm.", timestamps:[{time:"0:45","note":"Tay bảo vệ mặt bị hạ"}] },
-    ]},
-
-  { id:"b2", title:"Boxing – Combo 1-2-3-4 & Footwork",
-    description:"Combo 4 đòn kết hợp di chuyển. Góc nhìn trước/bên/trên.",
-    thumbnail:REF.boxing_combo, duration:"13:10", durationSec:790,
-    type:"normal", category:"Boxing", tags:["combo","footwork","advanced"],
-    visibility:"students", views:389, likes:98, uploadDate:"21/02/2026",
-    fileSize:"1.1 GB", resolution:"1920×1080",
-    assignedStudents:["Phạm Đức Hải"],
-    notes:"Chỉ xem sau khi thành thục Jab-Cross",
-    submissions: [
-      { id:"sb2a", studentName:"Phạm Đức Hải", studentAvatar:AVT.duc_hai,
-        thumbnail:SUB.boxing_s, duration:"02:05", uploadDate:"23/02/2026",
-        status:"reviewed",
-        scores:{ posture:7, technique:6, rhythm:6, power:8 },
-        coachFeedback:"Footwork tốt nhưng sau combo 4 đòn bị mất tư thế, cần reset guard nhanh hơn.", timestamps:[{time:"1:02","note":"Reset guard chậm"}] },
-    ]},
-
-  { id:"b3", title:"Boxing Defense 360° – Guard & Slip",
-    description:"Video 360° Guard, Slip, Roll, Parry từ góc nhìn đối thủ.",
-    thumbnail:REF.boxing_def, duration:"09:55", durationSec:595,
-    type:"360", category:"Boxing", tags:["defense","guard","360"],
-    visibility:"students", views:276, likes:71, uploadDate:"14/02/2026",
-    fileSize:"3.5 GB", resolution:"5760×2880 (360°)",
-    assignedStudents:["Phạm Đức Hải","Bùi Văn Nam"],
-    notes:"360° từ góc đối thủ rất trực quan",
-    submissions: [] },
-
-  // ── Cardio ────────────────────────────────────────────────────────────────
-  { id:"c1", title:"Chạy bộ – Kỹ thuật Sprinting đúng cách",
-    description:"Nâng gối cao, đánh tay, lean forward 10°. Phân tích từng pha tiếp đất.",
-    thumbnail:REF.run_sprint, duration:"08:40", durationSec:520,
-    type:"normal", category:"Cardio", tags:["sprint","running","form"],
-    visibility:"public", views:734, likes:189, uploadDate:"24/02/2026",
-    fileSize:"780 MB", resolution:"1920×1080",
-    assignedStudents:["Đặng Quốc Tuấn","Bùi Văn Nam"],
-    notes:"",
-    submissions: [
-      { id:"sc1a", studentName:"Đặng Quốc Tuấn", studentAvatar:AVT.quoc_tuan,
-        thumbnail:SUB.run_s, duration:"01:20", uploadDate:"25/02/2026",
-        status:"reviewed",
-        scores:{ posture:8, technique:7, rhythm:8, power:9 },
-        coachFeedback:"Tư thế tổng thể tốt! Cần nâng gối cao hơn ở phase drive.", timestamps:[{time:"0:38","note":"Nâng gối chưa đủ cao"}] },
-      { id:"sc1b", studentName:"Bùi Văn Nam", studentAvatar:AVT.van_nam,
-        thumbnail:SUB.run_s, duration:"01:05", uploadDate:"26/02/2026",
-        status:"pending",
-        scores:{ posture:7, technique:7, rhythm:7, power:7 },
-        coachFeedback:"", timestamps:[] },
-    ]},
-
-  { id:"c2", title:"Chạy bộ bền – VO2max & Zone Training",
-    description:"Kỹ thuật chạy bền, zone training, bài tập tăng VO2max.",
-    thumbnail:REF.run_endure, duration:"16:20", durationSec:980,
-    type:"normal", category:"Cardio", tags:["endurance","VO2max","marathon"],
-    visibility:"students", views:298, likes:76, uploadDate:"19/02/2026",
-    fileSize:"1.5 GB", resolution:"1920×1080",
-    assignedStudents:["Đặng Quốc Tuấn"],
-    notes:"Cho học viên chuẩn bị marathon",
-    submissions: [] },
-
-  { id:"c3", title:"HIIT Jump Rope – Đốt cháy 20 phút",
-    description:"20 phút HIIT nhảy dây: 8 biến thể, nghỉ 20s mỗi set.",
-    thumbnail:REF.cardio_rope, duration:"21:00", durationSec:1260,
-    type:"normal", category:"Cardio", tags:["HIIT","jump rope","fat burn"],
-    visibility:"public", views:1456, likes:367, uploadDate:"10/02/2026",
-    fileSize:"1.9 GB", resolution:"1920×1080",
-    assignedStudents:["Nguyễn Minh Anh","Võ Thị Hoa","Bùi Văn Nam"],
-    notes:"Video phổ biến nhất",
-    submissions: [
-      { id:"sc3a", studentName:"Nguyễn Minh Anh", studentAvatar:AVT.minh_anh,
-        thumbnail:SUB.run_s, duration:"05:00", uploadDate:"12/02/2026",
-        status:"approved",
-        scores:{ posture:9, technique:8, rhythm:9, power:9 },
-        coachFeedback:"Xuất sắc! Nhịp điệu cực kỳ đều, tiếp tục!", timestamps:[] },
-    ]},
-
-  // ── Tennis ────────────────────────────────────────────────────────────────
-  { id:"t1", title:"Tennis – Flat Serve & Kick Serve",
-    description:"Phân tích Flat và Kick Serve: tung bóng, backswing, contact point, pronation.",
-    thumbnail:REF.tennis_serve, duration:"11:50", durationSec:710,
-    type:"normal", category:"Tennis", tags:["serve","flat","kick"],
-    visibility:"students", views:412, likes:107, uploadDate:"23/02/2026",
-    fileSize:"1.05 GB", resolution:"1920×1080",
-    assignedStudents:["Nguyễn Minh Anh"],
-    notes:"",
-    submissions: [
-      { id:"st1a", studentName:"Nguyễn Minh Anh", studentAvatar:AVT.minh_anh,
-        thumbnail:SUB.tennis_s, duration:"01:40", uploadDate:"24/02/2026",
-        status:"reviewed",
-        scores:{ posture:7, technique:6, rhythm:7, power:6 },
-        coachFeedback:"Tung bóng bị lệch sang trái, cần tung thẳng và hơi về phía trước.", timestamps:[{time:"0:15",note:"Tung bóng lệch"}] },
-    ]},
-
-  { id:"t2", title:"Tennis – Backhand 1 tay vs 2 tay",
-    description:"So sánh trực tiếp: ưu nhược điểm từng loại, demo từng bước.",
-    thumbnail:REF.tennis_back, duration:"13:05", durationSec:785,
-    type:"normal", category:"Tennis", tags:["backhand","one-hand","two-hand"],
-    visibility:"students", views:287, likes:74, uploadDate:"17/02/2026",
-    fileSize:"1.2 GB", resolution:"1920×1080",
-    assignedStudents:["Nguyễn Minh Anh"],
-    notes:"Học viên đang phân vân chọn Backhand",
-    submissions: [
-      { id:"st2a", studentName:"Nguyễn Minh Anh", studentAvatar:AVT.minh_anh,
-        thumbnail:SUB.tennis_s, duration:"02:12", uploadDate:"19/02/2026",
-        status:"pending",
-        scores:{ posture:7, technique:7, rhythm:7, power:7 },
-        coachFeedback:"", timestamps:[] },
-    ]},
-
-  // ── Bơi lội ───────────────────────────────────────────────────────────────
-  { id:"sw1", title:"Bơi lội – Freestyle Stroke kỹ thuật",
-    description:"Pull, push, recovery, kick. Camera underwater 60fps.",
-    thumbnail:REF.swim_free, duration:"14:10", durationSec:850,
-    type:"normal", category:"Bơi lội", tags:["freestyle","stroke","underwater"],
-    visibility:"students", views:356, likes:91, uploadDate:"20/02/2026",
-    fileSize:"1.3 GB", resolution:"1920×1080",
-    assignedStudents:["Lê Thúy Nga"],
-    notes:"Quay underwater rõ kỹ thuật",
-    submissions: [
-      { id:"ssw1a", studentName:"Lê Thúy Nga", studentAvatar:AVT.thuy_nga,
-        thumbnail:SUB.swim_s, duration:"01:55", uploadDate:"22/02/2026",
-        status:"reviewed",
-        scores:{ posture:8, technique:7, rhythm:7, power:7 },
-        coachFeedback:"Pull phase rất tốt! Kick cần mạnh hơn ở cuối, đừng quá sâu.", timestamps:[{time:"1:10","note":"Kick quá sâu, lãng phí năng lượng"}] },
-    ]},
-
-  { id:"sw2", title:"Bơi Bướm 360° – Underwater",
-    description:"Video 360° butterfly underwater. Dolphin kick, undulation, pull pattern.",
-    thumbnail:REF.swim_fly, duration:"07:30", durationSec:450,
-    type:"360", category:"Bơi lội", tags:["butterfly","underwater","360"],
-    visibility:"students", views:189, likes:52, uploadDate:"12/02/2026",
-    fileSize:"3.2 GB", resolution:"5760×2880 (360°)",
-    assignedStudents:["Lê Thúy Nga"],
-    notes:"Cần waterproof 360° cam",
-    submissions: [] },
-
-  // ── CrossFit ──────────────────────────────────────────────────────────────
-  { id:"cf1", title:"CrossFit – WOD Burpee Box Jump & Thruster",
-    description:"5 rounds: 10 Burpee Box Jump + 10 Thruster 40kg. Demo + scaling options.",
-    thumbnail:REF.crossfit, duration:"17:25", durationSec:1045,
-    type:"normal", category:"CrossFit", tags:["WOD","burpee","thruster"],
-    visibility:"students", views:623, likes:158, uploadDate:"03/03/2026",
-    fileSize:"1.6 GB", resolution:"1920×1080",
-    assignedStudents:["Đặng Quốc Tuấn","Bùi Văn Nam"],
-    notes:"WOD tuần 3 tháng 3",
-    submissions: [
-      { id:"scf1a", studentName:"Đặng Quốc Tuấn", studentAvatar:AVT.quoc_tuan,
-        thumbnail:SUB.run_s, duration:"08:30", uploadDate:"04/03/2026",
-        status:"pending",
-        scores:{ posture:7, technique:6, rhythm:7, power:9 },
-        coachFeedback:"", timestamps:[] },
-      { id:"scf1b", studentName:"Bùi Văn Nam", studentAvatar:AVT.van_nam,
-        thumbnail:SUB.squat_s, duration:"10:15", uploadDate:"04/03/2026",
-        status:"reviewed",
-        scores:{ posture:6, technique:6, rhythm:6, power:8 },
-        coachFeedback:"Thruster bị quarter-squat, cần squat đủ sâu trước khi press.", timestamps:[{time:"3:20",note:"Thruster squat chưa đủ sâu"}] },
-    ]},
-
-  // ── Pilates ───────────────────────────────────────────────────────────────
-  { id:"p1", title:"Pilates – Mat Core Series 30 phút",
-    description:"The Hundred, Roll-Up, Single Leg Stretch, Criss-Cross, Teaser.",
-    thumbnail:REF.pilates_mat, duration:"30:00", durationSec:1800,
-    type:"normal", category:"Pilates", tags:["core","mat","hundred"],
-    visibility:"students", views:278, likes:69, uploadDate:"08/02/2026",
-    fileSize:"2.7 GB", resolution:"1920×1080",
-    assignedStudents:["Võ Thị Hoa","Lê Thúy Nga"],
-    notes:"",
-    submissions: [
-      { id:"sp1a", studentName:"Võ Thị Hoa", studentAvatar:AVT.thi_hoa,
-        thumbnail:SUB.yoga_s, duration:"12:00", uploadDate:"10/02/2026",
-        status:"approved",
-        scores:{ posture:9, technique:9, rhythm:9, power:8 },
-        coachFeedback:"Pilates rất chuẩn! Teaser đẹp xuất sắc.", timestamps:[] },
-    ]},
-
-  // ── Tour 360° ─────────────────────────────────────────────────────────────
-  { id:"g360", title:"Tour phòng tập 8K 360°",
-    description:"Video 360° 8K tour toàn bộ phòng tập, giới thiệu thiết bị.",
-    thumbnail:REF.gym360, duration:"04:50", durationSec:290,
-    type:"360", category:"Thể hình", tags:["tour","gym","360","8K"],
-    visibility:"public", views:1847, likes:456, uploadDate:"01/02/2026",
-    fileSize:"4.2 GB", resolution:"7680×3840 (8K 360°)",
-    assignedStudents:["Nguyễn Minh Anh","Trần Bảo Long","Lê Thúy Nga","Phạm Đức Hải","Võ Thị Hoa","Đặng Quốc Tuấn","Bùi Văn Nam"],
-    notes:"Gửi cho tất cả học viên mới",
-    submissions: [] },
-];
 
 const CATEGORIES = ["Tất cả","Thể hình","Yoga","Boxing","Cardio","Tennis","Bơi lội","CrossFit","Pilates"];
 
@@ -1235,6 +879,7 @@ type StudioTab = "library"|"upload"|"compare"|"player360";
 
 export function CoachVideoStudio() {
   const [videos,setVideos]       = useState<CoachVideo[]>([]);
+  const [loading,setLoading]     = useState(true);
   const [usingFallback,setUsingFallback] = useState(false);
   const [tab,setTab]             = useState<StudioTab>("library");
   const [gridMode,setGridMode]   = useState(true);
@@ -1248,6 +893,7 @@ export function CoachVideoStudio() {
   useEffect(() => {
     const session = getAuthSession();
     const currentCoachId = session?.userId;
+    setLoading(true);
     Promise.all([
       getVideos(currentCoachId ? { coachId: currentCoachId } : {}),
       getCoachSubmissions().catch(() => []),
@@ -1255,19 +901,32 @@ export function CoachVideoStudio() {
       .then(([videoItems, submissions]) => {
         let finalVideoItems = videoItems;
         if (currentCoachId) {
-          finalVideoItems = videoItems.filter((v: any) => v.coachUserId === currentCoachId);
+          finalVideoItems = videoItems.filter((v: any) => 
+            v.coachUserId === session?.userId || 
+            (session?.coachId && (v.coachId === session?.coachId || v.coachUserId === session?.coachId))
+          );
         }
-        if (finalVideoItems.length === 0) return;
-        const mapped = finalVideoItems.map((video: any) => mapApiVideo(video, submissions));
+        if (finalVideoItems.length === 0) {
+          setVideos([]);
+          setSelectedId(null);
+          setUsingFallback(false);
+          return;
+        }
+        // Strict filter submissions: only submissions for these videos
+        const validVideoIds = new Set(finalVideoItems.map((v: any) => v.id));
+        const validSubmissions = submissions.filter((sub: any) => validVideoIds.has(sub.videoId));
+        
+        const mapped = finalVideoItems.map((video: any) => mapApiVideo(video, validSubmissions));
         setVideos(mapped);
         setSelectedId(mapped[0]?.id ?? null);
         setUsingFallback(false);
       })
       .catch(() => {
-        setVideos(INITIAL_VIDEOS);
-        setSelectedId(INITIAL_VIDEOS[0]?.id ?? null);
+        setVideos([]);
+        setSelectedId(null);
         setUsingFallback(true);
-      });
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const filtered = videos.filter(v=>{
@@ -1457,7 +1116,12 @@ export function CoachVideoStudio() {
           <>
             <div className={`flex-1 overflow-y-auto ${selectedVideo?"hidden lg:block":""}`}>
               <div className="mb-3 text-gray-400" style={{fontSize:"0.75rem"}}>{filtered.length} video</div>
-              {filtered.length===0 ? (
+              {loading ? (
+                <div className="flex flex-col items-center justify-center h-40 text-gray-300">
+                  <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+                  <span style={{fontSize:"0.85rem"}}>Đang tải video...</span>
+                </div>
+              ) : filtered.length===0 ? (
                 <div className="flex flex-col items-center justify-center h-40 text-gray-200"><Film className="w-10 h-10 mb-2 opacity-30"/><span style={{fontSize:"0.85rem"}} className="text-gray-400">Không tìm thấy</span></div>
               ) : gridMode ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 pr-1">

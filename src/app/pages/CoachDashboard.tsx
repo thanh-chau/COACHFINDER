@@ -5,6 +5,7 @@ import { CoachStudents } from "../components/CoachStudents";
 import { CoachAnalytics } from "../components/CoachAnalytics";
 import { CoachMessages } from "../components/CoachMessages";
 import { CoachSubscription } from "../components/CoachSubscription";
+import { CoachSettings } from "../components/CoachSettings";
 import { NotificationBell } from "../components/NotificationBell";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
@@ -38,14 +39,14 @@ type TodaySessionRow = { student: string; time: string; type: string; status: "d
 type RecentPaymentRow = { student: string; amount: string; date: string; type: string };
 
 const DEFAULT_OVERVIEW = {
-  totalStudents: 24,
-  monthRevenue: 15600000,
-  averageRating: 4.9,
-  totalReviews: 187,
-  weekSessions: 12,
-  todaySessions: 3,
-  totalVideos: 8,
-  totalVideoViews: 234,
+  totalStudents: 0,
+  monthRevenue: 0,
+  averageRating: 0.0,
+  totalReviews: 0,
+  weekSessions: 0,
+  todaySessions: 0,
+  totalVideos: 0,
+  totalVideoViews: 0,
 };
 
 const navItems = [
@@ -93,8 +94,10 @@ function mapRevenueRows(rows: { period: string; value: number }[]): EarningsRow[
 function mapDashboardStudents(summaries: CoachStudentSummary[], progressList: CoachStudentProgress[]): DashboardStudentRow[] {
   const progressById = new Map(progressList.map(item => [item.traineeId, item]));
   const avatars = [STUDENT_1, STUDENT_2, STUDENT_3];
+  
+  const sorted = [...summaries].sort((a, b) => (b.revenue || 0) - (a.revenue || 0));
 
-  return summaries.slice(0, 5).map((student, index) => {
+  return sorted.slice(0, 5).map((student, index) => {
     const progress = progressById.get(student.traineeId);
     const score = progress?.averageSubmissionScore == null ? 0 : Math.round(progress.averageSubmissionScore);
 
@@ -156,6 +159,7 @@ export function CoachDashboard() {
   const [activeNav, setActiveNav] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [loadingOverview, setLoadingOverview] = useState(true);
   const [overview, setOverview] = useState(DEFAULT_OVERVIEW);
   const [earningsRows, setEarningsRows] = useState<EarningsRow[]>([]);
   const [studentRows, setStudentRows] = useState<DashboardStudentRow[]>([]);
@@ -188,6 +192,7 @@ export function CoachDashboard() {
 
   useEffect(() => {
     let active = true;
+    setLoadingOverview(true);
 
     Promise.all([
       coachWorkspaceApi.getAnalyticsOverview().catch(() => null),
@@ -216,6 +221,7 @@ export function CoachDashboard() {
       setSessionRows(mappedSessions);
       setOverview(current => ({ ...current, todaySessions: mappedSessions.length }));
       setPaymentRows(mappedPayments);
+      setLoadingOverview(false);
     });
 
     return () => {
@@ -224,6 +230,54 @@ export function CoachDashboard() {
   }, []);
 
   const formatM = (n: number) => {
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + "M";
+    return (n / 1000).toFixed(0) + "K";
+  };
+
+  return (
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black/40 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      {/* ── SIDEBAR ──────────────────────────────────────── */}
+      <aside className={`
+        fixed lg:relative z-40 flex flex-col h-full bg-gray-950 transition-transform duration-300 ease-in-out
+        ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+      `} style={{ width: 256, minWidth: 256 }}>
+
+        {/* Logo */}
+        <div className="flex items-center gap-3 px-5 h-16 border-b border-white/[0.06] shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/20">
+            <Dumbbell className="w-[18px] h-[18px] text-white" />
+          </div>
+          <span style={{ fontWeight: 800, fontSize: "1.15rem", letterSpacing: "-0.02em" }} className="text-white">
+            Coach<span className="text-blue-400">Finder</span>
+          </span>
+          <button className="ml-auto lg:hidden p-1.5 rounded-lg bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-colors" onClick={() => setSidebarOpen(false)}>
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* User card */}
+        <div className="px-4 py-4 border-b border-white/[0.06]">
+          <div className="flex items-center gap-3 bg-white/[0.04] rounded-xl px-3.5 py-3 border border-white/[0.06]">
+            <div className="relative shrink-0">
+              {session?.avatar ? (
+                <img src={session.avatar} alt={coachName} className="w-10 h-10 rounded-xl object-cover ring-2 ring-blue-500/30" />
+              ) : (
+                <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-300 flex items-center justify-center ring-2 ring-blue-500/30" style={{ fontSize: "0.76rem", fontWeight: 800 }}>
+                  {coachInitials}
+                </div>
+              )}
+              <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-blue-500 rounded-full border-2 border-gray-950 flex items-center justify-center">
+                <CheckCircle2 className="w-2 h-2 text-white" />
+              </span>
+            </div>
+            <div className="min-w-0">
+              <div style={{ fontWeight: 700, fontSize: "0.85rem" }} className="text-white truncate">{coachName}</div>
     if (n >= 1000000) return (n / 1000000).toFixed(1) + "M";
     return (n / 1000).toFixed(0) + "K";
   };
@@ -283,11 +337,11 @@ export function CoachDashboard() {
         {/* Revenue mini card */}
         <div className="px-4 py-3 border-b border-white/[0.06]">
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-3.5 py-3">
-            <div style={{ fontSize: "0.68rem" }} className="text-blue-300 mb-0.5">Doanh thu tháng 3</div>
+            <div style={{ fontSize: "0.68rem" }} className="text-blue-300 mb-0.5">Doanh thu tháng này</div>
             <div style={{ fontWeight: 800, fontSize: "1.15rem", letterSpacing: "-0.02em" }} className="text-white">{formatCurrency(overview.monthRevenue)}</div>
             <div className="flex items-center gap-1 mt-0.5">
               <TrendingUp className="w-3 h-3 text-green-400" />
-              <span style={{ fontSize: "0.68rem" }} className="text-green-400">+13% tháng trước</span>
+              <span style={{ fontSize: "0.68rem" }} className="text-green-400">Doanh thu tạm tính</span>
             </div>
           </div>
         </div>
@@ -370,25 +424,28 @@ export function CoachDashboard() {
           <div className="p-5 lg:p-6 space-y-5 lg:space-y-6 max-w-[1440px] mx-auto w-full">
 
             {/* ── STUDENTS ── */}
-            {activeNav === "students" && <CoachStudents onNavigate={setActiveNav} />}
+            <div className={activeNav === "students" ? "block h-full" : "hidden"}><CoachStudents onNavigate={setActiveNav} /></div>
 
             {/* ── SCHEDULE ── */}
-            {activeNav === "schedule" && <CoachSchedule onNavigate={setActiveNav} />}
+            <div className={activeNav === "schedule" ? "block h-full" : "hidden"}><CoachSchedule onNavigate={setActiveNav} /></div>
 
             {/* ── VIDEO STUDIO ── */}
-            {activeNav === "studio" && <CoachVideoStudio />}
+            <div className={activeNav === "studio" ? "block h-full" : "hidden"}><CoachVideoStudio /></div>
 
             {/* ── INCOME ── */}
-            {activeNav === "income" && <CoachIncome />}
+            <div className={activeNav === "income" ? "block h-full" : "hidden"}><CoachIncome /></div>
 
             {/* ── ANALYTICS ── */}
-            {activeNav === "analytics" && <CoachAnalytics />}
+            <div className={activeNav === "analytics" ? "block h-full" : "hidden"}><CoachAnalytics /></div>
 
             {/* ── MESSAGES ── */}
-            {activeNav === "msg" && <CoachMessages />}
+            <div className={activeNav === "msg" ? "block h-full" : "hidden"}><CoachMessages /></div>
 
             {/* ── SUBSCRIPTION ── */}
-            {activeNav === "subscription" && <CoachSubscription />}
+            <div className={activeNav === "subscription" ? "block h-full" : "hidden"}><CoachSubscription /></div>
+
+            {/* ── SETTINGS ── */}
+            <div className={activeNav === "settings" ? "block h-full" : "hidden"}><CoachSettings /></div>
 
             {/* ── STATS ─────────────────────────────────── */}
             {activeNav === "overview" && (
@@ -417,7 +474,7 @@ export function CoachDashboard() {
             )}
 
             {/* ── PLACEHOLDER for unbuilt views ── */}
-            {!["overview", "students", "schedule", "studio", "income", "analytics", "msg", "subscription"].includes(activeNav) && (
+            {!["overview", "students", "schedule", "studio", "income", "analytics", "msg", "subscription", "settings"].includes(activeNav) && (
               <div className="flex flex-col items-center justify-center h-64 bg-white rounded-2xl border border-gray-100 shadow-sm">
                 <div style={{ fontSize: "2.5rem" }} className="mb-3">🚧</div>
                 <div style={{ fontWeight: 600, fontSize: "0.95rem" }} className="text-gray-600">Đang phát triển</div>
@@ -427,7 +484,13 @@ export function CoachDashboard() {
 
             {/* ── MAIN GRID ────────────────────────────── */}
             {activeNav === "overview" && (
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+              loadingOverview ? (
+                <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+                  <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+                  <span style={{fontSize:"0.85rem"}}>Đang tải dữ liệu tổng quan...</span>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
 
               {/* LEFT 2/3 */}
               <div className="xl:col-span-2 space-y-5">
@@ -441,7 +504,7 @@ export function CoachDashboard() {
                     </div>
                     <div className="flex items-center gap-1.5 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100">
                       <ArrowUpRight className="w-3.5 h-3.5 text-emerald-500" />
-                      <span style={{ fontSize: "0.78rem", fontWeight: 700 }} className="text-emerald-600">+59% vs T10</span>
+                      <span style={{ fontSize: "0.78rem", fontWeight: 700 }} className="text-emerald-600">Đang cập nhật</span>
                     </div>
 
                   </div>
@@ -552,7 +615,7 @@ export function CoachDashboard() {
                 <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
                   <div className="flex items-center justify-between mb-4">
                     <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900">Thanh toán gần đây</div>
-                    <span className="bg-green-50 text-green-600 px-2 py-0.5 rounded-full" style={{ fontSize: "0.7rem", fontWeight: 700 }}>Hôm nay: 800K</span>
+                    <span className="bg-green-50 text-green-600 px-2 py-0.5 rounded-full" style={{ fontSize: "0.7rem", fontWeight: 700 }}>Mới nhất</span>
                   </div>
                   <div className="space-y-3">
                     {paymentRows.map((p, i) => (
@@ -612,6 +675,7 @@ export function CoachDashboard() {
                 </div>
               </div>
             </div>
+            )
             )}
           </div>
         </div>

@@ -103,8 +103,8 @@ function RevenueTab({ months }: { months: AnalyticsMonthRow[] }) {
   const cur = months.length > 0 ? months[months.length - 1] : defaultCur;
   const prev = months.length > 1 ? months[months.length - 2] : cur;
   
-  const growG = prev.gross === 0 ? (cur.gross > 0 ? "100.0" : "0.0") : ((cur.gross - prev.gross) / Math.max(prev.gross, 1) * 100).toFixed(1);
-  const growN = prev.net === 0 ? (cur.net > 0 ? "100.0" : "0.0") : ((cur.net - prev.net) / Math.max(prev.net, 1) * 100).toFixed(1);
+  const growG = prev.gross === 0 ? (cur.gross > 0 ? "100.0" : "0.0") : ((cur.gross - prev.gross) / prev.gross * 100).toFixed(1);
+  const growN = prev.net === 0 ? (cur.net > 0 ? "100.0" : "0.0") : ((cur.net - prev.net) / prev.net * 100).toFixed(1);
   const avgPerSession = cur.sessions > 0 ? Math.round(cur.net / cur.sessions) : 0;
   const forecast = Math.round(cur.net * 1.08);
 
@@ -126,7 +126,7 @@ function RevenueTab({ months }: { months: AnalyticsMonthRow[] }) {
 
   // Generate pie data dynamically from recent months
   const SOURCE_PIE = cur.gross > 0 ? [
-    { name: "Tổng thu", value: 100, color: "#3b82f6" }
+    { name: "Học phí & Lịch dạy", value: 100, color: "#3b82f6" }
   ] : [];
 
   return (
@@ -198,17 +198,22 @@ function RevenueTab({ months }: { months: AnalyticsMonthRow[] }) {
           <div className="h-[150px]">
             {months.length > 1 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={months.slice(1).map((m, i) => ({
-                  m: m.m,
-                  growth: Number(((m.gross - months[i].gross) / Math.max(months[i].gross, 1) * 100).toFixed(1))
-                }))} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                <BarChart data={months.slice(1).map((m, i) => {
+                  const prevGross = months[i].gross;
+                  return {
+                    m: m.m,
+                    growth: prevGross === 0 ? (m.gross > 0 ? 100 : 0) : Number(((m.gross - prevGross) / prevGross * 100).toFixed(1))
+                  };
+                })} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
                   <XAxis dataKey="m" tick={{ fontSize: 9, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 9, fill: "#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={v => v + "%"} />
                   <Tooltip content={<Tip />} formatter={(v: any) => [v + "%", "Tăng trưởng"]} />
                   <Bar dataKey="growth" name="Tăng trưởng" radius={[4, 4, 0, 0]} fill="#3b82f6">
                     {months.slice(1).map((_, i) => {
-                      const g = (months[i + 1].gross - months[i].gross) / Math.max(months[i].gross, 1) * 100;
+                      const prevGross = months[i].gross;
+                      const curGross = months[i + 1].gross;
+                      const g = prevGross === 0 ? (curGross > 0 ? 100 : 0) : (curGross - prevGross) / prevGross * 100;
                       return <Cell key={i} fill={g >= 0 ? "#10b981" : "#ef4444"} />;
                     })}
                   </Bar>
@@ -234,7 +239,7 @@ function StudentsTab({ students, months }: { students: StudentProgressRow[]; mon
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KPI icon={Users} label={`Học viên ${displayMonth}`} value={curMonth.students.toString()} sub="Tổng cộng" trendUp bg="bg-blue-50" color="text-blue-500" />
+        <KPI icon={Users} label={`Học viên ${displayMonth}`} value={students.length.toString()} sub="Tổng cộng" trendUp bg="bg-blue-50" color="text-blue-500" />
         <KPI icon={Activity} label="Active (≥80% RT)" value={active.toString()} sub="retention cao" trendUp bg="bg-emerald-50" color="text-emerald-500" />
         <KPI icon={Star} label="Tiến độ TB" value={avgProg + "%"} sub="Đánh giá tiến độ" trendUp bg="bg-purple-50" color="text-purple-500" />
         <KPI icon={Award} label="NPS Score" value={avgNPS} sub="Trung bình 0–10" trendUp bg="bg-amber-50" color="text-amber-500" />
@@ -351,10 +356,29 @@ export function CoachAnalytics() {
       coachWorkspaceApi.getRevenueAnalytics(),
       coachWorkspaceApi.getStudentsProgress(),
       coachWorkspaceApi.getVideoAnalytics(),
+      coachWorkspaceApi.getStudents(),
     ])
-      .then(([revenueData, studentData, videoData]) => {
+      .then(([revenueData, studentProgressData, videoData, studentsData]) => {
         setMonths(revenueData?.length ? revenueData.map(mapChartPointToMonth) : []);
-        setStudents(studentData?.length ? studentData.map(mapStudentProgress) : []);
+        
+        const studentsMap = new Map((studentsData || []).map(s => [s.traineeId, s]));
+        
+        setStudents(studentProgressData?.length ? studentProgressData.map(p => {
+          const summary = studentsMap.get(p.traineeId);
+          const name = summary?.fullName || `HV #${p.traineeId}`;
+          const progress = p.averageSubmissionScore == null ? Math.min(100, p.completedSessions * 10) : Math.round(p.averageSubmissionScore);
+          const retention = p.totalSessions > 0 ? Math.round((p.completedSessions / p.totalSessions) * 100) : 0;
+          return {
+            name,
+            progress,
+            sessions: p.totalSessions,
+            retention,
+            sport: summary?.goal || "Training",
+            nps: Math.max(1, Math.round(progress / 10)),
+            paid: summary?.revenue || 0,
+          };
+        }) : []);
+        
         setVideoTrend(videoData?.length ? videoData.map(mapVideoTrend) : []);
       })
       .catch((e) => {

@@ -71,7 +71,7 @@ export function uploadCoachVideo(request: {
   formData.append("videoType", request.videoType);
   formData.append("file", request.file);
 
-  return rawApiRequest<VideoItem>("/api/coach/videos/upload", {
+  return rawApiRequest<VideoItem>("/api/v1/coach/videos/upload", {
     method: "POST",
     body: formData,
   });

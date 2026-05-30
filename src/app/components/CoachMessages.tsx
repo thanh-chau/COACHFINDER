@@ -24,6 +24,8 @@ interface Message {
   id: string; from: "coach"|"student"; text: string;
   time: string; status?: MsgStatus; type?: "text"|"file"|"video"|"system";
   fileName?: string; fileSize?: string;
+
+
 }
 
 interface Conversation {
@@ -34,103 +36,7 @@ interface Conversation {
   joined: string;
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const AVT = {
-  a: "https://images.unsplash.com/photo-1607286908165-b8b6a2874fc4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=80",
-  b: "https://images.unsplash.com/photo-1755549476788-efd8bf819561?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=80",
-  c: "https://images.unsplash.com/photo-1660463527860-b66aebd362c9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=80",
-};
-
-const INITIAL_CONVS: Conversation[] = [
-  {
-    id:"c1", name:"Nguyễn Minh Anh", avatar:AVT.a, sport:"Thể hình",
-    status:"online", lastMsg:"Thầy ơi ngày mai tập có cần mang đồ gì không ạ?", lastTime:"08:42",
-    unread:2, pinned:true, sessions:26, progress:87, nextSession:"Ngày mai 09:00", joined:"01/10/2025",
-    messages:[
-      {id:"m1",from:"student",text:"Thầy ơi em mới xem video Squat rồi ạ, kỹ thuật này của thầy chi tiết quá!",time:"T2 08:00",status:"read"},
-      {id:"m2",from:"coach",  text:"Tốt lắm! Em xem kỹ phần Low Bar vs High Bar nhé, quan trọng nhất là bar path thẳng.",time:"T2 08:15",status:"read"},
-      {id:"m3",from:"student",text:"Vâng thầy, em đã nộp video tập squat lên rồi ạ, thầy xem giúp em với!",time:"T2 09:30",status:"read"},
-      {id:"m4",from:"coach",  text:"Thầy xem rồi, form của em khá tốt! Chỉ cần chú ý độ sâu hơn một chút nữa. Thầy đã gửi nhận xét chi tiết trong Video Studio rồi nhé.",time:"T2 14:00",status:"read"},
-      {id:"m5",from:"student",text:"Cảm ơn thầy nhiều ạ 🙏 Em sẽ cố gắng cải thiện!",time:"T2 14:05",status:"read"},
-      {id:"m6",from:"coach",  text:"Cố lên! Em đang tiến bộ rất nhanh đó. Buổi tới mình tập Deadlift nhé.",time:"T2 14:10",status:"read"},
-      {id:"m7",from:"student",text:"Thầy ơi ngày mai tập có cần mang đồ gì không ạ?",time:"08:40",status:"read"},
-      {id:"m8",from:"student",text:"Thầy ơi ngày mai tập có cần mang đồ gì không ạ?",time:"08:42",status:"delivered"},
-    ]
-  },
-  {
-    id:"c2", name:"Trần Bảo Long", avatar:AVT.b, sport:"Thể hình",
-    status:"online", lastMsg:"Video squat của em đã nộp rồi ạ thầy ơi", lastTime:"Hôm nay",
-    unread:1, sessions:12, progress:68, nextSession:"Hôm nay 17:00", joined:"15/11/2025",
-    messages:[
-      {id:"m1",from:"coach",  text:"Bảo Long, hôm nay em tập Deadlift thế nào?",time:"T4 10:00",status:"read"},
-      {id:"m2",from:"student",text:"Dạ em tập được 5 set thầy ơi, nhưng lưng hơi mỏi ạ.",time:"T4 10:30",status:"read"},
-      {id:"m3",from:"coach",  text:"Lưng mỏi là do form chưa đúng. Em nhớ brace core trước khi kéo nhé. Thầy gửi video 360° Deadlift cho em xem lại.",time:"T4 11:00",status:"read"},
-      {id:"m4",from:"student",text:"Dạ em đã xem rồi ạ, hiểu rõ hơn nhiều! Cảm ơn thầy",time:"T4 14:00",status:"read"},
-      {id:"m5",from:"student",type:"file",text:"",fileName:"Bai_tap_tuan_3.pdf",fileSize:"1.2 MB",time:"T5 08:00",status:"read"},
-      {id:"m6",from:"coach",  text:"OK thầy xem rồi. Bài tập tuần này ổn. Nhớ nghỉ ngơi đủ giấc ngủ nhé.",time:"T5 09:00",status:"read"},
-      {id:"m7",from:"student",text:"Video squat của em đã nộp rồi ạ thầy ơi",time:"Hôm nay",status:"delivered"},
-    ]
-  },
-  {
-    id:"c3", name:"Võ Thị Hoa", avatar:AVT.a, sport:"Yoga",
-    status:"away", lastMsg:"Cảm ơn thầy đã nhận xét bài Pilates! Em sẽ cố 🎉", lastTime:"Hôm qua",
-    unread:0, sessions:22, progress:95, nextSession:"Hôm nay 14:00", joined:"01/09/2025",
-    messages:[
-      {id:"m1",from:"student",text:"Thầy ơi em đã hoàn thành Pilates Mat Series rồi! Teaser pose đẹp chưa thầy?",time:"T6 09:00",status:"read"},
-      {id:"m2",from:"coach",  text:"Xuất sắc! Teaser của em đẹp nhất trong lớp đó 🏆 Thầy đã chấm Đạt chuẩn rồi.",time:"T6 10:00",status:"read"},
-      {id:"m3",from:"student",text:"Thật không thầy? Em vui lắm ạ 😊",time:"T6 10:05",status:"read"},
-      {id:"m4",from:"coach",  text:"Thật đó! Em tiến bộ rất nhanh. 95 điểm AI — top 1 trong tất cả học viên của thầy!",time:"T6 10:10",status:"read"},
-      {id:"m5",from:"student",text:"Cảm ơn thầy đã nhận xét bài Pilates! Em sẽ cố 🎉",time:"Hôm qua",status:"read"},
-    ]
-  },
-  {
-    id:"c4", name:"Phạm Đức Hải", avatar:AVT.a, sport:"Boxing",
-    status:"offline", lastMsg:"Thầy ơi em bị đau vai hôm nay, buổi tập có thể đổi giờ không ạ?", lastTime:"10:15",
-    unread:3, sessions:8, progress:62, joined:"01/12/2025",
-    messages:[
-      {id:"m1",from:"student",text:"Thầy ơi hôm qua em tập combo 4 đòn nhưng footwork vẫn chưa tốt lắm ạ.",time:"T3 09:00",status:"read"},
-      {id:"m2",from:"coach",  text:"Thầy thấy rồi, guard sau combo 4 của em bị hạ xuống. Quan trọng là reset guard ngay sau mỗi đòn. Xem lại timestamp 1:02 trong video nhé.",time:"T3 10:00",status:"read"},
-      {id:"m3",from:"student",text:"Dạ em xem rồi ạ! Hiểu rồi, em sẽ luyện thêm",time:"T3 11:00",status:"read"},
-      {id:"m4",from:"student",text:"Thầy ơi em bị đau vai hôm nay",time:"10:13",status:"read"},
-      {id:"m5",from:"student",text:"Buổi tập có thể đổi giờ không ạ?",time:"10:14",status:"read"},
-      {id:"m6",from:"student",text:"Thầy ơi em bị đau vai hôm nay, buổi tập có thể đổi giờ không ạ?",time:"10:15",status:"delivered"},
-    ]
-  },
-  {
-    id:"c5", name:"Lê Thúy Nga", avatar:AVT.c, sport:"Yoga",
-    status:"online", lastMsg:"Thầy gửi thêm bài breathing cho em nhé ạ", lastTime:"09:20",
-    unread:0, sessions:11, progress:91, nextSession:"T5 16:00", joined:"15/10/2025",
-    messages:[
-      {id:"m1",from:"student",text:"Thầy ơi bài Pranayama của thầy hay quá! Em tập buổi sáng thấy tinh thần tốt hơn hẳn.",time:"T2 07:30",status:"read"},
-      {id:"m2",from:"coach",  text:"Tốt quá! Nadi Shodhana buổi sáng rất tốt cho thần kinh. Em tập bao nhiêu vòng?",time:"T2 08:00",status:"read"},
-      {id:"m3",from:"student",text:"Dạ em tập 10 vòng mỗi bên ạ",time:"T2 08:10",status:"read"},
-      {id:"m4",from:"coach",  text:"Hoàn hảo! Tuần sau mình học Kapalabhati nhé, tốt cho detox phổi.",time:"T2 08:15",status:"read"},
-      {id:"m5",from:"student",text:"Thầy gửi thêm bài breathing cho em nhé ạ",time:"09:20",status:"read"},
-    ]
-  },
-  {
-    id:"c6", name:"Đặng Quốc Tuấn", avatar:AVT.b, sport:"Cardio",
-    status:"offline", lastMsg:"Ngày mai em thi 10km, chúc thầy ngủ ngon!", lastTime:"Hôm qua",
-    unread:0, sessions:15, progress:79, joined:"01/08/2025",
-    messages:[
-      {id:"m1",from:"student",text:"Thầy ơi form chạy Sprint của em cải thiện nhiều chưa ạ?",time:"T5 17:00",status:"read"},
-      {id:"m2",from:"coach",  text:"Cải thiện rõ rệt! Gối nâng cao hơn, lean forward đúng góc. Chỉ cần mạnh ở giai đoạn drive hơn nữa thôi.",time:"T5 18:00",status:"read"},
-      {id:"m3",from:"student",text:"Thầy ơi video nộp của em ở timestamp 0:38 thầy thấy thế nào ạ?",time:"T6 09:00",status:"read"},
-      {id:"m4",from:"coach",  text:"Thầy thấy rồi, ghi chú 'Nâng gối chưa đủ cao' ở đó. Em xem feedback chi tiết nhé. Đang tiến bộ tốt lắm!",time:"T6 10:00",status:"read"},
-      {id:"m5",from:"student",text:"Ngày mai em thi 10km, chúc thầy ngủ ngon!",time:"Hôm qua",status:"read"},
-    ]
-  },
-  {
-    id:"c7", name:"Bùi Văn Nam", avatar:AVT.b, sport:"Cardio",
-    status:"away", lastMsg:"Thầy cho em hỏi về chế độ ăn sau tập HIIT ạ", lastTime:"11:45",
-    unread:1, sessions:18, progress:73, joined:"01/07/2025",
-    messages:[
-      {id:"m1",from:"student",text:"Thầy ơi hôm nay em tập HIIT Jump Rope 20 phút, mệt lắm thầy ơi 😅",time:"T4 07:00",status:"read"},
-      {id:"m2",from:"coach",  text:"Tốt lắm! Cảm giác mệt sau HIIT là bình thường. Em nghỉ 2 phút rồi thả lỏng nhé.",time:"T4 07:15",status:"read"},
-      {id:"m3",from:"student",text:"Thầy cho em hỏi về chế độ ăn sau tập HIIT ạ",time:"11:45",status:"delivered"},
-    ]
-  },
-];
+const INITIAL_CONVS: Conversation[] = [];
 
 const QUICK_REPLIES = [
   "OK thầy sẽ xem!","Buổi tới mình điều chỉnh nhé 💪","Form của em tốt lắm! 🎉",
@@ -291,6 +197,7 @@ function InfoPanel({ conv, onClose }:{ conv:Conversation; onClose:()=>void }) {
 // ─── Main Component ─────────────────────────────────────────────────────────────
 export function CoachMessages() {
   const [convs,setConvs]         = useState<Conversation[]>(INITIAL_CONVS);
+  const [loading,setLoading]     = useState(true);
   const [activeId,setActiveId]   = useState<string>("c1");
   const [text,setText]           = useState("");
   const [search,setSearch]       = useState("");
@@ -354,15 +261,23 @@ export function CoachMessages() {
 
   useEffect(() => {
     let mounted = true;
+    setLoading(true);
     getConversations()
       .then((items) => {
-        if (!mounted || items.length === 0) return;
+        if (!mounted) return;
+        if (items.length === 0) {
+          setLoading(false);
+          return;
+        }
         const mapped = items.map(mapApiConversation);
         setConvs(mapped);
         setActiveId(String(items[0].id));
       })
       .catch(() => {
         // Keep bundled sample conversations as fallback.
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
       });
     return () => {
       mounted = false;
@@ -430,7 +345,6 @@ export function CoachMessages() {
     setShowQuick(false);
     if (usingApi) return;
   };
-
   return (
     <div className="flex flex-col" style={{height:"calc(100vh - 130px)"}}>
       {/* Page header */}
@@ -469,14 +383,21 @@ export function CoachMessages() {
 
           {/* Conversation list */}
           <div className="flex-1 overflow-y-auto">
-            {filtered.length===0&&(
+            {loading ? (
+              <div className="flex flex-col items-center justify-center h-40 text-gray-300">
+                <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+                <span style={{fontSize:"0.85rem"}}>Đang tải tin nhắn...</span>
+              </div>
+            ) : filtered.length===0 ? (
               <div className="flex flex-col items-center justify-center h-32 text-gray-300">
                 <MessageSquare className="w-8 h-8 mb-2 opacity-40"/>
                 <span style={{fontSize:"0.8rem"}}>Không tìm thấy</span>
               </div>
-            )}
-            {filtered.map(c=>(
-              <button key={c.id} onClick={()=>openConv(c.id)}
+            ) : filtered.map(c=>(
+              <button key={c.id} onClick={()=>{
+                setActiveId(c.id);
+                if(showMobile==="list") setShowMobile("chat");
+              }}
                 className={`w-full flex items-center gap-3 px-3 py-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-50 ${activeId===c.id?"bg-blue-50 border-blue-100":""}`}>
                 <div className="relative shrink-0">
                   <img src={c.avatar} alt="" className="w-10 h-10 rounded-xl object-cover"/>
