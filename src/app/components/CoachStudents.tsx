@@ -495,7 +495,7 @@ function buildWorkspaceStudents(summaries: CoachStudentSummary[], progressList: 
       id: String(summary.traineeId),
       name: summary.fullName,
       avatar: summary.avatar || AVT[index % AVT.length],
-      plan: summary.plan || "Chưa có dữ liệu",
+      plan: (summary.plan as Student["plan"]) || "Chưa có dữ liệu",
       status: totalSessions > completedSessions ? "pending" : totalSessions > 0 ? "active" : "inactive",
       goal: summary.goal || "Chưa cập nhật mục tiêu",
       sessions: completedSessions,
