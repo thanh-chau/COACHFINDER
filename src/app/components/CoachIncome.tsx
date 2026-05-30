@@ -85,6 +85,41 @@ const PAYOUTS = [
   { date:"01/03/2026", amount:12144000, status:"done",    method:"VCB ****8819", ref:"PO-20260301" },
   { date:"01/02/2026", amount:10824000, status:"done",    method:"VCB ****8819", ref:"PO-20260201" },
   { date:"01/01/2026", amount:12760000, status:"done",    method:"VCB ****8819", ref:"PO-20260101" },
+  id: string; date: string; student: string; avatar: string;
+  type: string; package: string; gross: number; commission: number; net: number;
+  status: TxStatus; method: string; note?: string;
+}
+
+const TRANSACTIONS: Tx[] = [
+  { id:"tx001", date:"05/03/2026", student:"Võ Thị Hoa",       avatar:AVT.a, type:"Buổi lẻ",    package:"Buổi tập Thể hình",   gross:454545, commission:54545, net:400000, status:"paid",    method:"MoMo" },
+  { id:"tx002", date:"05/03/2026", student:"Trần Bảo Long",    avatar:AVT.b, type:"Buổi lẻ",    package:"Buổi tập Thể hình",   gross:454545, commission:54545, net:400000, status:"paid",    method:"VNPAY" },
+  { id:"tx003", date:"04/03/2026", student:"Nguyễn Minh Anh",  avatar:AVT.a, type:"Gói 8 buổi", package:"Thể hình 8 buổi",     gross:3636364,commission:436364,net:3200000,status:"paid",    method:"Chuyển khoản" },
+  { id:"tx004", date:"04/03/2026", student:"Đặng Quốc Tuấn",   avatar:AVT.b, type:"Buổi lẻ",    package:"Buổi tập Thể hình",   gross:454545, commission:54545, net:400000, status:"paid",    method:"MoMo" },
+  { id:"tx005", date:"03/03/2026", student:"Lê Thúy Nga",      avatar:AVT.c, type:"Gói tháng",  package:"Thể hình tháng 3",    gross:4318182,commission:518182,net:3800000,status:"paid",    method:"VNPAY" },
+  { id:"tx006", date:"03/03/2026", student:"Phạm Đức Hải",     avatar:AVT.a, type:"Buổi lẻ",    package:"Buổi tập Boxing",     gross:454545, commission:54545, net:400000, status:"pending", method:"MoMo", note:"Chờ xác nhận" },
+  { id:"tx007", date:"02/03/2026", student:"Bùi Văn Nam",      avatar:AVT.b, type:"Gói 8 buổi", package:"Cardio 8 buổi",       gross:3636364,commission:436364,net:3200000,status:"paid",    method:"Chuyển khoản" },
+  { id:"tx008", date:"01/03/2026", student:"Võ Thị Hoa",       avatar:AVT.a, type:"Gói tháng",  package:"Yoga tháng 3",        gross:4318182,commission:518182,net:3800000,status:"paid",    method:"MoMo" },
+  { id:"tx009", date:"28/02/2026", student:"Nguyễn Minh Anh",  avatar:AVT.a, type:"Gói 3 tháng",package:"Thể hình Q1",         gross:11363636,commission:1363636,net:10000000,status:"paid", method:"Chuyển khoản" },
+  { id:"tx010", date:"27/02/2026", student:"Trần Bảo Long",    avatar:AVT.b, type:"Buổi lẻ",    package:"Buổi tập Thể hình",   gross:454545, commission:54545, net:400000, status:"paid",    method:"VNPAY" },
+  { id:"tx011", date:"26/02/2026", student:"Lê Thúy Nga",      avatar:AVT.c, type:"Buổi lẻ",    package:"Buổi tập Yoga",       gross:454545, commission:54545, net:400000, status:"paid",    method:"MoMo" },
+  { id:"tx012", date:"25/02/2026", student:"Đặng Quốc Tuấn",   avatar:AVT.b, type:"Gói 8 buổi", package:"Chạy bộ 8 buổi",     gross:3636364,commission:436364,net:3200000,status:"refunded",method:"Chuyển khoản", note:"Học viên hủy" },
+  { id:"tx013", date:"24/02/2026", student:"Phạm Đức Hải",     avatar:AVT.a, type:"Buổi lẻ",    package:"Buổi tập Boxing",     gross:454545, commission:54545, net:400000, status:"pending", method:"MoMo" },
+  { id:"tx014", date:"23/02/2026", student:"Bùi Văn Nam",      avatar:AVT.b, type:"Gói tháng",  package:"Cardio tháng 2",      gross:4318182,commission:518182,net:3800000,status:"paid",    method:"VNPAY" },
+  { id:"tx015", date:"22/02/2026", student:"Võ Thị Hoa",       avatar:AVT.a, type:"Buổi lẻ",    package:"Buổi tập Yoga",       gross:454545, commission:54545, net:400000, status:"paid",    method:"MoMo" },
+];
+
+const TOP_STUDENTS = [
+  { name:"Nguyễn Minh Anh", avatar:AVT.a, revenue:13200000, sessions:26, pkg:"Gói 3 tháng", rating:5.0 },
+  { name:"Võ Thị Hoa",      avatar:AVT.a, revenue:8200000,  sessions:22, pkg:"Gói tháng",   rating:4.9 },
+  { name:"Bùi Văn Nam",     avatar:AVT.b, revenue:7000000,  sessions:18, pkg:"Gói 8 buổi",  rating:4.8 },
+  { name:"Trần Bảo Long",   avatar:AVT.b, revenue:4400000,  sessions:12, pkg:"Buổi lẻ",     rating:4.7 },
+  { name:"Lê Thúy Nga",     avatar:AVT.c, revenue:4200000,  sessions:11, pkg:"Gói tháng",   rating:5.0 },
+];
+
+const PAYOUTS = [
+  { date:"01/03/2026", amount:12144000, status:"done",    method:"VCB ****8819", ref:"PO-20260301" },
+  { date:"01/02/2026", amount:10824000, status:"done",    method:"VCB ****8819", ref:"PO-20260201" },
+  { date:"01/01/2026", amount:12760000, status:"done",    method:"VCB ****8819", ref:"PO-20260101" },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -98,8 +133,6 @@ const STATUS_CFG: Record<TxStatus,{ label:string; bg:string; text:string; icon:a
 };
 
 const COMMISSION_RATE = 0.12;
-const BALANCE_PENDING = 800000;    // amount pending in system
-const BALANCE_AVAIL   = 15600000; // available to withdraw
 
 function StatusBadge({ status }:{ status:TxStatus }) {
   const c = STATUS_CFG[status];
@@ -132,25 +165,61 @@ function CustomTooltip({ active, payload, label }:any) {
 function OverviewTab({
   monthlyData = MONTHLY_DATA,
   topStudents = TOP_STUDENTS,
+  transactions = [],
 }: {
   monthlyData?: MonthlyIncomeRow[];
   topStudents?: TopStudentRow[];
+  transactions?: Tx[];
 }) {
   const [period,setPeriod] = useState<"6m"|"12m">("12m");
   const data = period==="6m" ? monthlyData.slice(-6) : monthlyData;
-  const curMonth = monthlyData[monthlyData.length-1] ?? MONTHLY_DATA[MONTHLY_DATA.length-1];
-  const prevMonth= monthlyData[monthlyData.length-2] ?? curMonth;
-  const growthGross = ((curMonth.gross-prevMonth.gross)/prevMonth.gross*100).toFixed(1);
-  const growthNet   = ((curMonth.net  -prevMonth.net  )/prevMonth.net  *100).toFixed(1);
+  const curMonth = monthlyData[monthlyData.length-1] || { gross: 0, net: 0, sessions: 0, students: 0, month: "N/A" };
+  const prevMonth = monthlyData[monthlyData.length-2] || curMonth;
+  
+  const rawMonthStr = curMonth.month || "";
+  let displayMonth = "T" + (new Date().getMonth() + 1);
+  if (rawMonthStr.includes("-")) {
+    const parts = rawMonthStr.split("-");
+    if (parts.length >= 2) displayMonth = "T" + parseInt(parts[1], 10);
+  } else if (rawMonthStr.includes("/")) {
+    displayMonth = rawMonthStr.split("/")[0];
+  }
+
+  const growthGross = prevMonth.gross === 0 
+    ? (curMonth.gross > 0 ? "100.0" : "0.0") 
+    : ((curMonth.gross - prevMonth.gross) / prevMonth.gross * 100).toFixed(1);
+  const growthNet = prevMonth.net === 0 
+    ? (curMonth.net > 0 ? "100.0" : "0.0") 
+    : ((curMonth.net - prevMonth.net) / prevMonth.net * 100).toFixed(1);
+
+  const pieData = (() => {
+    if (!transactions || transactions.length === 0) return [];
+    const map: Record<string, number> = {};
+    let total = 0;
+    transactions.forEach(t => {
+      if (t.status === "paid") {
+        map[t.type] = (map[t.type] || 0) + t.gross;
+        total += t.gross;
+      }
+    });
+    if (total === 0) return [];
+    const colors = ["#3b82f6", "#8b5cf6", "#10b981", "#f59e0b", "#f43f5e"];
+    return Object.keys(map).map((k, i) => ({
+      name: k,
+      value: map[k],
+      color: colors[i % colors.length],
+      pct: Math.round((map[k] / total) * 100)
+    })).sort((a, b) => b.value - a.value);
+  })();
 
   return (
     <div className="space-y-4">
       {/* KPI row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { icon:Banknote,    label:"Doanh thu T3",        value:fmtM(curMonth.gross),  sub:"Trước hoa hồng",       trend:`+${growthGross}%`, trendUp:true,  bg:"bg-blue-50",   color:"text-blue-500"   },
-          { icon:DollarSign,  label:"Thu nhập thực T3",    value:fmtM(curMonth.net),    sub:"Sau HH 12%",           trend:`+${growthNet}%`,   trendUp:true,  bg:"bg-emerald-50",color:"text-emerald-500"},
-          { icon:Calendar,    label:"Buổi dạy T3",         value:curMonth.sessions+"",  sub:`${curMonth.students} học viên`, trend:"+5",   trendUp:true,  bg:"bg-purple-50", color:"text-purple-500" },
+          { icon:Banknote,    label:`Doanh thu ${displayMonth}`,        value:fmtM(curMonth.gross),  sub:"Trước hoa hồng",       trend:`+${growthGross}%`, trendUp:true,  bg:"bg-blue-50",   color:"text-blue-500"   },
+          { icon:DollarSign,  label:`Thu nhập thực ${displayMonth}`,    value:fmtM(curMonth.net),    sub:"Sau HH 12%",           trend:`+${growthNet}%`,   trendUp:true,  bg:"bg-emerald-50",color:"text-emerald-500"},
+          { icon:Calendar,    label:`Buổi dạy ${displayMonth}`,         value:curMonth.sessions+"",  sub:`${curMonth.students} học viên`, trend:"+5",   trendUp:true,  bg:"bg-purple-50", color:"text-purple-500" },
           { icon:BadgePercent,label:"Hoa hồng nền tảng",  value:"12%",                sub:"Pro Coach plan",        trend:"Elite: 0%",        trendUp:false, bg:"bg-amber-50",  color:"text-amber-500"  },
         ].map(({icon:Icon,label,value,sub,trend,trendUp,bg,color})=>(
           <div key={label} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
@@ -217,37 +286,44 @@ function OverviewTab({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Source breakdown */}
         <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-          <div style={{fontWeight:700,fontSize:"0.95rem"}} className="text-gray-900 mb-1">Nguồn thu tháng 3</div>
+          <div style={{fontWeight:700,fontSize:"0.95rem"}} className="text-gray-900 mb-1">Nguồn thu {displayMonth.replace("T", "Tháng ")}</div>
           <div style={{fontSize:"0.75rem"}} className="text-gray-400 mb-4">Phân bổ theo loại gói</div>
-          <div className="flex items-center gap-4">
-            <div className="shrink-0">
-              <ResponsiveContainer width={130} height={130}>
-                <PieChart>
-                  <Pie data={SOURCE_DATA} cx="50%" cy="50%" innerRadius={38} outerRadius={60}
-                    dataKey="value" strokeWidth={2} stroke="#fff">
-                    {SOURCE_DATA.map((e,i)=><Cell key={i} fill={e.color}/>)}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex-1 space-y-2">
-              {SOURCE_DATA.map(s=>(
-                <div key={s.name} className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{backgroundColor:s.color}}/>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-center">
-                      <span style={{fontSize:"0.78rem",fontWeight:500}} className="text-gray-700 truncate">{s.name}</span>
-                      <span style={{fontSize:"0.75rem",fontWeight:700}} className="text-gray-900">{s.pct}%</span>
+          
+          {pieData.length > 0 ? (
+            <div className="flex items-center gap-4">
+              <div className="shrink-0">
+                <ResponsiveContainer width={130} height={130}>
+                  <PieChart>
+                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={38} outerRadius={60}
+                      dataKey="value" strokeWidth={2} stroke="#fff">
+                      {pieData.map((e,i)=><Cell key={i} fill={e.color}/>)}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex-1 space-y-2">
+                {pieData.map(s=>(
+                  <div key={s.name} className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{backgroundColor:s.color}}/>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-center">
+                        <span style={{fontSize:"0.78rem",fontWeight:500}} className="text-gray-700 truncate">{s.name}</span>
+                        <span style={{fontSize:"0.75rem",fontWeight:700}} className="text-gray-900">{s.pct}%</span>
+                      </div>
+                      <div className="mt-0.5 h-1 bg-gray-100 rounded-full">
+                        <div className="h-1 rounded-full transition-all" style={{width:`${s.pct}%`,backgroundColor:s.color}}/>
+                      </div>
+                      <span style={{fontSize:"0.68rem"}} className="text-gray-400">{fmtM(s.value)}</span>
                     </div>
-                    <div className="mt-0.5 h-1 bg-gray-100 rounded-full">
-                      <div className="h-1 rounded-full transition-all" style={{width:`${s.pct}%`,backgroundColor:s.color}}/>
-                    </div>
-                    <span style={{fontSize:"0.68rem"}} className="text-gray-400">{fmtM(s.value)}</span>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center justify-center h-32 text-gray-400" style={{ fontSize: "0.8rem" }}>
+              Chưa có dữ liệu giao dịch
+            </div>
+          )}
         </div>
 
         {/* Sessions bar chart */}
@@ -279,7 +355,7 @@ function OverviewTab({
           </span>
         </div>
         <div className="space-y-2">
-          {topStudents.map((s,i)=>(
+          {topStudents && topStudents.length > 0 ? topStudents.map((s,i)=>(
             <div key={s.name} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors">
               <span style={{fontWeight:800,fontSize:"0.85rem",width:20,textAlign:"center"}}
                 className={i===0?"text-amber-400":i===1?"text-gray-400":i===2?"text-orange-400":"text-gray-300"}>
@@ -305,7 +381,11 @@ function OverviewTab({
                 </div>
               </div>
             </div>
-          ))}
+          )) : (
+            <div className="py-8 text-center text-gray-400" style={{ fontSize: "0.8rem" }}>
+              Chưa có dữ liệu học viên
+            </div>
+          )}
         </div>
       </div>
 
@@ -411,7 +491,6 @@ function TransactionsTab({ transactions = TRANSACTIONS }: { transactions?: Tx[] 
 
       {/* Table */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        {/* Header */}
         <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2.5 bg-gray-50 border-b border-gray-100">
           {["Học viên","Gói","Doanh thu","HH 12%","Thu thực","Trạng thái","Phương thức",""].map((h,i)=>(
             <div key={i} className={`${i===0?"col-span-3":i===1?"col-span-2":i===7?"col-span-1":"col-span-1"} text-gray-400`}
@@ -426,7 +505,6 @@ function TransactionsTab({ transactions = TRANSACTIONS }: { transactions?: Tx[] 
             <div key={tx.id}>
               <div className="grid grid-cols-12 gap-2 px-4 py-3 hover:bg-gray-50/50 transition-colors items-center cursor-pointer"
                 onClick={()=>setShowDetail(d=>d===tx.id?null:tx.id)}>
-                {/* Student */}
                 <div className="col-span-12 sm:col-span-3 flex items-center gap-2.5">
                   <img src={tx.avatar} alt="" className="w-8 h-8 rounded-xl object-cover shrink-0"/>
                   <div className="min-w-0">
@@ -434,38 +512,30 @@ function TransactionsTab({ transactions = TRANSACTIONS }: { transactions?: Tx[] 
                     <div style={{fontSize:"0.68rem"}} className="text-gray-400">{tx.date} · #{tx.id}</div>
                   </div>
                 </div>
-                {/* Package */}
                 <div className="hidden sm:block sm:col-span-2">
                   <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-lg" style={{fontSize:"0.72rem",fontWeight:600}}>{tx.type}</span>
                   <div style={{fontSize:"0.68rem"}} className="text-gray-400 mt-0.5 truncate">{tx.package}</div>
                 </div>
-                {/* Gross */}
                 <div className="hidden sm:block sm:col-span-1">
                   <span style={{fontSize:"0.8rem",fontWeight:600}} className="text-gray-700">{fmtM(tx.gross)}</span>
                 </div>
-                {/* Commission */}
                 <div className="hidden sm:block sm:col-span-1">
                   <span style={{fontSize:"0.78rem",fontWeight:500}} className="text-red-400">-{fmtM(tx.commission)}</span>
                 </div>
-                {/* Net */}
                 <div className="hidden sm:block sm:col-span-1">
                   <span style={{fontSize:"0.85rem",fontWeight:700}} className="text-emerald-600">{fmtM(tx.net)}</span>
                 </div>
-                {/* Status */}
                 <div className="hidden sm:block sm:col-span-2">
                   <StatusBadge status={tx.status}/>
                   {tx.note&&<div style={{fontSize:"0.65rem"}} className="text-gray-400 mt-0.5">{tx.note}</div>}
                 </div>
-                {/* Method */}
                 <div className="hidden sm:flex sm:col-span-1 items-center gap-1">
                   <span style={{fontSize:"0.72rem"}} className="text-gray-500">{tx.method}</span>
                 </div>
-                {/* Expand */}
                 <div className="hidden sm:flex sm:col-span-1 justify-end">
                   {showDetail===tx.id?<ChevronUp className="w-3.5 h-3.5 text-gray-400"/>:<ChevronDown className="w-3.5 h-3.5 text-gray-400"/>}
                 </div>
               </div>
-              {/* Detail row */}
               {showDetail===tx.id&&(
                 <div className="px-4 pb-3 bg-blue-50/30 border-t border-blue-100">
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3">
@@ -503,8 +573,8 @@ function TransactionsTab({ transactions = TRANSACTIONS }: { transactions?: Tx[] 
 
 // ─── Payout Tab ───────────────────────────────────────────────────────────────
 function PayoutTab({
-  availableBalance = BALANCE_AVAIL,
-  pendingBalance = BALANCE_PENDING,
+  availableBalance = 0,
+  pendingBalance = 0,
   payouts = PAYOUTS,
 }: {
   availableBalance?: number;
@@ -516,7 +586,6 @@ function PayoutTab({
 
   return (
     <div className="space-y-4 max-w-2xl mx-auto">
-      {/* Balance card */}
       <div className="bg-gradient-to-br from-slate-900 to-blue-950 rounded-2xl p-6 text-white relative overflow-hidden">
         <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full bg-white/5"/>
         <div className="absolute -bottom-8 -left-4 w-40 h-40 rounded-full bg-blue-500/10"/>
@@ -528,123 +597,7 @@ function PayoutTab({
               <div style={{fontSize:"0.65rem"}} className="text-gray-400">Đang chờ xử lý</div>
               <div style={{fontWeight:700,fontSize:"0.88rem"}} className="text-amber-300">{fmt(pendingBalance)}</div>
             </div>
-            <div className="bg-white/10 rounded-xl px-3 py-2">
-              <div style={{fontSize:"0.65rem"}} className="text-gray-400">Ngân hàng liên kết</div>
-              <div style={{fontWeight:700,fontSize:"0.88rem"}} className="text-white">VCB ****8819</div>
-            </div>
-            <div className="bg-white/10 rounded-xl px-3 py-2">
-              <div style={{fontSize:"0.65rem"}} className="text-gray-400">Chu kỳ rút</div>
-              <div style={{fontWeight:700,fontSize:"0.88rem"}} className="text-white">Mỗi tháng</div>
-            </div>
           </div>
-        </div>
-      </div>
-
-      {/* Withdraw form */}
-      {step==="idle"&&(
-        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm space-y-4">
-          <div style={{fontWeight:700,fontSize:"0.95rem"}} className="text-gray-900 flex items-center gap-2">
-            <Wallet className="w-4 h-4 text-blue-500"/> Yêu cầu rút tiền
-          </div>
-          <div>
-            <label style={{fontSize:"0.78rem",fontWeight:600}} className="text-gray-600 block mb-1.5">Số tiền rút</label>
-            <div className="relative">
-              <input type="number" value={amount} onChange={e=>setAmount(e.target.value)}
-                className="w-full pl-4 pr-12 py-3 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                style={{fontSize:"0.95rem",fontWeight:700}}/>
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" style={{fontSize:"0.82rem"}}>đ</span>
-            </div>
-            <div className="flex gap-2 mt-2">
-              {[5000000,10000000,availableBalance].map(v=>(
-                <button key={v} onClick={()=>setAmount(String(v))}
-                  className={`px-3 py-1.5 rounded-lg border transition-colors ${Number(amount)===v?"border-blue-500 bg-blue-50 text-blue-600":"border-gray-200 text-gray-500 hover:border-blue-300"}`}
-                  style={{fontSize:"0.73rem",fontWeight:600}}>
-                  {v===availableBalance?"Tất cả":fmtM(v)}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label style={{fontSize:"0.78rem",fontWeight:600}} className="text-gray-600 block mb-1.5">Tài khoản nhận</label>
-            <div className="flex items-center gap-3 border-2 border-blue-300 bg-blue-50 rounded-xl px-4 py-3">
-              <CreditCard className="w-4 h-4 text-blue-500 shrink-0"/>
-              <div>
-                <div style={{fontWeight:700,fontSize:"0.88rem"}} className="text-gray-800">Vietcombank ****8819</div>
-                <div style={{fontSize:"0.72rem"}} className="text-gray-400">Trần Văn Đức</div>
-              </div>
-              <CheckCircle2 className="w-4 h-4 text-blue-500 ml-auto"/>
-            </div>
-          </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2">
-            <Info className="w-4 h-4 text-amber-500 shrink-0 mt-0.5"/>
-            <p style={{fontSize:"0.75rem",lineHeight:1.7}} className="text-amber-700">
-              Tiền sẽ được chuyển trong <strong>1–2 ngày làm việc</strong>. Yêu cầu tối thiểu <strong>500,000đ</strong>.
-            </p>
-          </div>
-          <button onClick={()=>setStep("confirm")} disabled={Number(amount)<500000||Number(amount)>availableBalance}
-            className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 transition-all ${Number(amount)>=500000&&Number(amount)<=availableBalance?"bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 shadow-md shadow-blue-200":"bg-gray-100 text-gray-400 cursor-not-allowed"}`}
-            style={{fontSize:"0.9rem",fontWeight:700}}>
-            <ArrowDown className="w-4 h-4"/> Rút {Number(amount)>0?fmt(Number(amount)):""}
-          </button>
-        </div>
-      )}
-
-      {step==="confirm"&&(
-        <div className="bg-white rounded-2xl p-5 border border-blue-200 shadow-sm space-y-4">
-          <div style={{fontWeight:700,fontSize:"0.95rem"}} className="text-gray-900">Xác nhận rút tiền</div>
-          <div className="space-y-2">
-            {[
-              {label:"Số tiền rút",   value:fmt(Number(amount)), big:true},
-              {label:"Tài khoản",     value:"VCB ****8819 – Trần Văn Đức"},
-              {label:"Thời gian",     value:"1–2 ngày làm việc"},
-              {label:"Số dư còn lại", value:fmt(availableBalance-Number(amount))},
-            ].map(({label,value,big})=>(
-              <div key={label} className="flex justify-between py-1.5 border-b border-gray-50">
-                <span style={{fontSize:"0.8rem"}} className="text-gray-500">{label}</span>
-                <span style={{fontSize:big?"1rem":"0.82rem",fontWeight:big?800:600}} className={big?"text-blue-600":"text-gray-800"}>{value}</span>
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-3">
-            <button onClick={()=>setStep("idle")} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors" style={{fontSize:"0.88rem",fontWeight:600}}>Hủy</button>
-            <button onClick={()=>setStep("done")} className="flex-1 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:from-blue-600 hover:to-indigo-600 shadow-md" style={{fontSize:"0.88rem",fontWeight:700}}>✅ Xác nhận</button>
-          </div>
-        </div>
-      )}
-
-      {step==="done"&&(
-        <div className="bg-white rounded-2xl p-8 border border-emerald-200 shadow-sm text-center">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-            <CheckCircle2 className="w-8 h-8 text-emerald-500"/>
-          </div>
-          <div style={{fontWeight:800,fontSize:"1.1rem"}} className="text-gray-900 mb-1">Yêu cầu đã gửi!</div>
-          <p style={{fontSize:"0.82rem",lineHeight:1.7}} className="text-gray-500 mb-4">
-            {fmt(Number(amount))} sẽ được chuyển đến <strong>VCB ****8819</strong> trong 1–2 ngày làm việc.
-          </p>
-          <button onClick={()=>setStep("idle")} className="flex items-center gap-2 mx-auto text-blue-500 hover:text-blue-600 transition-colors" style={{fontSize:"0.85rem",fontWeight:600}}>
-            <RefreshCw className="w-3.5 h-3.5"/> Rút thêm
-          </button>
-        </div>
-      )}
-
-      {/* Payout history */}
-      <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-        <div style={{fontWeight:700,fontSize:"0.95rem"}} className="text-gray-900 mb-4">Lịch sử rút tiền</div>
-        <div className="space-y-2.5">
-          {payouts.map(p=>(
-            <div key={p.ref} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-              <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
-                <Banknote className="w-4 h-4 text-emerald-500"/>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div style={{fontWeight:600,fontSize:"0.85rem"}} className="text-gray-900">{fmt(p.amount)}</div>
-                <div style={{fontSize:"0.7rem"}} className="text-gray-400">{p.date} · {p.method} · {p.ref}</div>
-              </div>
-              <span className="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-lg flex items-center gap-1" style={{fontSize:"0.65rem",fontWeight:700}}>
-                <CheckCircle2 className="w-2.5 h-2.5"/>Đã chuyển
-              </span>
-            </div>
-          ))}
         </div>
       </div>
     </div>
@@ -661,13 +614,6 @@ function PlanTab() {
 
   return (
     <div className="space-y-4">
-      <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-center gap-3">
-        <Info className="w-5 h-5 text-blue-500 shrink-0"/>
-        <p style={{fontSize:"0.82rem",lineHeight:1.7}} className="text-blue-700">
-          Nâng cấp <strong>Elite Coach</strong> để hoa hồng về <strong>0%</strong>. Với doanh thu {fmtM(MONTHLY_DATA[11].gross)}/tháng, bạn tiết kiệm <strong className="text-emerald-600">{fmtM(MONTHLY_DATA[11].gross*0.12)}</strong> so với gói Pro Coach.
-        </p>
-      </div>
-
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {plans.map(p=>(
           <div key={p.id}
@@ -692,50 +638,8 @@ function PlanTab() {
                 </div>
               ))}
             </div>
-            <button
-              className={`w-full py-2.5 rounded-xl transition-all ${p.current?"bg-blue-50 text-blue-600 border border-blue-200 cursor-default":p.id==="elite"?"bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-md hover:from-amber-500 hover:to-orange-500":"bg-gray-100 text-gray-400 cursor-not-allowed"}`}
-              style={{fontSize:"0.85rem",fontWeight:700}}>
-              {p.current?"✅ Gói hiện tại":p.id==="starter"?"Hạ cấp":"🚀 Nâng cấp"}
-            </button>
           </div>
         ))}
-      </div>
-
-      {/* Savings calculator */}
-      <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-        <div style={{fontWeight:700,fontSize:"0.95rem"}} className="text-gray-900 mb-4">📊 Tính tiết kiệm khi nâng Elite</div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100">
-                {["Doanh thu/tháng","HH 12% (Pro)","Phí Elite","Thu thực (Pro)","Thu thực (Elite)","Tiết kiệm"].map(h=>(
-                  <th key={h} className="text-left py-2 px-2" style={{fontSize:"0.7rem",fontWeight:600,color:"#9ca3af",textTransform:"uppercase"}}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {[10000000,15000000,20000000,30000000].map(rev=>{
-                const proComm = rev*0.12;
-                const eliteFee= 499000;
-                const proNet  = rev-proComm;
-                const eliteNet= rev-eliteFee;
-                const saved   = eliteNet-proNet;
-                return (
-                  <tr key={rev} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                    <td className="py-2.5 px-2" style={{fontSize:"0.8rem",fontWeight:600,color:"#374151"}}>{fmtM(rev)}</td>
-                    <td className="py-2.5 px-2 text-red-400" style={{fontSize:"0.78rem",fontWeight:500}}>-{fmtM(proComm)}</td>
-                    <td className="py-2.5 px-2 text-orange-400" style={{fontSize:"0.78rem",fontWeight:500}}>-{fmtM(eliteFee)}</td>
-                    <td className="py-2.5 px-2 text-gray-700" style={{fontSize:"0.78rem",fontWeight:600}}>{fmtM(proNet)}</td>
-                    <td className="py-2.5 px-2 text-emerald-600" style={{fontSize:"0.78rem",fontWeight:600}}>{fmtM(eliteNet)}</td>
-                    <td className="py-2.5 px-2">
-                      <span className="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-lg" style={{fontSize:"0.72rem",fontWeight:700}}>+{fmtM(saved)}</span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
       </div>
     </div>
   );
@@ -747,10 +651,10 @@ type IncomeTab = "overview" | "transactions" | "payout" | "plan";
 export function CoachIncome() {
   const [tab, setTab] = useState<IncomeTab>("overview");
   const [overview, setOverview] = useState<CoachIncomeOverview | null>(null);
-  const [monthlyData, setMonthlyData] = useState<MonthlyIncomeRow[]>(MONTHLY_DATA);
-  const [transactions, setTransactions] = useState<Tx[]>(TRANSACTIONS);
-  const [topStudents, setTopStudents] = useState<TopStudentRow[]>(TOP_STUDENTS);
-  const [payouts, setPayouts] = useState<PayoutRow[]>(PAYOUTS);
+  const [monthlyData, setMonthlyData] = useState<MonthlyIncomeRow[]>([]);
+  const [transactions, setTransactions] = useState<Tx[]>([]);
+  const [topStudents, setTopStudents] = useState<TopStudentRow[]>([]);
+  const [payouts, setPayouts] = useState<PayoutRow[]>([]);
   const [usingFallback, setUsingFallback] = useState(false);
 
   useEffect(() => {
@@ -763,68 +667,40 @@ export function CoachIncome() {
     ])
       .then(([overviewData, chartData, transactionData, studentData, payoutData]) => {
         setOverview(overviewData);
-        if (chartData.length > 0) {
-          setMonthlyData(chartData.map((point) => ({
-            month: point.period,
-            gross: point.value,
-            net: Math.round(point.value * 0.88),
-            sessions: point.count,
-            students: point.count,
-          })));
-        }
-        if (transactionData.length > 0) {
-          setTransactions(transactionData.map(mapTransaction));
-        }
-        if (studentData.length > 0) {
-          setTopStudents(studentData.map(mapTopStudent));
-        }
-        if (payoutData.length > 0) {
-          setPayouts(payoutData.map(mapPayout));
-        }
+        setMonthlyData(chartData?.length ? chartData.map((p: any) => ({ month: p.period, gross: p.value, net: Math.round(p.value * 0.88), sessions: p.count, students: p.count })) : []);
+        setTransactions(transactionData?.length ? transactionData.map(mapTransaction) : []);
+        setTopStudents(studentData?.length ? studentData.map(mapTopStudent) : []);
+        setPayouts(payoutData?.length ? payoutData.map(mapPayout) : []);
         setUsingFallback(false);
       })
-      .catch(() => {
-        setOverview(null);
-        setUsingFallback(true);
-      });
+      .catch(() => { setUsingFallback(true); });
   }, []);
 
   const TABS: { id: IncomeTab; label: string; emoji: string; badge?: string }[] = [
     { id:"overview",     label:"Tổng quan",      emoji:"📊" },
-    { id:"transactions", label:"Giao dịch",       emoji:"📋", badge:`${transactions.filter(t=>t.status==="pending").length}` },
+    { id:"transactions", label:"Giao dịch",       emoji:"📋", badge:`${transactions.filter(t=>t.status==="pending").length || 0}` },
     { id:"payout",       label:"Rút tiền",        emoji:"💸" },
     { id:"plan",         label:"Gói HLV",         emoji:"⭐" },
   ];
 
   return (
     <div className="space-y-4">
-      {/* Page header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 style={{fontWeight:800,fontSize:"1.2rem"}} className="text-gray-900">Thu nhập</h1>
-          <p style={{fontSize:"0.78rem"}} className="text-gray-400 mt-0.5">Quản lý doanh thu, giao dịch và rút tiền · Tháng 3, 2026</p>
+          <p style={{fontSize:"0.78rem"}} className="text-gray-400 mt-0.5">Quản lý doanh thu, giao dịch và rút tiền</p>
         </div>
         <div className="flex items-center gap-2.5">
           <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2 flex items-center gap-2">
             <DollarSign className="w-4 h-4 text-emerald-500"/>
             <div>
-              <div style={{fontWeight:800,fontSize:"1rem"}} className="text-emerald-600">{fmt(overview?.availableBalance ?? BALANCE_AVAIL)}</div>
+              <div style={{fontWeight:800,fontSize:"1rem"}} className="text-emerald-600">{fmt(overview?.availableBalance ?? 0)}</div>
               <div style={{fontSize:"0.62rem"}} className="text-emerald-400">Khả dụng</div>
             </div>
           </div>
-          <button className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors"
-            style={{fontSize:"0.8rem",fontWeight:600}}>
-            <Download className="w-3.5 h-3.5"/> Báo cáo
-          </button>
         </div>
       </div>
-      {usingFallback && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-amber-700" style={{ fontSize: "0.78rem", fontWeight: 600 }}>
-          Dang hien thi du lieu mau cho cac widget can aggregate backend: income overview, monthly chart, transactions, top students, payouts.
-        </div>
-      )}
 
-      {/* Tabs */}
       <div className="flex bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm w-fit">
         {TABS.map(t=>(
           <button key={t.id} onClick={()=>setTab(t.id)}
@@ -832,16 +708,11 @@ export function CoachIncome() {
             style={{fontSize:"0.82rem",fontWeight:tab===t.id?700:500}}>
             <span>{t.emoji}</span>
             <span className="hidden sm:inline">{t.label}</span>
-            {t.badge&&Number(t.badge)>0&&(
-              <span className={`px-1.5 py-0.5 rounded-full ${tab===t.id?"bg-white/25 text-white":"bg-amber-500 text-white"}`}
-                style={{fontSize:"0.6rem",fontWeight:800}}>{t.badge}</span>
-            )}
           </button>
         ))}
       </div>
 
-      {/* Content */}
-      {tab==="overview"     && <OverviewTab monthlyData={monthlyData} topStudents={topStudents}/>}
+      {tab==="overview"     && <OverviewTab monthlyData={monthlyData} topStudents={topStudents} transactions={transactions}/>}
       {tab==="transactions" && <TransactionsTab transactions={transactions}/>}
       {tab==="payout"       && <WalletPanel mode="coach" allowWithdraw allowBankAccount />}
       {tab==="plan"         && <PlanTab/>}
