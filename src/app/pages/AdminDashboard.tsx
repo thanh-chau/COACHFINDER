@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useNavigate } from "react-router";
 import {
   LayoutDashboard,
@@ -67,6 +67,15 @@ const navItems = [
   },
 ];
 
+const ADMIN_TAB_IDS = [
+  "overview",
+  "users",
+  "transactions",
+  "subscriptions",
+  "finance",
+  "settings",
+];
+
 const quickStats = [
   {
     label: "Doanh thu hôm nay",
@@ -91,6 +100,7 @@ const quickStats = [
 export function AdminDashboard() {
   const [activeNav, setActiveNav] = useState("overview");
   const [mountedTabs, setMountedTabs] = useState<Record<string, boolean>>({ overview: true });
+  const [, startTransition] = useTransition();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [notificationCount, setNotificationCount] = useState(0);
@@ -124,6 +134,32 @@ export function AdminDashboard() {
       .then((result) => setNotificationCount(result.unreadCount))
       .catch(() => setNotificationCount(0));
   }, []);
+
+  useEffect(() => {
+    const timers = ADMIN_TAB_IDS
+      .filter((id) => id !== "overview")
+      .map((id, index) =>
+        window.setTimeout(() => {
+          startTransition(() => {
+            setMountedTabs((prev) => (prev[id] ? prev : { ...prev, [id]: true }));
+          });
+        }, 500 + index * 250),
+      );
+
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, [startTransition]);
+
+  const mountTab = useCallback((id: string) => {
+    startTransition(() => {
+      setMountedTabs((prev) => (prev[id] ? prev : { ...prev, [id]: true }));
+    });
+  }, [startTransition]);
+
+  const navigateTab = useCallback((id: string) => {
+    setActiveNav(id);
+    setSidebarOpen(false);
+    window.requestAnimationFrame(() => mountTab(id));
+  }, [mountTab]);
 
   const formatCompactMoney = (value?: number) => {
     const amount = value || 0;
@@ -325,11 +361,9 @@ export function AdminDashboard() {
           {dynamicNavItems.map(({ icon: Icon, label, id, badge }) => (
             <button
               key={id}
-              onClick={() => {
-                setActiveNav(id);
-                setMountedTabs((prev) => ({ ...prev, [id]: true }));
-                setSidebarOpen(false);
-              }}
+              onMouseEnter={() => mountTab(id)}
+              onFocus={() => mountTab(id)}
+              onClick={() => navigateTab(id)}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 ${
                 activeNav === id
                   ? "bg-gradient-to-r from-rose-500 to-red-600 text-white shadow-lg shadow-rose-900/30"
@@ -374,10 +408,9 @@ export function AdminDashboard() {
             Hệ thống
           </div>
           <button
-            onClick={() => {
-              setActiveNav("settings");
-              setMountedTabs((prev) => ({ ...prev, settings: true }));
-            }}
+            onMouseEnter={() => mountTab("settings")}
+            onFocus={() => mountTab("settings")}
+            onClick={() => navigateTab("settings")}
             className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 ${activeNav === "settings" ? "bg-gradient-to-r from-rose-500 to-red-600 text-white" : "text-gray-400 hover:bg-white/[0.06] hover:text-gray-200"}`}
           >
             <Settings className="w-[18px] h-[18px] shrink-0" />
