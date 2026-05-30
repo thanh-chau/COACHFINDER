@@ -90,6 +90,7 @@ const quickStats = [
 
 export function AdminDashboard() {
   const [activeNav, setActiveNav] = useState("overview");
+  const [mountedTabs, setMountedTabs] = useState<Record<string, boolean>>({ overview: true });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [notificationCount, setNotificationCount] = useState(0);
@@ -284,6 +285,108 @@ export function AdminDashboard() {
         </div>
 
         {/* Quick stats in sidebar */}
+    finance: {
+      title: "Báo cáo tài chính",
+      sub: "Tháng 3/2026 · Tổng doanh thu: 220M đ",
+    },
+    settings: {
+      title: "Cài đặt nền tảng",
+      sub: "Cấu hình hệ thống & thông số",
+    },
+  };
+
+  const current = pageTitles[activeNav] ?? pageTitles.overview;
+
+  return (
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* ── SIDEBAR ─────────────────────────────────────────── */}
+      <aside
+        className={`
+        fixed lg:relative z-40 flex flex-col h-full transition-transform duration-300 ease-in-out
+        ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+      `}
+        style={{
+          width: 256,
+          minWidth: 256,
+          background:
+            "linear-gradient(160deg, #0f172a 0%, #1e1b4b 100%)",
+        }}
+      >
+        {/* Logo */}
+        <div className="flex items-center gap-3 px-5 h-16 border-b border-white/[0.06] shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-500 to-red-600 flex items-center justify-center shrink-0 shadow-lg shadow-rose-900/50">
+            <Shield className="w-[18px] h-[18px] text-white" />
+          </div>
+          <div>
+            <div
+              style={{
+                fontWeight: 800,
+                fontSize: "1.05rem",
+                letterSpacing: "-0.02em",
+              }}
+              className="text-white"
+            >
+              Coach<span className="text-rose-400">Finder</span>
+            </div>
+            <div
+              style={{ fontSize: "0.62rem", fontWeight: 600 }}
+              className="text-rose-300 uppercase tracking-wider"
+            >
+              Admin Panel
+            </div>
+          </div>
+          <button
+            className="ml-auto lg:hidden p-1.5 rounded-lg bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Admin card */}
+        <div className="px-4 py-4 border-b border-white/[0.06]">
+          <div className="flex items-center gap-3 bg-white/[0.04] rounded-xl px-3.5 py-3 border border-white/[0.06]">
+            <div
+              className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-red-600 flex items-center justify-center text-white shrink-0"
+              style={{ fontSize: "0.75rem", fontWeight: 800 }}
+            >
+              {adminInitials}
+            </div>
+            <div className="min-w-0">
+              <div
+                style={{ fontWeight: 700, fontSize: "0.85rem" }}
+                className="text-white truncate"
+              >
+                {adminName}
+              </div>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0 animate-pulse" />
+                <span
+                  style={{ fontSize: "0.68rem" }}
+                  className="text-rose-300"
+                >
+                  {session?.email || "Tài khoản quản trị"}
+                </span>
+              </div>
+            </div>
+            <span
+              className="ml-auto bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded-md"
+              style={{ fontSize: "0.6rem", fontWeight: 700 }}
+            >
+              ROOT
+            </span>
+          </div>
+        </div>
+
+        {/* Quick stats in sidebar */}
         <div className="px-4 py-3 border-b border-white/[0.06] space-y-1.5">
           {dynamicQuickStats.map((s) => (
             <div
@@ -324,6 +427,7 @@ export function AdminDashboard() {
               key={id}
               onClick={() => {
                 setActiveNav(id);
+                setMountedTabs((prev) => ({ ...prev, [id]: true }));
                 setSidebarOpen(false);
               }}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 ${
@@ -370,7 +474,10 @@ export function AdminDashboard() {
             Hệ thống
           </div>
           <button
-            onClick={() => setActiveNav("settings")}
+            onClick={() => {
+              setActiveNav("settings");
+              setMountedTabs((prev) => ({ ...prev, settings: true }));
+            }}
             className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 ${activeNav === "settings" ? "bg-gradient-to-r from-rose-500 to-red-600 text-white" : "text-gray-400 hover:bg-white/[0.06] hover:text-gray-200"}`}
           >
             <Settings className="w-[18px] h-[18px] shrink-0" />
@@ -385,7 +492,6 @@ export function AdminDashboard() {
             </span>
           </button>
         </nav>
-
         {/* Logout */}
         <div className="px-3 py-3 border-t border-white/[0.06]">
           <button
@@ -462,12 +568,24 @@ export function AdminDashboard() {
         {/* Content area */}
         <div className="flex-1 overflow-y-auto">
           <div className="p-5 lg:p-6 max-w-[1440px] mx-auto w-full">
-            {activeNav === "overview" && <AdminOverview />}
-            {activeNav === "users" && <AdminUsers />}
-            {activeNav === "transactions" && <AdminTransactions />}
-            {activeNav === "subscriptions" && <AdminSubscriptions />}
-            {activeNav === "finance" && <AdminFinance />}
-            {activeNav === "settings" && <AdminSettings />}
+            <div className={activeNav === "overview" ? "block" : "hidden"}>
+              {mountedTabs["overview"] && <AdminOverview />}
+            </div>
+            <div className={activeNav === "users" ? "block" : "hidden"}>
+              {mountedTabs["users"] && <AdminUsers />}
+            </div>
+            <div className={activeNav === "transactions" ? "block" : "hidden"}>
+              {mountedTabs["transactions"] && <AdminTransactions />}
+            </div>
+            <div className={activeNav === "subscriptions" ? "block" : "hidden"}>
+              {mountedTabs["subscriptions"] && <AdminSubscriptions />}
+            </div>
+            <div className={activeNav === "finance" ? "block" : "hidden"}>
+              {mountedTabs["finance"] && <AdminFinance />}
+            </div>
+            <div className={activeNav === "settings" ? "block" : "hidden"}>
+              {mountedTabs["settings"] && <AdminSettings />}
+            </div>
           </div>
         </div>
       </div>
