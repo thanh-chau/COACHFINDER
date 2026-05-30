@@ -467,7 +467,7 @@ export function AdminDashboard() {
             {activeNav === "transactions" && <AdminTransactions />}
             {activeNav === "subscriptions" && <AdminSubscriptions />}
             {activeNav === "finance" && <AdminFinance />}
-            {activeNav === "settings" && <AdminSettingsPlaceholder />}
+            {activeNav === "settings" && <AdminSettings />}
           </div>
         </div>
       </div>
