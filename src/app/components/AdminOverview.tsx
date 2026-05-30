@@ -85,9 +85,9 @@ export function AdminOverview() {
 
   const chartData = chart.map((p) => ({
     month: p.period,
-    tuition: Math.round((p.bookingRevenue || 0) / 1000000),
-    commission: Math.round((p.commission || 0) / 1000000),
-    subscription: Math.round((p.subscriptionRevenue || 0) / 1000000),
+    tuition: Number(((p.bookingRevenue || 0) / 1000000).toFixed(2)),
+    commission: Number(((p.commission || 0) / 1000000).toFixed(2)),
+    subscription: Number(((p.subscriptionRevenue || 0) / 1000000).toFixed(2)),
   }));
   const learnerPlans = subscriptionSummary?.learnerPlans || [];
   const coachPlans = subscriptionSummary?.coachPlans || [];
@@ -125,7 +125,7 @@ export function AdminOverview() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-        <div className="xl:col-span-2 bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+        <div className="xl:col-span-2 bg-white rounded-2xl p-5 border border-gray-100 shadow-sm min-w-0">
           <div className="flex items-center justify-between mb-5">
             <div>
               <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900">Doanh thu nền tảng</div>

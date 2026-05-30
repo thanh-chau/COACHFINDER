@@ -133,10 +133,10 @@ export function AdminDashboard() {
 
   const dynamicNavItems = navItems.map((item) => {
     if (item.id === "users") {
-      return { ...item, badge: overview ? String(overview.totalUsers) : undefined };
+      return { ...item, badge: overview ? String((overview.totalTrainees || 0) + (overview.totalCoaches || 0)) : undefined };
     }
     if (item.id === "transactions") {
-      return { ...item, badge: overview ? String(overview.todayTransactions || overview.totalTransactions) : undefined };
+      return { ...item, badge: undefined };
     }
     return item;
   });
@@ -156,7 +156,7 @@ export function AdminDashboard() {
     },
     {
       label: "Tổng người dùng",
-      value: (overview?.totalUsers || 0).toLocaleString("vi-VN"),
+      value: ((overview?.totalTrainees || 0) + (overview?.totalCoaches || 0)).toLocaleString("vi-VN"),
       icon: Users,
       color: "text-violet-400",
     },
