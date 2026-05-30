@@ -443,6 +443,7 @@ export function CoachDashboard() {
                       <ArrowUpRight className="w-3.5 h-3.5 text-emerald-500" />
                       <span style={{ fontSize: "0.78rem", fontWeight: 700 }} className="text-emerald-600">+59% vs T10</span>
                     </div>
+
                   </div>
                   <ResponsiveContainer width="100%" height={175}>
                     <BarChart data={earningsRows} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
@@ -466,13 +467,6 @@ export function CoachDashboard() {
                   </div>
                   <div className="space-y-3">
                     {sessionRows.map((s, i) => (
-                      <div key={i} className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all ${s.status === "upcoming" ? "border-blue-200 bg-blue-50/40" : "border-gray-100 bg-gray-50 opacity-70"}`}>
-                        <img src={s.avatar} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div style={{ fontWeight: 600, fontSize: "0.9rem" }} className="text-gray-900">{s.student}</div>
-                          <div style={{ fontSize: "0.75rem" }} className="text-gray-500">{s.time} · {s.type}</div>
-                        </div>
-                        <div className="flex flex-col items-end gap-1.5 shrink-0">
                       <div key={i} className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all ${s.status === "upcoming" ? "border-blue-200 bg-blue-50/40" : "border-gray-100 bg-gray-50 opacity-70"}`}>
                         <img src={s.avatar} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" />
                         <div className="flex-1 min-w-0">
