@@ -290,6 +290,42 @@ function HeatmapSection({ heatmap = WEEKLY_HEATMAP, streakDays = 14 }: { heatmap
   );
 }
 
+function AchievementsSection({ achievements = ACHIEVEMENTS }: { achievements?: AchievementCard[] }) {
+  const rows = Array.isArray(achievements) ? achievements : [];
+  return (
+    <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900">Thành tích</div>
+          <div style={{ fontSize: "0.78rem" }} className="text-gray-400">{rows.length} mục đã mở khóa</div>
+        </div>
+        <Award className="w-4 h-4 text-amber-500" />
+      </div>
+
+      {rows.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-200 p-4 text-center text-gray-400" style={{ fontSize: "0.82rem", fontWeight: 600 }}>
+          Chưa có thành tích từ API.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {rows.map((item) => (
+            <div key={item.id} className="rounded-xl border border-amber-100 bg-amber-50/50 p-4">
+              <div className="flex items-center gap-3">
+                <span style={{ fontSize: "1.35rem" }}>{item.icon}</span>
+                <div className="min-w-0">
+                  <div className="truncate text-gray-900" style={{ fontSize: "0.85rem", fontWeight: 800 }}>{item.title}</div>
+                  <div className="truncate text-gray-500" style={{ fontSize: "0.72rem" }}>{item.desc}</div>
+                  <div className="text-amber-600 mt-1" style={{ fontSize: "0.72rem", fontWeight: 700 }}>{item.date}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TrainingChart({ timeRange, overview }: { timeRange: TimeRange; overview: ProgressOverview | null }) {
   const data = timeRange === "week" ? (overview?.weeklySummary ?? WEEKLY_DATA)
     : timeRange === "3months" ? (overview?.quarterlySummary ?? QUARTERLY_DATA)

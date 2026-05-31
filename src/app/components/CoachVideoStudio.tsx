@@ -102,6 +102,16 @@ function normalizeTags(tags: unknown): string[] {
   return [];
 }
 
+function normalizeText(value: unknown, fallback = ""): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number") return String(value);
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return normalizeText(record.name ?? record.title ?? record.label, fallback);
+  }
+  return fallback;
+}
+
 function mapSubmission(submission: CoachVideoSubmission): StudentSubmission {
   const score = submission.totalScore ?? 0;
   return {
@@ -133,14 +143,14 @@ function mapApiVideo(video: VideoItem, submissions: CoachVideoSubmission[]): Coa
   ));
   return {
     id: String(video.id),
-    title: video.title,
-    description: video.description || "",
+    title: normalizeText(video.title, "Video"),
+    description: normalizeText(video.description),
     thumbnail: video.thumbnailUrl || REF.gym360,
     videoUrl: video.videoUrl,
     duration: formatDuration(video.duration),
     durationSec: video.duration || 0,
     type: video.videoType === "VIDEO_360" || video.format === "360" ? "360" : "normal",
-    category: video.category || "Thể hình",
+    category: normalizeText(video.category, "Thể hình"),
     tags: normalizeTags(video.tags),
     visibility: video.visibility === "PUBLIC" ? "public" : video.visibility === "PRIVATE" ? "private" : "students",
     views: video.viewCount,

@@ -3,7 +3,7 @@ import {
   Check, X, Zap, Sparkles, ChevronRight,
   Shield, Wallet,
   CheckCircle2, Star, Brain,
-  Gift, Lock, Flame
+  Gift, Lock, Flame, Clock
 } from "lucide-react";
 import {
   getTraineeSubscriptionCatalog,
