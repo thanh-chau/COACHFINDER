@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   TrendingUp, TrendingDown, Flame, Trophy, Target, Dumbbell,
   Calendar, Clock, CheckCircle2, ChevronRight, ChevronDown,
@@ -462,8 +462,8 @@ function TrainingChart({ timeRange, overview }: { timeRange: TimeRange; overview
               return [`${Math.round(v * 100)} kcal`, "Calo tiêu thụ"];
             }}
           />
-          <Bar key="bar-hours" dataKey="hours" fill="#f97316" radius={[6, 6, 0, 0]} maxBarSize={32} />
-          <Bar key="bar-cal" dataKey="caloriesScaled" name="calories" fill="#3b82f6" radius={[6, 6, 0, 0]} maxBarSize={32} />
+          <Bar key="bar-hours" dataKey="hours" fill="#f97316" radius={[6, 6, 0, 0]} maxBarSize={32} isAnimationActive={false} />
+          <Bar key="bar-cal" dataKey="caloriesScaled" name="calories" fill="#3b82f6" radius={[6, 6, 0, 0]} maxBarSize={32} isAnimationActive={false} />
         </BarChart>
       </ResponsiveContainer>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
@@ -563,9 +563,9 @@ function BodyMetricsSection({ data = BODY_METRICS_HISTORY }: { data?: BodyMetric
             <XAxis key="xaxis" dataKey="month" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
             <YAxis key="yaxis" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
             <Tooltip key="tooltip" contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 12 }} />
-            <Line key="line-weight" type="monotone" dataKey="weight" name="Cân nặng (kg)" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 4, fill: "#3b82f6", strokeWidth: 0 }} />
-            <Line key="line-fat" type="monotone" dataKey="fat" name="Mỡ (%)" stroke="#f87171" strokeWidth={2.5} dot={{ r: 4, fill: "#f87171", strokeWidth: 0 }} />
-            <Line key="line-muscle" type="monotone" dataKey="muscle" name="Cơ bắp (kg)" stroke="#10b981" strokeWidth={2.5} dot={{ r: 4, fill: "#10b981", strokeWidth: 0 }} />
+            <Line key="line-weight" type="monotone" dataKey="weight" name="Cân nặng (kg)" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 4, fill: "#3b82f6", strokeWidth: 0 }} isAnimationActive={false} />
+            <Line key="line-fat" type="monotone" dataKey="fat" name="Mỡ (%)" stroke="#f87171" strokeWidth={2.5} dot={{ r: 4, fill: "#f87171", strokeWidth: 0 }} isAnimationActive={false} />
+            <Line key="line-muscle" type="monotone" dataKey="muscle" name="Cơ bắp (kg)" stroke="#10b981" strokeWidth={2.5} dot={{ r: 4, fill: "#10b981", strokeWidth: 0 }} isAnimationActive={false} />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -651,6 +651,7 @@ function ExerciseProgressSection({ data = EXERCISE_PROGRESS }: { data?: Exercise
                 strokeWidth={selected === ex.id ? 3 : 1.5}
                 strokeOpacity={selected === ex.id ? 1 : 0.4}
                 dot={selected === ex.id ? { r: 5, fill: ex.color, strokeWidth: 0 } : false}
+                isAnimationActive={false}
               />
             ))}
           </LineChart>
@@ -716,7 +717,7 @@ function AIScoreSection({ trend, breakdown }: { trend: AIScoreRow[]; breakdown: 
             <XAxis key="xaxis" dataKey="month" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
             <YAxis key="yaxis" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} domain={[0, 100]} />
             <Tooltip key="tooltip" contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 12 }} />
-            <Area key="area-avg" type="monotone" dataKey="avg" name="Trung bình" stroke="#f97316" strokeWidth={2.5} fill="url(#progressAvgGrad)" dot={{ r: 4, fill: "#f97316", strokeWidth: 0 }} />
+            <Area key="area-avg" type="monotone" dataKey="avg" name="Trung bình" stroke="#f97316" strokeWidth={2.5} fill="url(#progressAvgGrad)" dot={{ r: 4, fill: "#f97316", strokeWidth: 0 }} isAnimationActive={false} />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
@@ -842,6 +843,7 @@ interface Props {
 export function ProgressTracking({ onNavigate }: Props) {
   const [timeRange, setTimeRange] = useState<TimeRange>("month");
   const [metricTab, setMetricTab] = useState<MetricTab>("overview");
+  const [isTabPending, startTabTransition] = useTransition();
   const [overview, setOverview] = useState<ProgressOverview | null>(null);
   const [bodyMetrics, setBodyMetrics] = useState<BodyMetricChartRow[]>(BODY_METRICS_HISTORY);
   const [exerciseProgress, setExerciseProgress] = useState<ExerciseChartItem[]>(EXERCISE_PROGRESS);
@@ -939,20 +941,41 @@ export function ProgressTracking({ onNavigate }: Props) {
     }
   };
 
-  const timeRanges: { id: TimeRange; label: string }[] = [
+  const timeRanges: { id: TimeRange; label: string }[] = useMemo(() => [
     { id: "week", label: "Tuần" },
     { id: "month", label: "Tháng" },
     { id: "3months", label: "3 tháng" },
     { id: "year", label: "Năm" },
-  ];
+  ], []);
 
-  const metricTabs: { id: MetricTab; label: string; icon: React.ElementType }[] = [
+  const metricTabs: { id: MetricTab; label: string; icon: React.ElementType }[] = useMemo(() => [
     { id: "overview", label: "Tổng quan", icon: BarChart2 },
     { id: "body", label: "Cơ thể", icon: Heart },
     { id: "exercise", label: "Bài tập", icon: Dumbbell },
     { id: "ai", label: "AI Score", icon: Brain },
-  ];
+  ], []);
   const reviewedSubmissionCount = aiScoreBreakdown.length;
+
+  const tabContent = useMemo(() => {
+    if (metricTab === "overview") {
+      return (
+        <div className="space-y-6">
+          <TrainingChart timeRange={timeRange} overview={overview} />
+          <HeatmapSection heatmap={heatmap} streakDays={overview?.streakDays ?? 0} />
+          <AchievementsSection achievements={achievements} />
+        </div>
+      );
+    }
+
+    if (metricTab === "body") return <BodyMetricsSection data={bodyMetrics} />;
+    if (metricTab === "exercise") return <ExerciseProgressSection data={exerciseProgress} />;
+    return (
+      <div className="space-y-5">
+        <AIScoreSection trend={aiScoreTrend} breakdown={aiScoreBreakdown} />
+        <SubmissionReviewsSection submissions={mySubmissions} />
+      </div>
+    );
+  }, [achievements, aiScoreBreakdown, aiScoreTrend, bodyMetrics, exerciseProgress, heatmap, metricTab, mySubmissions, overview, timeRange]);
 
   return (
     <div className="space-y-5">
@@ -970,7 +993,7 @@ export function ProgressTracking({ onNavigate }: Props) {
           {metricTabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setMetricTab(tab.id)}
+              onClick={() => startTabTransition(() => setMetricTab(tab.id))}
               className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg transition-all ${
                 metricTab === tab.id
                   ? "bg-white text-gray-900 shadow-sm"
@@ -989,7 +1012,7 @@ export function ProgressTracking({ onNavigate }: Props) {
             {timeRanges.map((tr) => (
               <button
                 key={tr.id}
-                onClick={() => setTimeRange(tr.id)}
+                onClick={() => startTabTransition(() => setTimeRange(tr.id))}
                 className={`px-3 py-1.5 rounded-lg transition-all ${
                   timeRange === tr.id
                     ? "bg-white text-gray-900 shadow-sm"
@@ -1053,23 +1076,9 @@ export function ProgressTracking({ onNavigate }: Props) {
         </div>
       )}
 
-      {/* Tab content */}
-      {metricTab === "overview" && (
-        <div className="space-y-6">
-          <TrainingChart timeRange={timeRange} overview={overview} />
-          <HeatmapSection heatmap={heatmap} streakDays={overview?.streakDays ?? 0} />
-          <AchievementsSection achievements={achievements} />
-        </div>
-      )}
-
-      {metricTab === "body" && <BodyMetricsSection data={bodyMetrics} />}
-      {metricTab === "exercise" && <ExerciseProgressSection data={exerciseProgress} />}
-      {metricTab === "ai" && (
-        <div className="space-y-5">
-          <AIScoreSection trend={aiScoreTrend} breakdown={aiScoreBreakdown} />
-          <SubmissionReviewsSection submissions={mySubmissions} />
-        </div>
-      )}
+      <div className={`transition-opacity duration-150 ${isTabPending ? "opacity-70" : "opacity-100"}`}>
+        {tabContent}
+      </div>
     </div>
   );
 }
