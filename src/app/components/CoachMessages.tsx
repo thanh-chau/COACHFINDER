@@ -97,6 +97,10 @@ function getTargetParticipantId(target: ChatTarget | null) {
   return Number.isFinite(id) ? id : undefined;
 }
 
+function canCreateTargetConversation(target: ChatTarget | null) {
+  return !!target && (getTargetParticipantId(target) !== undefined || Number.isFinite(target.coachProfileId));
+}
+
 function matchesTarget(conversation: ApiConversation, target: ChatTarget | null) {
   if (!target) return false;
   const participantId = getTargetParticipantId(target);
@@ -294,8 +298,11 @@ export function CoachMessages({ targetUsername }: { targetUsername?: string | nu
 
     async function loadConversations() {
       let items = await getConversations();
-      if (target && !items.some(item => matchesTarget(item, target)) && targetParticipantId) {
-        const created = await createConversation(targetParticipantId);
+      if (target && !items.some(item => matchesTarget(item, target)) && canCreateTargetConversation(target)) {
+        const created = await createConversation({
+          participantId: targetParticipantId,
+          coachProfileId: target.coachProfileId,
+        });
         items = [created, ...items.filter(item => item.id !== created.id)];
       }
       if (!mounted) return;

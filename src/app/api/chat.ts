@@ -1,14 +1,20 @@
-import type { ChatMessage, Conversation, PageResponse } from "../types/chat";
+import type { ChatMessage, ChatTarget, Conversation, PageResponse } from "../types/chat";
 import { apiRequest } from "./client";
 
 export function getConversations() {
   return apiRequest<Conversation[]>("/api/v1/chat/conversations");
 }
 
-export function createConversation(participantId: number) {
+export function createConversation(target: number | Pick<ChatTarget, "participantId" | "userId" | "id" | "coachProfileId">) {
+  const body = typeof target === "number"
+    ? { participantId: target }
+    : {
+        participantId: target.participantId ?? target.userId ?? undefined,
+        coachProfileId: target.coachProfileId,
+      };
   return apiRequest<Conversation>("/api/v1/chat/conversations", {
     method: "POST",
-    body: JSON.stringify({ participantId }),
+    body: JSON.stringify(body),
   });
 }
 

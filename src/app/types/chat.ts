@@ -38,6 +38,7 @@ export interface ChatTarget {
   id?: number;
   userId?: number;
   participantId?: number;
+  coachProfileId?: number;
   name?: string;
   username?: string;
   avatar?: string | null;

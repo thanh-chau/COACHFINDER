@@ -389,7 +389,7 @@ function CoachDetailModal({ coachId, onClose, onNavigate }: { coachId: number; o
             </div>
 
             <div className="border-t border-gray-100 px-6 py-4 flex gap-3">
-              <button type="button" onClick={() => onNavigate?.("msg", JSON.stringify({ participantId: coach.userId, name: coach.fullName, avatar: coach.avatar }))} className="flex-1 rounded-xl border border-gray-200 py-3 text-gray-700 flex items-center justify-center gap-2" style={{ fontWeight: 600, fontSize: "0.86rem" }}>
+              <button type="button" onClick={() => onNavigate?.("msg", JSON.stringify({ participantId: coach.userId, coachProfileId: coach.id, name: coach.fullName, avatar: coach.avatar }))} className="flex-1 rounded-xl border border-gray-200 py-3 text-gray-700 flex items-center justify-center gap-2" style={{ fontWeight: 600, fontSize: "0.86rem" }}>
                 <MessageCircle className="w-4 h-4" /> Nhắn tin
               </button>
               <button type="button" onClick={() => setBookingOpen(true)} className="flex-1 rounded-xl bg-orange-500 py-3 text-white hover:bg-orange-600 transition-colors flex items-center justify-center gap-2" style={{ fontWeight: 700, fontSize: "0.86rem" }}>
