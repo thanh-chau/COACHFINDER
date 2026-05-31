@@ -8,13 +8,14 @@ import {
   Zap,
 } from "lucide-react";
 import {
+  createConversation,
   getConversationMessages,
   getConversations,
   markConversationRead,
   sendConversationMessage,
 } from "../api/chat";
 import { useChatWebSocket } from "../api/websocket";
-import type { ChatMessage as ApiChatMessage, Conversation as ApiConversation } from "../types/chat";
+import type { ChatMessage as ApiChatMessage, ChatTarget, Conversation as ApiConversation } from "../types/chat";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type MsgStatus  = "sent"|"delivered"|"read";
@@ -81,6 +82,30 @@ function mapApiConversation(conversation: ApiConversation): Conversation {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+function parseChatTarget(raw?: string | null): ChatTarget | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as ChatTarget | string;
+    return typeof parsed === "string" ? { name: parsed } : parsed;
+  } catch {
+    return { name: raw };
+  }
+}
+
+function getTargetParticipantId(target: ChatTarget | null) {
+  const id = target?.participantId ?? target?.userId ?? target?.id;
+  return Number.isFinite(id) ? id : undefined;
+}
+
+function matchesTarget(conversation: ApiConversation, target: ChatTarget | null) {
+  if (!target) return false;
+  const participantId = getTargetParticipantId(target);
+  if (participantId && conversation.participantId === participantId) return true;
+  const targetName = (target.name || target.username || "").trim().toLocaleLowerCase();
+  return !!targetName && [conversation.participantFullName, conversation.participantUsername]
+    .some(value => value?.trim().toLocaleLowerCase() === targetName);
+}
+
 const STATUS_DOT:Record<ConvStatus,string> = {
   online:"bg-emerald-400", offline:"bg-gray-300", away:"bg-amber-400"
 };
@@ -263,40 +288,31 @@ export function CoachMessages({ targetUsername }: { targetUsername?: string | nu
 
   useEffect(() => {
     let mounted = true;
+    const target = parseChatTarget(targetUsername);
+    const targetParticipantId = getTargetParticipantId(target);
     setLoading(true);
-    getConversations()
-      .then((items) => {
-        if (!mounted) return;
-        let mapped = items.map(mapApiConversation);
-        let initialId = mapped.length > 0 ? String(mapped[0].id) : "";
-        if (targetUsername) {
-          const found = mapped.find(c => c.name === targetUsername);
-          if (found) {
-             initialId = found.id;
-          } else {
-             const mockConv: Conversation = {
-               id: "new_conv_" + Date.now(),
-               name: targetUsername,
-               avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(targetUsername)}&background=3b82f6&color=ffffff`,
-               sport: "Học viên mới",
-               status: "online",
-               lastMsg: "Bắt đầu cuộc trò chuyện...",
-               lastTime: "Bây giờ",
-               unread: 0,
-               pinned: false,
-               messages: [],
-               sessions: 0,
-               progress: 0,
-               joined: "Hôm nay"
-             };
-             mapped.unshift(mockConv);
-             initialId = mockConv.id;
-          }
-          setShowMobile("chat");
-        }
-        setConvs(mapped);
-        if (initialId) setActiveId(initialId);
-      })
+
+    async function loadConversations() {
+      let items = await getConversations();
+      if (target && !items.some(item => matchesTarget(item, target)) && targetParticipantId) {
+        const created = await createConversation(targetParticipantId);
+        items = [created, ...items.filter(item => item.id !== created.id)];
+      }
+      if (!mounted) return;
+
+      const mapped = items.map(mapApiConversation);
+      let initialId = mapped.length > 0 ? String(mapped[0].id) : "";
+      if (target) {
+        const foundApi = items.find(item => matchesTarget(item, target));
+        const found = foundApi ? mapped.find(c => c.id === String(foundApi.id)) : undefined;
+        if (found) initialId = found.id;
+        setShowMobile("chat");
+      }
+      setConvs(mapped);
+      if (initialId) setActiveId(initialId);
+    }
+
+    loadConversations()
       .catch(() => {})
       .finally(() => {
         if (mounted) setLoading(false);
@@ -304,35 +320,6 @@ export function CoachMessages({ targetUsername }: { targetUsername?: string | nu
     return () => {
       mounted = false;
     };
-  }, []);
-
-  useEffect(() => {
-    if (targetUsername && convs.length > 0) {
-      const found = convs.find(c => c.name === targetUsername);
-      if (found) {
-        setActiveId(found.id);
-        setShowMobile("chat");
-      } else if (!convs.some(c => String(c.id).startsWith("new_conv_") && c.name === targetUsername)) {
-         const mockConv: Conversation = {
-           id: "new_conv_" + Date.now(),
-           name: targetUsername,
-           avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(targetUsername)}&background=3b82f6&color=ffffff`,
-           sport: "Học viên mới",
-           status: "online",
-           lastMsg: "Bắt đầu cuộc trò chuyện...",
-           lastTime: "Bây giờ",
-           unread: 0,
-           pinned: false,
-           messages: [],
-           sessions: 0,
-           progress: 0,
-           joined: "Hôm nay"
-         };
-         setConvs(prev => [mockConv, ...prev]);
-         setActiveId(mockConv.id);
-         setShowMobile("chat");
-      }
-    }
   }, [targetUsername]);
 
   useEffect(() => {
@@ -368,33 +355,22 @@ export function CoachMessages({ targetUsername }: { targetUsername?: string | nu
 
   const sendMsg = async () => {
     const t = text.trim();
-    if(!t) return;
+    if (!t || !/^\d+$/.test(activeId)) return;
 
-    if (/^\d+$/.test(activeId)) {
-      try {
-        const sent = await sendConversationMessage(Number(activeId), t);
-        setConvs(prev=>prev.map(c=>
-          c.id===activeId ? {...c, messages:[...c.messages,mapApiMessage(sent)], lastMsg:t, lastTime:"Vừa xong"} : c
-        ));
-        setText("");
-        setShowQuick(false);
-        return;
-      } catch {
-        // Fall through to local optimistic message.
-      }
-    }
-
-    const newMsg:Message = {
-      id:"m"+Date.now(), from:"coach", text:t,
-      time:new Date().toLocaleTimeString("vi",{hour:"2-digit",minute:"2-digit"}),
-      status:"sent", type:"text",
-    };
-    setConvs(prev=>prev.map(c=>
-      c.id===activeId ? {...c, messages:[...c.messages,newMsg], lastMsg:t, lastTime:"Vừa xong"} : c
-    ));
-    setText("");
-    setShowQuick(false);
-    if (usingApi) return;
+    try {
+      const sent = await sendConversationMessage(Number(activeId), t);
+      const mapped = mapApiMessage(sent);
+      setConvs(prev=>prev.map(c=>
+        c.id===activeId ? {
+          ...c,
+          messages: c.messages.some(message => message.id === mapped.id) ? c.messages : [...c.messages, mapped],
+          lastMsg:t,
+          lastTime:"Vừa xong",
+        } : c
+      ));
+      setText("");
+      setShowQuick(false);
+    } catch {}
   };
   return (
     <div className="flex flex-col" style={{height:"calc(100vh - 130px)"}}>

@@ -13,6 +13,7 @@ export interface Category {
 
 export interface Coach {
   id: number;
+  userId?: number;
   fullName: string;
   avatar?: string;
   category?: string;

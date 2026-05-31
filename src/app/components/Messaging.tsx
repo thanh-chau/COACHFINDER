@@ -4,13 +4,14 @@ import {
   Lock, Check, CheckCheck, ArrowLeft, Info, X
 } from "lucide-react";
 import {
+  createConversation,
   getConversationMessages,
   getConversations,
   markConversationRead,
   sendConversationMessage,
 } from "../api/chat";
 import { chatWebSocketService, useChatWebSocket } from "../api/websocket";
-import type { ChatMessage as ApiChatMessage, Conversation as ApiConversation } from "../types/chat";
+import type { ChatMessage as ApiChatMessage, ChatTarget, Conversation as ApiConversation } from "../types/chat";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Message {
@@ -83,6 +84,30 @@ function mapApiConversation(conversation: ApiConversation): Conversation {
     messages: [],
     subscribed: true,
   };
+}
+
+function parseChatTarget(raw?: string | null): ChatTarget | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as ChatTarget | string;
+    return typeof parsed === "string" ? { name: parsed } : parsed;
+  } catch {
+    return { name: raw };
+  }
+}
+
+function getTargetParticipantId(target: ChatTarget | null) {
+  const id = target?.participantId ?? target?.userId ?? target?.id;
+  return Number.isFinite(id) ? id : undefined;
+}
+
+function matchesTarget(conversation: ApiConversation, target: ChatTarget | null) {
+  if (!target) return false;
+  const participantId = getTargetParticipantId(target);
+  if (participantId && conversation.participantId === participantId) return true;
+  const targetName = (target.name || target.username || "").trim().toLocaleLowerCase();
+  return !!targetName && [conversation.participantFullName, conversation.participantUsername]
+    .some(value => value?.trim().toLocaleLowerCase() === targetName);
 }
 
 function MessageBubble({ msg, isMe }: { msg: Message; isMe: boolean }) {
@@ -166,56 +191,31 @@ export function Messaging({ userPlan = "free", onNavigate, targetUsername }: { u
 
   useEffect(() => {
     let mounted = true;
-    getConversations().then((items) => {
+    const target = parseChatTarget(targetUsername);
+    const targetParticipantId = getTargetParticipantId(target);
+
+    async function loadConversations() {
+      let items = await getConversations();
+      if (target && !items.some(item => matchesTarget(item, target)) && targetParticipantId) {
+        const created = await createConversation(targetParticipantId);
+        items = [created, ...items.filter(item => item.id !== created.id)];
+      }
       if (!mounted) return;
-      let mapped = items.map(mapApiConversation);
+
+      const mapped = items.map(mapApiConversation);
       let initialId = mapped.length > 0 ? String(mapped[0].id) : "";
-      if (targetUsername) {
-        const found = mapped.find(c => c.coach.name === targetUsername);
-        if (found) {
-          initialId = found.id;
-        } else {
-          const mockConv: Conversation = {
-            id: "new_conv_" + Date.now(),
-            coach: { name: targetUsername, avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(targetUsername)}&background=ffedd5&color=f97316`, sport: "Huấn luyện viên", rating: 5, sessions: 0, online: true },
-            lastMessage: "Bắt đầu trò chuyện...",
-            lastTime: "Bây giờ",
-            unread: 0,
-            messages: [],
-            subscribed: true
-          };
-          mapped.unshift(mockConv);
-          initialId = mockConv.id;
-        }
+      if (target) {
+        const foundApi = items.find(item => matchesTarget(item, target));
+        const found = foundApi ? mapped.find(c => c.id === String(foundApi.id)) : undefined;
+        if (found) initialId = found.id;
         setShowMobileList(false);
       }
       setConversations(mapped);
       if (initialId) setActiveId(initialId);
-    }).catch(() => {});
-    return () => { mounted = false; };
-  }, []);
-
-  useEffect(() => {
-    if (targetUsername && conversations.length > 0) {
-      const found = conversations.find(c => c.coach.name === targetUsername);
-      if (found) {
-        setActiveId(found.id);
-        setShowMobileList(false);
-      } else if (!conversations.some(c => String(c.id).startsWith("new_conv_") && c.coach.name === targetUsername)) {
-        const mockConv: Conversation = {
-            id: "new_conv_" + Date.now(),
-            coach: { name: targetUsername, avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(targetUsername)}&background=ffedd5&color=f97316`, sport: "Huấn luyện viên", rating: 5, sessions: 0, online: true },
-            lastMessage: "Bắt đầu trò chuyện...",
-            lastTime: "Bây giờ",
-            unread: 0,
-            messages: [],
-            subscribed: true
-        };
-        setConversations(prev => [mockConv, ...prev]);
-        setActiveId(mockConv.id);
-        setShowMobileList(false);
-      }
     }
+
+    loadConversations().catch(() => {});
+    return () => { mounted = false; };
   }, [targetUsername]);
 
   useEffect(() => {
@@ -236,20 +236,20 @@ export function Messaging({ userPlan = "free", onNavigate, targetUsername }: { u
 
   const handleSend = async (text?: string) => {
     const msg = (text ?? inputText).trim();
-    if (!msg || !activeConv?.subscribed) return;
-    if (/^\d+$/.test(activeId)) {
-      try {
-        const sent = await sendConversationMessage(Number(activeId), msg);
-        setConversations(prev => prev.map(c => c.id === activeId ? { ...c, messages: [...c.messages, mapApiMessage(sent)], lastMessage: msg, lastTime: "Vừa xong" } : c));
-        setInputText("");
-        setShowQuickReplies(false);
-        return;
-      } catch {}
-    }
-    const newMsg: Message = { id: `m${Date.now()}`, senderId: "learner", text: msg, time: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }), status: "sent" };
-    setConversations(prev => prev.map(c => c.id === activeId ? { ...c, messages: [...c.messages, newMsg], lastMessage: msg, lastTime: "Vừa xong" } : c));
-    setInputText("");
-    setShowQuickReplies(false);
+    if (!msg || !activeConv?.subscribed || !/^\d+$/.test(activeId)) return;
+
+    try {
+      const sent = await sendConversationMessage(Number(activeId), msg);
+      const mapped = mapApiMessage(sent);
+      setConversations(prev => prev.map(c => c.id === activeId ? {
+        ...c,
+        messages: c.messages.some(message => message.id === mapped.id) ? c.messages : [...c.messages, mapped],
+        lastMessage: msg,
+        lastTime: "Vừa xong",
+      } : c));
+      setInputText("");
+      setShowQuickReplies(false);
+    } catch {}
   };
 
   const handleVideoCall = () => {

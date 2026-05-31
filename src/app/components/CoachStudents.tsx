@@ -66,6 +66,7 @@ interface CoachNote {
 
 interface Student {
   id: string;
+  userId?: number;
   name: string;
   gender?: "male" | "female";
   age?: number;
@@ -178,6 +179,7 @@ function buildStudents(trainees: Trainee[], bookings: BookingListItem[]) {
 
     return {
       id: String(trainee.id),
+      userId: trainee.userId,
       name: trainee.fullName,
       age: trainee.age,
       avatar: trainee.avatar,
@@ -299,6 +301,7 @@ function buildWorkspaceStudents(
 
     return {
       id: String(summary.traineeId),
+      userId: summary.userId,
       name: summary.fullName,
       avatar: summary.avatar || AVT[index % AVT.length],
       plan: (summary.plan as Student["plan"]) || "Chưa có dữ liệu",
@@ -431,7 +434,7 @@ function StudentDetail({
 }: {
   s: Student;
   onClose: () => void;
-  onNavigate?: (v: string) => void;
+  onNavigate?: (v: string, payload?: string) => void;
   onStudentChange?: (student: Student) => void;
 }) {
   const [tab, setTab] = useState<DetailTab>("overview");
@@ -568,7 +571,7 @@ function StudentDetail({
         {/* Quick actions */}
         <div className="flex gap-2">
           {[
-            { icon: MessageCircle, label: "Nhắn tin", action: () => onNavigate?.("msg", s.name) },
+            { icon: MessageCircle, label: "Nhắn tin", action: () => onNavigate?.("msg", JSON.stringify({ participantId: s.userId, name: s.name, avatar: s.avatar })) },
             { icon: Calendar,      label: "Đặt lịch", action: () => {} },
             { icon: Phone,         label: "Gọi",      action: () => {} },
             { icon: Video,         label: "Video",     action: () => {} },
@@ -819,7 +822,7 @@ function DollarSign2({ className }: { className?: string }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 interface CoachStudentsProps {
-  onNavigate?: (view: string) => void;
+  onNavigate?: (view: string, payload?: string) => void;
 }
 
 type SortKey = "name" | "sessions" | "aiScore" | "revenue" | "lastSession";

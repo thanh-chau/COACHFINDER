@@ -1,5 +1,6 @@
 export interface Trainee {
   id: number;
+  userId?: number;
   fullName: string;
   avatar?: string;
   goal?: string;

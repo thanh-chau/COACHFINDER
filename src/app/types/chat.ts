@@ -34,3 +34,11 @@ export interface PageResponse<T> {
   last: boolean;
 }
 
+export interface ChatTarget {
+  id?: number;
+  userId?: number;
+  participantId?: number;
+  name?: string;
+  username?: string;
+  avatar?: string | null;
+}
