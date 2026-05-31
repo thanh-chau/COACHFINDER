@@ -257,6 +257,25 @@ function statusClass(status?: string | null, reviewed = false) {
   return "bg-blue-50 text-blue-600 border-blue-100";
 }
 
+function emptyTrainingRows(timeRange: TimeRange) {
+  if (timeRange === "week") {
+    return DAY_LABELS.map((day) => ({
+      day,
+      hours: 0,
+      calories: 0,
+      caloriesScaled: 0,
+    }));
+  }
+
+  const count = timeRange === "3months" ? 3 : 12;
+  return Array.from({ length: count }, (_, index) => ({
+    label: `T${index + 1}`,
+    hours: 0,
+    calories: 0,
+    caloriesScaled: 0,
+  }));
+}
+
 function TrendBadge({ value, suffix = "%" }: { value: number; suffix?: string }) {
   if (value === 0) return (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-500" style={{ fontSize: "0.72rem", fontWeight: 600 }}>
@@ -395,12 +414,13 @@ function TrainingChart({ timeRange, overview }: { timeRange: TimeRange; overview
   const apiData = timeRange === "week" ? (overview?.weeklySummary ?? WEEKLY_DATA)
     : timeRange === "3months" ? (overview?.quarterlySummary ?? QUARTERLY_DATA)
     : (overview?.monthlySummary ?? MONTHLY_DATA);
-  const data = (Array.isArray(apiData) ? apiData : []).map((row) => ({
+  const apiRows = (Array.isArray(apiData) ? apiData : []).map((row) => ({
     ...row,
     hours: numberValue((row as Record<string, unknown>).hours),
     calories: numberValue((row as Record<string, unknown>).calories),
     caloriesScaled: Number((numberValue((row as Record<string, unknown>).calories) / 100).toFixed(1)),
   }));
+  const data = apiRows.length ? apiRows : emptyTrainingRows(timeRange);
 
   const dataKey = timeRange === "week" ? "day" : "label";
   const summaryItems = [
@@ -433,7 +453,7 @@ function TrainingChart({ timeRange, overview }: { timeRange: TimeRange; overview
         <BarChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }} barGap={4}>
           <CartesianGrid key="grid" strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
           <XAxis key="xaxis" dataKey={dataKey} tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-          <YAxis key="yaxis" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+          <YAxis key="yaxis" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} domain={[0, "auto"]} />
           <Tooltip
             key="tooltip"
             contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 12 }}
