@@ -13,7 +13,7 @@ interface ApiRequestOptions extends RequestInit {
   allowEmptyData?: boolean;
 }
 
-const API_BASE_URL = "https://www.minhthien.io.vn";
+const API_BASE_URL = "https://be.minhthien.io.vn";
 
 function getRequestMethod(options: RequestInit) {
   return (options.method || "GET").toUpperCase();
