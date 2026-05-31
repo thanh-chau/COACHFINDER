@@ -7,7 +7,6 @@ import {
 } from "lucide-react";
 import {
   ResponsiveContainer, ComposedChart, AreaChart, Area, BarChart, Bar, LineChart, Line,
-  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   CartesianGrid, XAxis, YAxis, Tooltip, Cell
 } from "recharts";
 import {
@@ -19,12 +18,14 @@ import {
   getProgressHeatmap,
   getProgressOverview,
 } from "../api/progress";
+import { getMyVideoSubmissions } from "../api/videos";
 import type {
   Achievement,
   BodyMetricEntry,
   ExerciseProgressEntry,
   ProgressOverview,
 } from "../types/progress";
+import type { CoachVideoSubmission } from "../types/video";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type TimeRange = "week" | "month" | "3months" | "year";
@@ -58,14 +59,24 @@ type AchievementCard = {
   unlocked: boolean;
 };
 
+type AIScoreRow = {
+  month: string;
+  avg: number;
+};
+
+type AIScoreBreakdown = {
+  name: string;
+  score: number;
+  prev: number;
+  color: string;
+};
+
 // ─── Mock Data ───────────────────────────────────────────────────────────────
 const WEEKLY_DATA: any[] = [];
 const MONTHLY_DATA: any[] = [];
 const QUARTERLY_DATA: any[] = [];
 const BODY_METRICS_HISTORY: any[] = [];
 const EXERCISE_PROGRESS: any[] = [];
-const AI_SCORE_HISTORY: any[] = [];
-const RADAR_DATA: any[] = [];
 const ACHIEVEMENTS: AchievementCard[] = [];
 const WEEKLY_HEATMAP: number[][] = [];
 const DAY_LABELS = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
@@ -149,6 +160,32 @@ function mapAchievements(items: Achievement[]) {
     date: new Date(item.achievedAt).toLocaleDateString("vi-VN"),
     unlocked: true,
   }));
+}
+
+function mapAIScoreRows(items: CoachVideoSubmission[]): AIScoreRow[] {
+  const scored = items.filter(item => item.totalScore != null);
+  const grouped = scored.reduce<Record<string, number[]>>((acc, item) => {
+    const key = monthLabel(item.submittedAt);
+    acc[key] = [...(acc[key] ?? []), (item.totalScore ?? 0) * 10];
+    return acc;
+  }, {});
+  return Object.entries(grouped).map(([month, scores]) => ({
+    month,
+    avg: Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length),
+  }));
+}
+
+function mapAIScoreBreakdown(items: CoachVideoSubmission[]): AIScoreBreakdown[] {
+  const colors = ["#10b981", "#3b82f6", "#f59e0b", "#8b5cf6"];
+  return items
+    .filter(item => item.totalScore != null)
+    .slice(0, 4)
+    .map((item, index) => ({
+      name: item.videoTitle || `Bài nộp ${item.id}`,
+      score: Math.round((item.totalScore ?? 0) * 10),
+      prev: Math.round((item.totalScore ?? 0) * 10),
+      color: colors[index % colors.length],
+    }));
 }
 
 function TrendBadge({ value, suffix = "%" }: { value: number; suffix?: string }) {
@@ -298,6 +335,14 @@ function TrainingChart({ timeRange, overview }: { timeRange: TimeRange; overview
 }
 
 function BodyMetricsSection({ data = BODY_METRICS_HISTORY }: { data?: BodyMetricChartRow[] }) {
+  if (!data.length) {
+    return (
+      <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm text-center text-gray-500" style={{ fontSize: "0.86rem", fontWeight: 600 }}>
+        Chưa có dữ liệu chỉ số cơ thể từ API.
+      </div>
+    );
+  }
+
   const latest = data[data.length - 1] ?? BODY_METRICS_HISTORY[BODY_METRICS_HISTORY.length - 1];
   const prev = data[data.length - 2] ?? latest;
 
@@ -378,6 +423,15 @@ function BodyMetricsSection({ data = BODY_METRICS_HISTORY }: { data?: BodyMetric
 
 function ExerciseProgressSection({ data = EXERCISE_PROGRESS }: { data?: ExerciseChartItem[] }) {
   const [selected, setSelected] = useState(data[0]?.id ?? "squat");
+
+  if (!data.length) {
+    return (
+      <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm text-center text-gray-500" style={{ fontSize: "0.86rem", fontWeight: 600 }}>
+        Chưa có dữ liệu tiến độ bài tập từ API.
+      </div>
+    );
+  }
+
   const selectedEx = data.find((e) => e.id === selected) ?? data[0] ?? EXERCISE_PROGRESS[0];
 
   // combined chart data
@@ -475,23 +529,30 @@ function ExerciseProgressSection({ data = EXERCISE_PROGRESS }: { data?: Exercise
   );
 }
 
-function AIScoreSection() {
+function AIScoreSection({ trend, breakdown }: { trend: AIScoreRow[]; breakdown: AIScoreBreakdown[] }) {
+  if (!trend.length && !breakdown.length) {
+    return (
+      <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm text-center text-gray-500" style={{ fontSize: "0.86rem", fontWeight: 600 }}>
+        Chưa có kết quả nhận xét từ coach. Khi coach chấm bài nộp video, điểm sẽ hiển thị tại đây.
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
-      {/* AI Score trend */}
       <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div>
             <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900">Xu hướng AI Score</div>
-            <div style={{ fontSize: "0.78rem" }} className="text-gray-400">Điểm kỹ thuật qua từng tháng</div>
+            <div style={{ fontSize: "0.78rem" }} className="text-gray-400">Dữ liệu lấy từ bài nộp đã được coach nhận xét</div>
           </div>
           <div className="flex items-center gap-1.5 bg-purple-50 px-3 py-1.5 rounded-xl border border-purple-100">
             <Brain className="w-3.5 h-3.5 text-purple-500" />
-            <span style={{ fontSize: "0.78rem", fontWeight: 700 }} className="text-purple-600">AI Powered</span>
+            <span style={{ fontSize: "0.78rem", fontWeight: 700 }} className="text-purple-600">Coach Review</span>
           </div>
         </div>
         <ResponsiveContainer width="100%" height={240}>
-          <ComposedChart data={AI_SCORE_HISTORY} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
+          <ComposedChart data={trend} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
             <defs key="defs">
               <linearGradient id="progressAvgGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#f97316" stopOpacity={0.15} />
@@ -500,125 +561,32 @@ function AIScoreSection() {
             </defs>
             <CartesianGrid key="grid" strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
             <XAxis key="xaxis" dataKey="month" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-            <YAxis key="yaxis" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} domain={[50, 100]} />
+            <YAxis key="yaxis" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} domain={[0, 100]} />
             <Tooltip key="tooltip" contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 12 }} />
-            <Line key="line-squat" type="monotone" dataKey="squat" name="Squat" stroke="#10b981" strokeWidth={2} dot={{ r: 3, fill: "#10b981", strokeWidth: 0 }} />
-            <Line key="line-bench" type="monotone" dataKey="bench" name="Bench Press" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3, fill: "#3b82f6", strokeWidth: 0 }} />
-            <Line key="line-deadlift" type="monotone" dataKey="deadlift" name="Deadlift" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3, fill: "#f59e0b", strokeWidth: 0 }} />
             <Area key="area-avg" type="monotone" dataKey="avg" name="Trung bình" stroke="#f97316" strokeWidth={2.5} fill="url(#progressAvgGrad)" dot={{ r: 4, fill: "#f97316", strokeWidth: 0 }} />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-        {/* Radar chart */}
-        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-          <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900 mb-4">Biểu đồ năng lực</div>
-          <ResponsiveContainer width="100%" height={260}>
-            <RadarChart data={RADAR_DATA}>
-              <PolarGrid stroke="#e5e7eb" />
-              <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: "#6b7280" }} />
-              <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 10, fill: "#9ca3af" }} />
-              <Radar name="Năng lực" dataKey="value" stroke="#f97316" fill="#f97316" fillOpacity={0.2} strokeWidth={2} />
-            </RadarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Score breakdown */}
-        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-          <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900 mb-4">Chi tiết AI Score hiện tại</div>
-          <div className="space-y-4">
-            {[
-              { name: "Squat", score: 92, prev: 90, color: "#10b981", emoji: "🦵" },
-              { name: "Bench Press", score: 85, prev: 83, color: "#3b82f6", emoji: "💪" },
-              { name: "Deadlift", score: 82, prev: 78, color: "#f59e0b", emoji: "🏋️" },
-            ].map((s) => (
-              <div key={s.name}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="flex items-center gap-2">
-                    <span style={{ fontSize: "1rem" }}>{s.emoji}</span>
-                    <span style={{ fontWeight: 600, fontSize: "0.88rem" }} className="text-gray-900">{s.name}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span style={{ fontWeight: 800, fontSize: "1.05rem" }} className="text-gray-900">{s.score}</span>
-                    <span style={{ fontSize: "0.72rem" }} className="text-gray-400">/100</span>
-                    <TrendBadge value={s.score - s.prev} suffix="pt" />
-                  </div>
-                </div>
-                <div className="w-full bg-gray-100 rounded-full h-2.5">
-                  <div className="h-2.5 rounded-full transition-all duration-500" style={{ width: `${s.score}%`, backgroundColor: s.color }} />
+      <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+        <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900 mb-4">Kết quả bài nộp gần nhất</div>
+        <div className="space-y-4">
+          {breakdown.map((s) => (
+            <div key={s.name}>
+              <div className="flex items-center justify-between mb-1.5 gap-3">
+                <span style={{ fontWeight: 600, fontSize: "0.88rem" }} className="text-gray-900 truncate">{s.name}</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span style={{ fontWeight: 800, fontSize: "1.05rem" }} className="text-gray-900">{s.score}</span>
+                  <span style={{ fontSize: "0.72rem" }} className="text-gray-400">/100</span>
+                  <TrendBadge value={s.score - s.prev} suffix="pt" />
                 </div>
               </div>
-            ))}
-
-            <div className="mt-4 p-3.5 rounded-xl bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200">
-              <div className="flex items-center gap-2 mb-1">
-                <Trophy className="w-4 h-4 text-orange-500" />
-                <span style={{ fontWeight: 700, fontSize: "0.88rem" }} className="text-gray-900">Trung bình: 87/100</span>
-              </div>
-              <div style={{ fontSize: "0.78rem" }} className="text-gray-500">Top 15% học viên trên CoachFinder. Tăng 3 điểm so với tháng trước!</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AchievementsSection({ achievements = ACHIEVEMENTS }: { achievements?: AchievementCard[] }) {
-  const unlocked = achievements.filter((a) => a.unlocked);
-  const locked = achievements.filter((a) => !a.unlocked);
-
-  return (
-    <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Award className="w-5 h-5 text-amber-500" />
-          <div>
-            <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900">Thành tích</div>
-            <div style={{ fontSize: "0.78rem" }} className="text-gray-400">{unlocked.length}/{achievements.length} đã mở khóa</div>
-          </div>
-        </div>
-        {/* progress bar */}
-        <div className="flex items-center gap-2">
-          <div className="w-24 bg-gray-100 rounded-full h-2">
-            <div className="h-2 rounded-full bg-gradient-to-r from-amber-400 to-orange-500" style={{ width: `${(unlocked.length / Math.max(achievements.length, 1)) * 100}%` }} />
-          </div>
-          <span style={{ fontSize: "0.75rem", fontWeight: 700 }} className="text-amber-600">{Math.round((unlocked.length / Math.max(achievements.length, 1)) * 100)}%</span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        {unlocked.map((a) => (
-          <div key={a.id} className="p-3.5 rounded-xl bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200 hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-2.5 mb-2">
-              <span style={{ fontSize: "1.5rem" }}>{a.icon}</span>
-              <div className="min-w-0">
-                <div style={{ fontWeight: 700, fontSize: "0.85rem" }} className="text-gray-900 truncate">{a.title}</div>
-                <div style={{ fontSize: "0.72rem" }} className="text-gray-500 truncate">{a.desc}</div>
+              <div className="w-full bg-gray-100 rounded-full h-2.5">
+                <div className="h-2.5 rounded-full transition-all duration-500" style={{ width: String(s.score) + "%", backgroundColor: s.color }} />
               </div>
             </div>
-            <div className="flex items-center justify-between">
-              <span style={{ fontSize: "0.68rem" }} className="text-gray-400">{a.date}</span>
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-            </div>
-          </div>
-        ))}
-        {locked.map((a) => (
-          <div key={a.id} className="p-3.5 rounded-xl bg-gray-50 border border-gray-200 opacity-60">
-            <div className="flex items-center gap-2.5 mb-2">
-              <span style={{ fontSize: "1.5rem" }} className="grayscale">{a.icon}</span>
-              <div className="min-w-0">
-                <div style={{ fontWeight: 700, fontSize: "0.85rem" }} className="text-gray-500 truncate">{a.title}</div>
-                <div style={{ fontSize: "0.72rem" }} className="text-gray-400 truncate">{a.desc}</div>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span style={{ fontSize: "0.68rem" }} className="text-amber-500">{a.date}</span>
-              <Target className="w-4 h-4 text-gray-300" />
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -637,6 +605,8 @@ export function ProgressTracking({ onNavigate }: Props) {
   const [exerciseProgress, setExerciseProgress] = useState<ExerciseChartItem[]>(EXERCISE_PROGRESS);
   const [heatmap, setHeatmap] = useState<number[][]>(WEEKLY_HEATMAP);
   const [achievements, setAchievements] = useState<AchievementCard[]>(ACHIEVEMENTS);
+  const [aiScoreTrend, setAiScoreTrend] = useState<AIScoreRow[]>([]);
+  const [aiScoreBreakdown, setAiScoreBreakdown] = useState<AIScoreBreakdown[]>([]);
   const [apiError, setApiError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [savingProgress, setSavingProgress] = useState(false);
@@ -656,18 +626,21 @@ export function ProgressTracking({ onNavigate }: Props) {
 
   const loadProgress = async () => {
     try {
-      const [overviewData, bodyData, exerciseData, heatmapData, achievementData] = await Promise.all([
+      const [overviewData, bodyData, exerciseData, heatmapData, achievementData, submissionData] = await Promise.all([
         getProgressOverview(),
         getBodyMetrics(),
         getExerciseProgress(),
         getProgressHeatmap(),
         getAchievements(),
+        getMyVideoSubmissions(),
       ]);
       setOverview(overviewData);
       setBodyMetrics(mapBodyMetricRows(bodyData));
       setExerciseProgress(mapExerciseRows(exerciseData));
       setHeatmap(mapHeatmapRows(heatmapData));
       setAchievements(mapAchievements(achievementData));
+      setAiScoreTrend(mapAIScoreRows(submissionData));
+      setAiScoreBreakdown(mapAIScoreBreakdown(submissionData));
       setApiError(null);
     } catch (error) {
       setApiError(error instanceof Error ? error.message : "Không thể tải dữ liệu tiến độ.");
@@ -735,15 +708,16 @@ export function ProgressTracking({ onNavigate }: Props) {
     { id: "exercise", label: "Bài tập", icon: Dumbbell },
     { id: "ai", label: "AI Score", icon: Brain },
   ];
+  const reviewedSubmissionCount = aiScoreBreakdown.length;
 
   return (
     <div className="space-y-5">
       {/* Stats row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={CheckCircle2} label="Buổi đã tập" value={String(overview?.totalSessions ?? 24)} sub="Theo dữ liệu đặt lịch" trend={12} color="text-emerald-500" bg="bg-emerald-50" />
-        <StatCard icon={Clock} label="Tổng giờ tập" value={`${overview?.trainingHours ?? 48}h`} sub="Tổng thời lượng ước tính" trend={28} color="text-blue-500" bg="bg-blue-50" />
-        <StatCard icon={Flame} label="Calo tiêu thụ" value="14.4K" sub="kcal tháng này" trend={18} color="text-orange-500" bg="bg-orange-50" />
-        <StatCard icon={Trophy} label="AI Score TB" value={String(overview?.averageAiScore ?? 87)} sub={`${overview?.activeCoaches ?? 0} HLV đang hoạt động`} trend={4} color="text-purple-500" bg="bg-purple-50" />
+        <StatCard icon={CheckCircle2} label="Buổi đã tập" value={String(overview?.totalSessions ?? 0)} sub="Theo dữ liệu đặt lịch" color="text-emerald-500" bg="bg-emerald-50" />
+        <StatCard icon={Clock} label="Tổng giờ tập" value={`${overview?.trainingHours ?? 0}h`} sub="Tổng thời lượng ước tính" color="text-blue-500" bg="bg-blue-50" />
+        <StatCard icon={Flame} label="Bài đã nhận xét" value={String(reviewedSubmissionCount)} sub="Từ video bạn đã nộp" color="text-orange-500" bg="bg-orange-50" />
+        <StatCard icon={Trophy} label="AI Score TB" value={String(overview?.averageAiScore ?? 0)} sub={`${overview?.activeCoaches ?? 0} HLV đang hoạt động`} color="text-purple-500" bg="bg-purple-50" />
       </div>
 
       {/* Tab navigation */}
@@ -788,7 +762,7 @@ export function ProgressTracking({ onNavigate }: Props) {
 
       {apiError && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-700" style={{ fontSize: "0.82rem", fontWeight: 600 }}>
-          Đang hiển thị dữ liệu mẫu vì chưa tải được API tiến độ.
+          Không tải được API tiến độ: {apiError}
         </div>
       )}
 
@@ -846,7 +820,7 @@ export function ProgressTracking({ onNavigate }: Props) {
 
       {metricTab === "body" && <BodyMetricsSection data={bodyMetrics} />}
       {metricTab === "exercise" && <ExerciseProgressSection data={exerciseProgress} />}
-      {metricTab === "ai" && <AIScoreSection />}
+      {metricTab === "ai" && <AIScoreSection trend={aiScoreTrend} breakdown={aiScoreBreakdown} />}
     </div>
   );
 }

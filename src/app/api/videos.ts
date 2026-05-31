@@ -42,6 +42,20 @@ export function getSavedVideos() {
   return apiRequest<any>("/api/v1/videos/saved").then(res => res.data || res);
 }
 
+export function getMyVideoSubmissions() {
+  return apiRequest<CoachVideoSubmission[]>("/api/v1/videos/submissions/my");
+}
+
+export function submitVideoForReview(videoId: number, request: { file: File; note?: string }) {
+  const formData = new FormData();
+  formData.append("file", request.file);
+  if (request.note) formData.append("note", request.note);
+  return apiRequest<CoachVideoSubmission>(`/api/v1/videos/${videoId}/submissions`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
 export function updateCoachVideo(id: number, request: UpdateCoachVideoRequest) {
   return apiRequest<VideoItem>(`/api/v1/coach/videos/${id}`, {
     method: "PUT",
@@ -71,7 +85,7 @@ export function uploadCoachVideo(request: {
   formData.append("videoType", request.videoType);
   formData.append("file", request.file);
 
-  return rawApiRequest<VideoItem>("/api/v1/coach/videos/upload", {
+  return rawApiRequest<VideoItem>("/api/coach/videos/upload", {
     method: "POST",
     body: formData,
   });

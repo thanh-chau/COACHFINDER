@@ -43,15 +43,21 @@ export interface CoachVideoSubmission {
   videoUrl: string;
   note: string | null;
   status: string;
+  postureScore: number | null;
+  techniqueScore: number | null;
+  rhythmScore: number | null;
+  strengthScore: number | null;
   totalScore: number | null;
   feedback: string | null;
   submittedAt: string;
 }
 
 export interface ReviewCoachVideoSubmissionRequest {
-  totalScore: number;
+  postureScore: number;
+  techniqueScore: number;
+  rhythmScore: number;
+  strengthScore: number;
   feedback: string;
-  status?: "REVIEWED" | "APPROVED";
 }
 
 export interface AssignCoachVideoStudentsRequest {

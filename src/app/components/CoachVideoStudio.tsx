@@ -102,12 +102,12 @@ function mapSubmission(submission: CoachVideoSubmission): StudentSubmission {
     videoUrl: submission.videoUrl,
     duration: "00:00",
     uploadDate: new Date(submission.submittedAt).toLocaleDateString("vi-VN"),
-    status: submission.status === "REVIEWED" ? "reviewed" : submission.status === "APPROVED" ? "approved" : "pending",
+    status: submission.status === "PASSED" ? "approved" : submission.status === "FAILED" || submission.status === "REVIEWED" ? "reviewed" : "pending",
     scores: submission.totalScore == null ? undefined : {
-      posture: score,
-      technique: score,
-      rhythm: score,
-      power: score,
+      posture: submission.postureScore ?? score,
+      technique: submission.techniqueScore ?? score,
+      rhythm: submission.rhythmScore ?? score,
+      power: submission.strengthScore ?? score,
     },
     coachFeedback: submission.feedback || "",
     timestamps: [],
@@ -1057,7 +1057,7 @@ export function CoachVideoStudio() {
         format: nv.type === "360" ? "360" : "NORMAL",
         resolution: nv.resolution,
         tags: nv.tags,
-        videoType: nv.type === "360" ? "VIDEO_360" : "NORMAL",
+        videoType: nv.type === "360" ? "VR360" : "NORMAL",
         file: partial.file,
       });
       const mapped = mapUploadedVideo(uploaded);
@@ -1116,9 +1116,11 @@ export function CoachVideoStudio() {
     if (!Number.isFinite(numericId) || !scores) return;
     try {
       await reviewCoachSubmission(numericId, {
-        totalScore: Math.round(avgScore(scores)),
+        postureScore: Math.round(scores.posture),
+        techniqueScore: Math.round(scores.technique),
+        rhythmScore: Math.round(scores.rhythm),
+        strengthScore: Math.round(scores.power),
         feedback: fb,
-        status: "REVIEWED",
       });
     } catch {
       setVideos(previous);

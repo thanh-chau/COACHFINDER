@@ -1,13 +1,12 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
-  Search, Filter, Grid3X3, List, Play, Star, Eye, Clock,
-  Heart, Share2, Download, BookmarkPlus, ChevronRight,
-  Globe, Upload, X, ChevronLeft, Badge, Flame, Trophy,
-  Users, Zap, CheckCircle, MoreHorizontal, ThumbsUp,
-  Volume2, VolumeX, Maximize2, RotateCcw, Compass
+  Search, Grid3X3, List, Play, Star, Eye, Clock,
+  Heart, Share2, Download, BookmarkPlus,
+  Globe, Upload, X, Flame,
+  CheckCircle
 } from "lucide-react";
 import { Video360Player } from "./Video360Player";
-import { getSavedVideos, getVideo, getVideos, likeVideo, recordVideoPlaybackEvent, saveVideo, unlikeVideo, unsaveVideo } from "../api/videos";
+import { getSavedVideos, getVideo, getVideos, likeVideo, recordVideoPlaybackEvent, saveVideo, submitVideoForReview, unlikeVideo, unsaveVideo } from "../api/videos";
 import type { VideoItem as ApiVideoItem } from "../types/video";
 
 // ─── Images ──────────────────────────────────────────────────────────────────
@@ -29,12 +28,12 @@ const IMG = {
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 const CATEGORIES = [
-  { id: "all",       label: "Tất cả",    emoji: "🎬", count: 128 },
-  { id: "strength",  label: "Thể hình",  emoji: "💪", count: 34  },
-  { id: "cardio",    label: "Cardio",    emoji: "🏃", count: 22  },
-  { id: "martial",   label: "Võ thuật",  emoji: "🥊", count: 18  },
-  { id: "yoga",      label: "Yoga",      emoji: "🧘", count: 15  },
-  { id: "sports",    label: "Thể thao",  emoji: "⚽", count: 39  },
+  { id: "all",       label: "Tất cả",    emoji: "🎬" },
+  { id: "strength",  label: "Thể hình",  emoji: "💪" },
+  { id: "cardio",    label: "Cardio",    emoji: "🏃" },
+  { id: "martial",   label: "Võ thuật",  emoji: "🥊" },
+  { id: "yoga",      label: "Yoga",      emoji: "🧘" },
+  { id: "sports",    label: "Thể thao",  emoji: "⚽" },
 ];
 
 const SORT_OPTIONS = ["Mới nhất", "Xem nhiều nhất", "Đánh giá cao", "Thời lượng ngắn"];
@@ -52,6 +51,7 @@ interface VideoItem {
   videoUrl: string;
   duration: string;
   views: string;
+  viewCount: number;
   likes: number;
   rating: number;
   level: "Cơ bản" | "Trung cấp" | "Nâng cao";
@@ -99,10 +99,11 @@ function mapApiVideo(video: ApiVideoItem, index: number): VideoItem {
     videoUrl: video.videoUrl,
     duration: formatDuration(video.duration),
     views: formatViews(video.viewCount),
+    viewCount: video.viewCount,
     likes: video.likes,
-    rating: 4.8,
+    rating: 0,
     level: video.difficulty === "ADVANCED" ? "Nâng cao" : video.difficulty === "INTERMEDIATE" ? "Trung cấp" : "Cơ bản",
-    is360: video.videoType === "VIDEO_360" || video.format === "360",
+    is360: video.videoType === "VIDEO_360" || video.videoType === "VR360" || video.format === "360",
     isFeatured: index === 0,
     isNew: index < 3,
     isHot: video.viewCount > 1000,
@@ -114,210 +115,6 @@ function mapApiVideo(video: ApiVideoItem, index: number): VideoItem {
   };
 }
 
-const VIDEOS: VideoItem[] = [
-  {
-    id: 1,
-    title: "Khởi Động & Giãn Cơ Toàn Diện",
-    coachName: "Coach Anna",
-    coachAvatar: IMG.coach1,
-    coachVerified: true,
-    sport: "Thể thao",
-    sportEmoji: "🎬",
-    category: "sports",
-    thumbnail: IMG.gym,
-    videoUrl: "",
-    duration: "10:00",
-    views: "5.4K",
-    likes: 342,
-    rating: 4.9,
-    level: "Cơ bản",
-    is360: true,
-    isFeatured: true,
-    tags: ["warmup", "stretching"],
-    description: "Bài tập khởi động và giãn cơ toàn diện giúp cơ thể chuẩn bị tốt nhất trước khi tập luyện cường độ cao.",
-    uploadedAt: "01/01/2024",
-  }
-];
-
-// ─── Panoramic 360° Viewer (CSS-based mock) ─────────────────────────────────
-function PanoramicViewer({ thumbnail, title }: { thumbnail: string; title: string }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [lon, setLon] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const dragStart = useRef({ x: 0, lon: 0 });
-  const animRef = useRef<number>();
-
-  // Auto-rotate when playing
-  useEffect(() => {
-    if (isPlaying) {
-      const tick = () => {
-        setLon(l => (l + 0.15) % 360);
-        animRef.current = requestAnimationFrame(tick);
-      };
-      animRef.current = requestAnimationFrame(tick);
-    }
-    return () => { if (animRef.current) cancelAnimationFrame(animRef.current); };
-  }, [isPlaying]);
-
-  const onMouseDown = useCallback((e: React.MouseEvent) => {
-    setIsDragging(true);
-    dragStart.current = { x: e.clientX, lon };
-  }, [lon]);
-
-  const onMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragging) return;
-    const dx = e.clientX - dragStart.current.x;
-    setLon((dragStart.current.lon - dx * 0.3 + 360) % 360);
-  }, [isDragging]);
-
-  const onMouseUp = useCallback(() => setIsDragging(false), []);
-
-  const onTouchStart = useCallback((e: React.TouchEvent) => {
-    setIsDragging(true);
-    dragStart.current = { x: e.touches[0].clientX, lon };
-  }, [lon]);
-
-  const onTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isDragging) return;
-    const dx = e.touches[0].clientX - dragStart.current.x;
-    setLon((dragStart.current.lon - dx * 0.3 + 360) % 360);
-  }, [isDragging]);
-
-  // Translate lon to X offset percent (full panorama = 200% wide, shifts 0→100% over 0→360°)
-  const bgX = (lon / 360) * 100;
-
-  return (
-    <div className="relative w-full overflow-hidden rounded-2xl bg-black select-none" style={{ aspectRatio: "16/9" }}>
-      {/* Panoramic background */}
-      <div
-        ref={containerRef}
-        className="absolute inset-0"
-        style={{
-          backgroundImage: `url(${thumbnail})`,
-          backgroundSize: "200% 100%",
-          backgroundPositionX: `${bgX}%`,
-          backgroundPositionY: "center",
-          cursor: isDragging ? "grabbing" : "grab",
-          transition: isDragging ? "none" : "background-position-x 0.05s linear",
-          filter: "brightness(0.92)",
-        }}
-        onMouseDown={onMouseDown}
-        onMouseMove={onMouseMove}
-        onMouseUp={onMouseUp}
-        onMouseLeave={onMouseUp}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onMouseUp}
-      />
-
-      {/* Vignette */}
-      <div className="absolute inset-0 pointer-events-none"
-        style={{ background: "radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.55) 100%)" }} />
-
-      {/* 360° badge */}
-      <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm px-2.5 py-1.5 rounded-xl border border-white/20">
-        <Globe className="w-3.5 h-3.5 text-violet-400" />
-        <span className="text-white" style={{ fontSize: "0.72rem", fontWeight: 700 }}>360°</span>
-      </div>
-
-      {/* Compass */}
-      <div className="absolute top-3 right-3 pointer-events-none">
-        <CompassMini lon={lon} />
-      </div>
-
-      {/* Drag hint */}
-      {!isDragging && !isPlaying && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="flex flex-col items-center gap-2 opacity-80">
-            <div className="w-14 h-14 rounded-full bg-black/50 backdrop-blur-sm border border-white/20 flex items-center justify-center">
-              <Play className="w-6 h-6 text-white ml-0.5" />
-            </div>
-            <span className="text-white/80 bg-black/40 px-3 py-1 rounded-full" style={{ fontSize: "0.72rem" }}>
-              ↔ Kéo để xoay góc nhìn 360°
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Controls bar */}
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-4 py-3">
-        {/* Progress */}
-        <div className="w-full bg-white/20 rounded-full h-1 mb-3 cursor-pointer">
-          <div className="h-1 rounded-full bg-violet-400" style={{ width: isPlaying ? "34%" : "0%",
-            transition: "width 0.5s linear" }} />
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setIsPlaying(p => !p)}
-            className="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors"
-          >
-            {isPlaying ? <Pause className="w-4 h-4 text-white" /> : <Play className="w-4 h-4 text-white ml-0.5" />}
-          </button>
-          <button
-            onClick={() => setIsMuted(m => !m)}
-            className="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors"
-          >
-            {isMuted ? <VolumeX className="w-3.5 h-3.5 text-white" /> : <Volume2 className="w-3.5 h-3.5 text-white" />}
-          </button>
-          <span className="text-white/70 ml-1" style={{ fontSize: "0.75rem" }}>
-            {isPlaying ? "6:22" : "0:00"} / 18:42
-          </span>
-          <div className="flex-1" />
-          <button
-            onClick={() => setLon(0)}
-            className="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors"
-          >
-            <RotateCcw className="w-3.5 h-3.5 text-white" />
-          </button>
-          <button className="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors">
-            <Maximize2 className="w-3.5 h-3.5 text-white" />
-          </button>
-        </div>
-      </div>
-
-      {/* Lon indicator */}
-      <div className="absolute bottom-16 left-4 text-white/50" style={{ fontSize: "0.65rem" }}>
-        {Math.round(lon)}°
-      </div>
-    </div>
-  );
-}
-
-// ─── Compass Mini ─────────────────────────────────────────────────────────────
-function CompassMini({ lon }: { lon: number }) {
-  const dirs = [{ l: "N", d: 0 }, { l: "E", d: 90 }, { l: "S", d: 180 }, { l: "W", d: 270 }];
-  return (
-    <div className="w-10 h-10">
-      <svg viewBox="0 0 40 40" className="w-full h-full drop-shadow-md">
-        <circle cx="20" cy="20" r="18" fill="rgba(0,0,0,0.5)" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
-        {dirs.map(({ l, d }) => {
-          const rad = ((d - lon) * Math.PI) / 180;
-          const x = 20 + 11 * Math.sin(rad);
-          const y = 20 - 11 * Math.cos(rad);
-          return (
-            <text key={l} x={x} y={y} textAnchor="middle" dominantBaseline="middle"
-              fill={l === "N" ? "#f87171" : "rgba(255,255,255,0.65)"}
-              fontSize="7" fontWeight="700">{l}</text>
-          );
-        })}
-        <circle cx="20" cy="20" r="1.5" fill="white" opacity="0.9" />
-      </svg>
-    </div>
-  );
-}
-
-// ─── Pause icon (missing from import) ─────────────────────────────────────────
-function Pause({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="currentColor" viewBox="0 0 24 24">
-      <rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" />
-    </svg>
-  );
-}
-
-// ─── Level Badge ──────────────────────────────────────────────────────────────
 function LevelBadge({ level }: { level: VideoItem["level"] }) {
   const map = {
     "Cơ bản":   "bg-emerald-100 text-emerald-700",
@@ -489,12 +286,18 @@ function VideoDetail({ video, allVideos, onClose, onVideoSelect }: {
   const [liked, setLiked] = useState(!!video.liked);
   const [saved, setSaved] = useState(!!video.saved);
   const [likes, setLikes] = useState(video.likes);
-  const [showUploader, setShowUploader] = useState(false);
+  const [submissionFile, setSubmissionFile] = useState<File | null>(null);
+  const [submissionNote, setSubmissionNote] = useState("");
+  const [submissionStatus, setSubmissionStatus] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     setLiked(!!video.liked);
     setSaved(!!video.saved);
     setLikes(video.likes);
+    setSubmissionFile(null);
+    setSubmissionNote("");
+    setSubmissionStatus(null);
   }, [video.id, video.liked, video.saved, video.likes]);
 
   useEffect(() => {
@@ -541,6 +344,28 @@ function VideoDetail({ video, allVideos, onClose, onVideoSelect }: {
     } catch {
       setLiked(!next);
       setLikes(current => Math.max(0, current + (next ? -1 : 1)));
+    }
+  };
+
+  const submitPracticeVideo = async () => {
+    if (!submissionFile) {
+      setSubmissionStatus("Vui lòng chọn video bài tập của bạn.");
+      return;
+    }
+    setSubmitting(true);
+    setSubmissionStatus(null);
+    try {
+      await submitVideoForReview(video.id, {
+        file: submissionFile,
+        note: submissionNote.trim() || undefined,
+      });
+      setSubmissionFile(null);
+      setSubmissionNote("");
+      setSubmissionStatus("Đã nộp video. HLV sẽ xem và nhận xét trong trang Coach Video Studio.");
+    } catch (error) {
+      setSubmissionStatus(error instanceof Error ? error.message : "Không nộp được video. Vui lòng thử lại.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -700,28 +525,28 @@ function VideoDetail({ video, allVideos, onClose, onVideoSelect }: {
                 ))}
               </div>
             </div>
-
-            {/* Upload your own */}
-            {video.is360 && (
-              <div className="rounded-2xl border-2 border-dashed border-violet-200 bg-violet-50/50 p-4">
+            <div className="rounded-2xl border-2 border-dashed border-violet-200 bg-violet-50/50 p-4">
+              <div className="flex flex-col gap-3">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
                     <Upload className="w-5 h-5 text-violet-500" />
                   </div>
                   <div className="flex-1">
-                    <div style={{ fontWeight: 700, fontSize: "0.88rem" }} className="text-gray-900">Upload video 360° của bạn</div>
-                    <div style={{ fontSize: "0.75rem" }} className="text-gray-500">Nhận phân tích AI từ HLV · Hỗ trợ MP4, MOV, WebM</div>
+                    <div style={{ fontWeight: 700, fontSize: "0.88rem" }} className="text-gray-900">Nộp video bài tập của bạn</div>
+                    <div style={{ fontSize: "0.75rem" }} className="text-gray-500">HLV sẽ dùng video này để so sánh với bài mẫu và gửi nhận xét.</div>
                   </div>
-                  <button
-                    onClick={() => setShowUploader(true)}
-                    className="shrink-0 px-3 py-1.5 bg-violet-500 text-white rounded-xl hover:bg-violet-600 transition-colors"
-                    style={{ fontSize: "0.78rem", fontWeight: 700 }}
-                  >
-                    Upload
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2">
+                  <input type="file" accept="video/*" onChange={event => setSubmissionFile(event.target.files?.[0] ?? null)} className="rounded-xl border border-violet-100 bg-white px-3 py-2 text-gray-600" style={{ fontSize: "0.78rem", fontWeight: 600 }} />
+                  <button onClick={() => void submitPracticeVideo()} disabled={submitting} className="px-4 py-2 bg-violet-500 text-white rounded-xl hover:bg-violet-600 disabled:opacity-60 transition-colors" style={{ fontSize: "0.78rem", fontWeight: 700 }}>
+                    {submitting ? "Đang nộp..." : "Nộp video"}
                   </button>
                 </div>
+                <textarea value={submissionNote} onChange={event => setSubmissionNote(event.target.value)} placeholder="Ghi chú cho HLV nếu cần..." className="min-h-20 rounded-xl border border-violet-100 bg-white px-3 py-2 outline-none focus:border-violet-300" style={{ fontSize: "0.78rem" }} />
+                {submissionStatus && <div className="rounded-xl border border-violet-100 bg-white px-3 py-2 text-violet-700" style={{ fontSize: "0.78rem", fontWeight: 600 }}>{submissionStatus}</div>}
               </div>
-            )}
+            </div>
+
           </div>
 
           {/* Right: Related Videos */}
@@ -763,46 +588,10 @@ function VideoDetail({ video, allVideos, onClose, onVideoSelect }: {
               ))}
             </div>
 
-            {/* Upload 360° with Three.js player */}
-            <div className="mt-4 p-4 rounded-2xl bg-gradient-to-br from-violet-50 to-indigo-50 border border-violet-100">
-              <div className="flex items-center gap-2 mb-2">
-                <Globe className="w-4 h-4 text-violet-500" />
-                <span style={{ fontWeight: 700, fontSize: "0.85rem" }} className="text-violet-700">Player 360° WebGL</span>
-              </div>
-              <p style={{ fontSize: "0.75rem", lineHeight: 1.6 }} className="text-gray-600 mb-3">
-                Upload video 360° của bạn và xem với công nghệ Three.js — xoay toàn hướng bằng chuột hoặc cảm ứng.
-              </p>
-              <button
-                onClick={() => setShowUploader(true)}
-                className="w-full py-2 bg-violet-500 text-white rounded-xl hover:bg-violet-600 transition-colors flex items-center justify-center gap-2"
-                style={{ fontSize: "0.8rem", fontWeight: 700 }}
-              >
-                <Upload className="w-4 h-4" /> Mở Video 360° Player
-              </button>
-            </div>
           </div>
         </div>
       </div>
 
-      {/* Three.js 360° uploader modal */}
-      {showUploader && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setShowUploader(false)}>
-          <div className="w-full max-w-3xl bg-gray-950 rounded-3xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/10">
-              <div className="flex items-center gap-2">
-                <Globe className="w-4 h-4 text-violet-400" />
-                <span style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-white">Video 360° Player — Three.js WebGL</span>
-              </div>
-              <button onClick={() => setShowUploader(false)} className="p-2 rounded-xl hover:bg-white/10 transition-colors">
-                <X className="w-5 h-5 text-gray-300" />
-              </button>
-            </div>
-            <div className="p-5">
-              <Video360Player />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -819,8 +608,8 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedVideo, setSelectedVideo] = useState<VideoItem | null>(null);
   const [show360Only, setShow360Only] = useState(false);
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [videos, setVideos] = useState<VideoItem[]>(VIDEOS);
+  const [videos, setVideos] = useState<VideoItem[]>([]);
+  const [loadingVideos, setLoadingVideos] = useState(true);
   const [showSavedOnly, setShowSavedOnly] = useState(false);
   const [loadingSaved, setLoadingSaved] = useState(false);
   const [videoNotice, setVideoNotice] = useState<string | null>(null);
@@ -829,14 +618,13 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
     setVideoNotice(null);
     getVideos()
       .then((items) => {
-        if (items.length > 0) {
-          setVideos(items.map(mapApiVideo));
-        }
+        setVideos(items.map(mapApiVideo));
       })
       .catch(() => {
-        setVideos(VIDEOS);
-        setVideoNotice("Đang hiển thị video mẫu vì API danh sách video chưa tải được.");
-      });
+        setVideos([]);
+        setVideoNotice("Không tải được API danh sách video.");
+      })
+      .finally(() => setLoadingVideos(false));
   }, []);
 
   useEffect(() => {
@@ -886,14 +674,30 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
     const match360 = !show360Only || v.is360;
     return matchCat && matchSearch && match360;
   });
+  const categoryCounts = CATEGORIES.reduce<Record<string, number>>((acc, cat) => {
+    acc[cat.id] = cat.id === "all" ? videos.length : videos.filter(video => video.category === cat.id).length;
+    return acc;
+  }, {});
+  const totalViews = videos.reduce((sum, video) => sum + video.viewCount, 0);
+  const totalLikes = videos.reduce((sum, video) => sum + video.likes, 0);
 
-  const featured = videos.find(v => v.isFeatured) || videos[0] || VIDEOS[0];
+  const featured = videos.find(v => v.isFeatured) || videos[0] || null;
 
-  if (!featured) {
+  if (loadingVideos) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <div className="animate-spin w-8 h-8 border-4 border-violet-500 border-t-transparent rounded-full mb-4"></div>
         <div className="text-gray-500 font-medium">Đang tải dữ liệu video...</div>
+      </div>
+    );
+  }
+
+  if (!featured) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-gray-100">
+        <div style={{ fontSize: "3rem" }} className="mb-3">🎬</div>
+        <div className="text-gray-700 font-bold">Chưa có video từ API</div>
+        {videoNotice && <div className="mt-2 text-amber-600" style={{ fontSize: "0.82rem", fontWeight: 600 }}>{videoNotice}</div>}
       </div>
     );
   }
@@ -911,8 +715,8 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
         {[
           { icon: "🎬", label: "Tổng video",    value: String(videos.length),  sub: "từ HLV chuyên nghiệp" },
           { icon: "🌐", label: "Video 360°",    value: String(videos.filter(video => video.is360).length),   sub: "xem được trực tiếp"  },
-          { icon: "👁️", label: "Lượt xem",      value: "184K", sub: "cộng đồng CoachFinder"  },
-          { icon: "⭐", label: "Đánh giá TB",   value: "4.8",  sub: "từ học viên"         },
+          { icon: "👁️", label: "Lượt xem", value: formatViews(totalViews), sub: "từ API video" },
+          { icon: "⭐", label: "Lượt thích", value: String(totalLikes), sub: "từ API video" },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
             <div className="flex items-center gap-2 mb-1.5">
@@ -1089,7 +893,7 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
             <span>{cat.label}</span>
             <span className={`px-1.5 py-0.5 rounded-full ${activeCategory === cat.id ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}
               style={{ fontSize: "0.65rem", fontWeight: 700 }}>
-              {cat.count}
+              {categoryCounts[cat.id] ?? 0}
             </span>
           </button>
         ))}
@@ -1103,23 +907,6 @@ export function VideoLibrary({ onNavigate }: VideoLibraryProps) {
           {showSavedOnly && <span className="ml-1 text-emerald-500">· video đã lưu</span>}
           {searchQuery && <span className="ml-1">cho "<span className="text-gray-900 font-semibold">{searchQuery}</span>"</span>}
         </div>
-        <button
-          onClick={() => setShowUploadModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-500 to-indigo-500 text-white rounded-xl hover:from-violet-600 hover:to-indigo-600 transition-all shadow-md shadow-violet-200"
-          style={{ fontSize: "0.82rem", fontWeight: 700 }}
-        >
-          <Upload className="w-4 h-4" />
-          Upload Video 360°
-        </button>
-
-        <button
-          onClick={() => setShowUploadModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-500 to-indigo-500 text-white rounded-xl hover:from-violet-600 hover:to-indigo-600 transition-all shadow-md shadow-violet-200"
-          style={{ fontSize: "0.82rem", fontWeight: 700 }}
-        >
-          <Upload className="w-4 h-4" />
-          Upload Video 360°
-        </button>
       </div>
 
       {/* ── Video Grid ── */}
