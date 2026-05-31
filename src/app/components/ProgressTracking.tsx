@@ -222,16 +222,34 @@ function formatDate(value?: string | null) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("vi-VN");
 }
 
-function statusLabel(status?: string | null) {
+function isReviewedSubmission(submission: CoachVideoSubmission) {
+  const status = textValue(submission.status).toUpperCase();
+  return Boolean(
+    status === "REVIEWED" ||
+    status === "DONE" ||
+    status === "PASSED" ||
+    status === "APPROVED" ||
+    submission.feedback ||
+    submission.totalScore != null ||
+    submission.postureScore != null ||
+    submission.techniqueScore != null ||
+    submission.rhythmScore != null ||
+    submission.strengthScore != null,
+  );
+}
+
+function statusLabel(status?: string | null, reviewed = false) {
   const normalized = textValue(status).toUpperCase();
+  if (reviewed) return "Đã nhận xét";
   if (normalized === "REVIEWED" || normalized === "DONE") return "Đã nhận xét";
   if (normalized === "APPROVED") return "Đạt";
   if (normalized === "REJECTED") return "Cần cải thiện";
   return "Chờ nhận xét";
 }
 
-function statusClass(status?: string | null) {
+function statusClass(status?: string | null, reviewed = false) {
   const normalized = textValue(status).toUpperCase();
+  if (reviewed) return "bg-emerald-50 text-emerald-600 border-emerald-100";
   if (normalized === "REVIEWED" || normalized === "DONE" || normalized === "APPROVED") {
     return "bg-emerald-50 text-emerald-600 border-emerald-100";
   }
@@ -373,45 +391,16 @@ function AchievementsSection({ achievements = ACHIEVEMENTS }: { achievements?: A
   );
 }
 
-function fallbackTrainingRows(timeRange: TimeRange, overview: ProgressOverview | null) {
-  const totalHours = Math.max(overview?.trainingHours ?? 0, overview?.totalSessions ? overview.totalSessions * 2 : 0);
-  const totalSessions = Math.max(overview?.totalSessions ?? 0, totalHours ? Math.ceil(totalHours / 2) : 0);
-  const distribute = (count: number, activeCount: number) => {
-    const active = Math.max(1, Math.min(count, activeCount || 1));
-    return Array.from({ length: count }, (_, index) => {
-      const activeStart = count - active;
-      if (index < activeStart) return 0;
-      const base = totalHours > 0 ? totalHours / active : 1;
-      return Number((base * (index === count - 1 ? 1.2 : 0.9)).toFixed(1));
-    });
-  };
-
-  if (timeRange === "week") {
-    const labels = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
-    const hours = distribute(labels.length, totalSessions || 2);
-    return labels.map((day, index) => ({
-      day,
-      hours: hours[index],
-      calories: Math.round(hours[index] * 120),
-    }));
-  }
-
-  const count = timeRange === "year" ? 12 : timeRange === "3months" ? 3 : 12;
-  const hours = distribute(count, Math.min(count, Math.max(3, totalSessions || 3)));
-  return Array.from({ length: count }, (_, index) => {
-    return {
-      label: timeRange === "3months" ? `T${index + 1}` : `T${index + 1}`,
-      hours: hours[index],
-      calories: Math.round(hours[index] * 120),
-    };
-  });
-}
-
 function TrainingChart({ timeRange, overview }: { timeRange: TimeRange; overview: ProgressOverview | null }) {
   const apiData = timeRange === "week" ? (overview?.weeklySummary ?? WEEKLY_DATA)
     : timeRange === "3months" ? (overview?.quarterlySummary ?? QUARTERLY_DATA)
     : (overview?.monthlySummary ?? MONTHLY_DATA);
-  const data = Array.isArray(apiData) && apiData.length ? apiData : fallbackTrainingRows(timeRange, overview);
+  const data = (Array.isArray(apiData) ? apiData : []).map((row) => ({
+    ...row,
+    hours: numberValue((row as Record<string, unknown>).hours),
+    calories: numberValue((row as Record<string, unknown>).calories),
+    caloriesScaled: Number((numberValue((row as Record<string, unknown>).calories) / 100).toFixed(1)),
+  }));
 
   const dataKey = timeRange === "week" ? "day" : "label";
   const summaryItems = [
@@ -450,11 +439,11 @@ function TrainingChart({ timeRange, overview }: { timeRange: TimeRange; overview
             contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 12 }}
             formatter={(v: number, name: string) => {
               if (name === "hours") return [`${v}h`, "Thời gian tập"];
-              return [`${v} kcal`, "Calo tiêu thụ"];
+              return [`${Math.round(v * 100)} kcal`, "Calo tiêu thụ"];
             }}
           />
           <Bar key="bar-hours" dataKey="hours" fill="#f97316" radius={[6, 6, 0, 0]} maxBarSize={32} />
-          <Bar key="bar-cal" dataKey="calories" fill="#3b82f6" radius={[6, 6, 0, 0]} maxBarSize={32} />
+          <Bar key="bar-cal" dataKey="caloriesScaled" name="calories" fill="#3b82f6" radius={[6, 6, 0, 0]} maxBarSize={32} />
         </BarChart>
       </ResponsiveContainer>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
@@ -467,7 +456,7 @@ function TrainingChart({ timeRange, overview }: { timeRange: TimeRange; overview
                 <span style={{ fontSize: "0.82rem", fontWeight: 800 }} className="text-gray-900">{item.value}{item.suffix}</span>
               </div>
               <div className="h-2 rounded-full bg-white overflow-hidden">
-                <div className={`h-full rounded-full ${item.color}`} style={{ width: `${Math.max(8, pctValue)}%` }} />
+                <div className={`h-full rounded-full ${item.color}`} style={{ width: `${pctValue > 0 ? Math.max(8, pctValue) : 0}%` }} />
               </div>
             </div>
           );
@@ -771,6 +760,7 @@ function SubmissionReviewsSection({ submissions }: { submissions: CoachVideoSubm
             const videoUrl = textValue(item.videoUrl);
             const feedback = textValue(item.feedback);
             const totalScore = item.totalScore == null ? null : numberValue(item.totalScore);
+            const reviewed = isReviewedSubmission(item);
 
             return (
               <div key={item.id} className="rounded-2xl border border-gray-100 bg-gray-50/70 p-4">
@@ -787,8 +777,8 @@ function SubmissionReviewsSection({ submissions }: { submissions: CoachVideoSubm
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
                       <div className="text-gray-900 truncate" style={{ fontSize: "0.95rem", fontWeight: 800 }}>{videoTitle}</div>
-                      <span className={`px-2 py-0.5 rounded-full border ${statusClass(item.status)}`} style={{ fontSize: "0.68rem", fontWeight: 800 }}>
-                        {statusLabel(item.status)}
+                      <span className={`px-2 py-0.5 rounded-full border ${statusClass(item.status, reviewed)}`} style={{ fontSize: "0.68rem", fontWeight: 800 }}>
+                        {statusLabel(item.status, reviewed)}
                       </span>
                     </div>
                     <div className="flex flex-wrap items-center gap-3 text-gray-400 mb-3" style={{ fontSize: "0.74rem", fontWeight: 600 }}>
