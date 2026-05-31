@@ -51,18 +51,6 @@ const REF = {
   gym360:       "https://images.unsplash.com/photo-1670004810567-f4328dcc983e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
 };
 
-// Student submission thumbnails (student's self-recorded videos)
-const SUB = {
-  squat_s:   "https://images.unsplash.com/photo-1754257319805-3c5424262197?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
-  deadlift_s:"https://images.unsplash.com/photo-1656774950529-44a6153521ee?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
-  bench_s:   "https://images.unsplash.com/photo-1651346847980-ab1c883e8cc8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
-  yoga_s:    "https://images.unsplash.com/photo-1758274535024-be3faa30f507?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
-  boxing_s:  "https://images.unsplash.com/photo-1570442387127-66eb80e00938?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
-  run_s:     "https://images.unsplash.com/photo-1676917077392-0698469dabb3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
-  swim_s:    "https://images.unsplash.com/photo-1721097777532-e1038b9fcb1f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
-  tennis_s:  "https://images.unsplash.com/photo-1758304455823-35c7b577d051?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
-};
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 type VideoType   = "normal" | "360";
 type Visibility  = "public" | "students" | "private";
@@ -75,6 +63,7 @@ interface StudentSubmission {
   studentName: string;
   studentAvatar: string;
   thumbnail: string;
+  videoUrl: string;
   duration: string;
   uploadDate: string;
   status: SubStatus;
@@ -109,7 +98,8 @@ function mapSubmission(submission: CoachVideoSubmission): StudentSubmission {
     id: String(submission.id),
     studentName: submission.traineeName,
     studentAvatar: AVT.minh_anh,
-    thumbnail: SUB.squat_s,
+    thumbnail: "",
+    videoUrl: submission.videoUrl,
     duration: "00:00",
     uploadDate: new Date(submission.submittedAt).toLocaleDateString("vi-VN"),
     status: submission.status === "REVIEWED" ? "reviewed" : submission.status === "APPROVED" ? "approved" : "pending",
@@ -158,7 +148,31 @@ function mapUploadedVideo(video: VideoItem): CoachVideo {
   return mapApiVideo(video, []);
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
+function MediaPreview({
+  videoUrl,
+  poster,
+  className = "w-full h-full object-cover",
+  placeholder = "Video chua co URL tu API.",
+}: {
+  videoUrl?: string;
+  poster?: string;
+  className?: string;
+  placeholder?: string;
+}) {
+  if (videoUrl) {
+    return <video src={videoUrl} poster={poster || undefined} muted playsInline preload="metadata" className={className} />;
+  }
+  if (poster) {
+    return <img src={poster} alt="" className={className} />;
+  }
+  return (
+    <div className="w-full h-full flex items-center justify-center bg-gray-950 px-3 text-center text-gray-300" style={{fontSize:"0.7rem",fontWeight:700}}>
+      {placeholder}
+    </div>
+  );
+}
+
+// ─── Static UI Options ────────────────────────────────────────────────────────
 
 const CATEGORIES = ["Tất cả","Thể hình","Yoga","Boxing","Cardio","Tennis","Bơi lội","CrossFit","Pilates"];
 
@@ -329,6 +343,8 @@ function ComparePlayer({ video, sub, onBack, onSaveFeedback }:{
   video:CoachVideo; sub:StudentSubmission;
   onBack:()=>void; onSaveFeedback:(subId:string,scores:StudentSubmission["scores"],fb:string,ts:TimestampNote[])=>void;
 }) {
+  const coachVideoRef = useRef<HTMLVideoElement>(null);
+  const submissionVideoRef = useRef<HTMLVideoElement>(null);
   const [playing,setPlaying]   = useState(false);
   const [syncPlay,setSyncPlay] = useState(true);
   const [showGuide,setShowGuide] = useState(true);
@@ -338,12 +354,15 @@ function ComparePlayer({ video, sub, onBack, onSaveFeedback }:{
   const [timestamps,setTimestamps] = useState<TimestampNote[]>(sub.timestamps ?? []);
   const [tsNote,setTsNote]     = useState("");
   const [saved,setSaved]       = useState(false);
+  const hasCoachVideo = !!video.videoUrl;
+  const hasSubmissionVideo = !!sub.videoUrl;
+  const maxDuration = Math.max(video.durationSec || 0, coachVideoRef.current?.duration || 0, submissionVideoRef.current?.duration || 0, 180);
   const overall = avgScore(scores);
 
   const scoreColor = (v:number) => v>=8?"text-emerald-500":v>=6?"text-blue-500":v>=4?"text-amber-500":"text-red-500";
   const addTs = () => {
     if(!tsNote.trim()) return;
-    const t = `${Math.floor(progress/100*180)}s`;
+    const t = `${displaySeconds}s`;
     setTimestamps(p=>[...p,{time:t,note:tsNote}]);
     setTsNote("");
   };
@@ -351,6 +370,37 @@ function ComparePlayer({ video, sub, onBack, onSaveFeedback }:{
     onSaveFeedback(sub.id,scores,feedback,timestamps);
     setSaved(true); setTimeout(()=>setSaved(false),2500);
   };
+  const togglePlayback = () => {
+    const shouldPlay = !playing;
+    setPlaying(shouldPlay);
+    [coachVideoRef.current, submissionVideoRef.current].forEach(player => {
+      if (!player) return;
+      if (shouldPlay) {
+        player.play().catch(() => setPlaying(false));
+      } else {
+        player.pause();
+      }
+    });
+  };
+  const seekToProgress = (nextProgress: number) => {
+    setProgress(nextProgress);
+    const nextTime = (nextProgress / 100) * maxDuration;
+    [coachVideoRef.current, submissionVideoRef.current].forEach(player => {
+      if (!player || !Number.isFinite(player.duration)) return;
+      player.currentTime = Math.min(nextTime, player.duration);
+    });
+  };
+  const resetPlayback = () => {
+    seekToProgress(0);
+    setPlaying(false);
+    [coachVideoRef.current, submissionVideoRef.current].forEach(player => player?.pause());
+  };
+  const updateProgressFromPlayer = (player: HTMLVideoElement) => {
+    const duration = Number.isFinite(player.duration) && player.duration > 0 ? player.duration : maxDuration;
+    setProgress(Math.min(100, Math.round((player.currentTime / duration) * 100)));
+  };
+  const displaySeconds = Math.floor(progress / 100 * maxDuration);
+  const displayTotal = formatDuration(Math.round(maxDuration));
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col h-full">
@@ -382,7 +432,22 @@ function ComparePlayer({ video, sub, onBack, onSaveFeedback }:{
               {video.type==="360"&&<span className="ml-auto bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-lg flex items-center gap-0.5 shrink-0" style={{fontSize:"0.6rem",fontWeight:700}}><Globe className="w-2.5 h-2.5"/>360°</span>}
             </div>
             <div className="relative aspect-video bg-gray-900">
-              <img src={video.thumbnail} alt="" className="w-full h-full object-cover opacity-90"/>
+              {hasCoachVideo ? (
+                <video
+                  ref={coachVideoRef}
+                  src={video.videoUrl}
+                  poster={video.thumbnail || undefined}
+                  className="w-full h-full object-cover"
+                  muted
+                  playsInline
+                  onTimeUpdate={event => updateProgressFromPlayer(event.currentTarget)}
+                  onEnded={() => setPlaying(false)}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gray-950 text-gray-300 px-6 text-center" style={{fontSize:"0.82rem",fontWeight:600}}>
+                  Video tham chiếu chưa có URL từ API.
+                </div>
+              )}
               {showGuide&&(
                 <div className="absolute inset-0 pointer-events-none">
                   <div className="absolute left-0 right-0 border-t-2 border-dashed border-yellow-400 opacity-80" style={{top:"50%"}}/>
@@ -392,7 +457,7 @@ function ComparePlayer({ video, sub, onBack, onSaveFeedback }:{
                 </div>
               )}
               <div className="absolute inset-0 flex items-center justify-center">
-                <button onClick={()=>setPlaying(p=>!p)} className="w-12 h-12 rounded-full bg-white/20 border-2 border-white/50 hover:bg-white/30 transition-colors flex items-center justify-center">
+                <button onClick={togglePlayback} disabled={!hasCoachVideo && !hasSubmissionVideo} className="w-12 h-12 rounded-full bg-white/20 border-2 border-white/50 hover:bg-white/30 disabled:opacity-40 transition-colors flex items-center justify-center">
                   {playing?<Pause className="w-6 h-6 text-white"/>:<Play className="w-6 h-6 text-white ml-0.5"/>}
                 </button>
               </div>
@@ -408,7 +473,21 @@ function ComparePlayer({ video, sub, onBack, onSaveFeedback }:{
               <span style={{fontSize:"0.65rem"}} className="text-gray-400 ml-auto shrink-0">{sub.uploadDate}</span>
             </div>
             <div className="relative aspect-video bg-gray-900">
-              <img src={sub.thumbnail} alt="" className="w-full h-full object-cover opacity-90"/>
+              {hasSubmissionVideo ? (
+                <video
+                  ref={submissionVideoRef}
+                  src={sub.videoUrl}
+                  poster={sub.thumbnail || undefined}
+                  className="w-full h-full object-cover"
+                  playsInline
+                  onTimeUpdate={event => updateProgressFromPlayer(event.currentTarget)}
+                  onEnded={() => setPlaying(false)}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gray-950 text-gray-300 px-6 text-center" style={{fontSize:"0.82rem",fontWeight:600}}>
+                  Bài nộp này chưa có videoUrl từ API.
+                </div>
+              )}
               {showGuide&&(
                 <div className="absolute inset-0 pointer-events-none">
                   <div className="absolute left-0 right-0 border-t-2 border-dashed border-yellow-400/60 opacity-80" style={{top:"55%"}}/>
@@ -416,7 +495,7 @@ function ComparePlayer({ video, sub, onBack, onSaveFeedback }:{
                 </div>
               )}
               <div className="absolute inset-0 flex items-center justify-center">
-                <button onClick={()=>setPlaying(p=>!p)} className="w-12 h-12 rounded-full bg-white/20 border-2 border-white/50 hover:bg-white/30 transition-colors flex items-center justify-center">
+                <button onClick={togglePlayback} disabled={!hasCoachVideo && !hasSubmissionVideo} className="w-12 h-12 rounded-full bg-white/20 border-2 border-white/50 hover:bg-white/30 disabled:opacity-40 transition-colors flex items-center justify-center">
                   {playing?<Pause className="w-6 h-6 text-white"/>:<Play className="w-6 h-6 text-white ml-0.5"/>}
                 </button>
               </div>
@@ -434,11 +513,11 @@ function ComparePlayer({ video, sub, onBack, onSaveFeedback }:{
         {/* Sync controls */}
         <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-100 flex items-center gap-3 flex-wrap">
           <div className="flex-1 min-w-32">
-            <input type="range" min={0} max={100} value={progress} onChange={e=>setProgress(Number(e.target.value))} className="w-full"/>
+            <input type="range" min={0} max={100} value={progress} onChange={e=>seekToProgress(Number(e.target.value))} className="w-full"/>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <button onClick={()=>setProgress(0)} className="p-1.5 rounded-lg hover:bg-gray-200 text-gray-500"><RotateCcw className="w-3.5 h-3.5"/></button>
-            <button onClick={()=>setPlaying(!playing)} className="w-8 h-8 rounded-xl bg-blue-500 text-white flex items-center justify-center hover:bg-blue-600">
+            <button onClick={resetPlayback} className="p-1.5 rounded-lg hover:bg-gray-200 text-gray-500"><RotateCcw className="w-3.5 h-3.5"/></button>
+            <button onClick={togglePlayback} disabled={!hasCoachVideo && !hasSubmissionVideo} className="w-8 h-8 rounded-xl bg-blue-500 text-white flex items-center justify-center hover:bg-blue-600 disabled:opacity-40">
               {playing?<Pause className="w-3.5 h-3.5"/>:<Play className="w-3.5 h-3.5 ml-0.5"/>}
             </button>
             <label className="flex items-center gap-1.5 cursor-pointer">
@@ -453,7 +532,7 @@ function ComparePlayer({ video, sub, onBack, onSaveFeedback }:{
               📏 Guide
             </button>
           </div>
-          <span style={{fontSize:"0.7rem"}} className="text-gray-400 shrink-0">{Math.floor(progress/100*180)}s / 3:00</span>
+          <span style={{fontSize:"0.7rem"}} className="text-gray-400 shrink-0">{displaySeconds}s / {displayTotal}</span>
         </div>
 
         {/* Scoring + Feedback */}
@@ -507,7 +586,7 @@ function ComparePlayer({ video, sub, onBack, onSaveFeedback }:{
               <div style={{fontSize:"0.78rem",fontWeight:600}} className="text-gray-600 mb-1.5">Ghi chú theo mốc thời gian:</div>
               <div className="flex gap-2">
                 <div className="bg-gray-100 text-gray-500 px-2 py-1.5 rounded-lg shrink-0" style={{fontSize:"0.72rem",fontWeight:700}}>
-                  {Math.floor(progress/100*180)}s
+                  {displaySeconds}s
                 </div>
                 <input value={tsNote} onChange={e=>setTsNote(e.target.value)}
                   onKeyDown={e=>e.key==="Enter"&&addTs()}
@@ -578,7 +657,7 @@ function CompareTab({ videos, onSaveFeedback }:{
         {/* Reference video info */}
         <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-4 flex items-center gap-4">
           <div className="relative w-28 h-16 rounded-xl overflow-hidden shrink-0">
-            <img src={selVideo.thumbnail} alt="" className="w-full h-full object-cover"/>
+            <MediaPreview videoUrl={selVideo.videoUrl} poster={selVideo.thumbnail} placeholder="Video tham chieu chua co URL." />
             <div className="absolute bottom-1 right-1 bg-black/70 text-white px-1 rounded" style={{fontSize:"0.6rem",fontWeight:700}}>{selVideo.duration}</div>
             {selVideo.type==="360"&&<span className="absolute top-1 left-1 bg-purple-600 text-white px-1 rounded" style={{fontSize:"0.55rem",fontWeight:700}}>360°</span>}
           </div>
@@ -609,7 +688,7 @@ function CompareTab({ videos, onSaveFeedback }:{
                   <div className="relative flex h-28">
                     {/* Left: coach thumb */}
                     <div className="w-1/2 relative overflow-hidden">
-                      <img src={selVideo.thumbnail} alt="" className="w-full h-full object-cover opacity-70"/>
+                      <MediaPreview videoUrl={selVideo.videoUrl} poster={selVideo.thumbnail} className="w-full h-full object-cover opacity-70" placeholder="Chua co video HLV." />
                       <div className="absolute inset-0 bg-blue-900/30"/>
                       <span className="absolute top-1.5 left-1.5 bg-blue-600 text-white px-1.5 py-0.5 rounded" style={{fontSize:"0.55rem",fontWeight:700}}>HLV</span>
                     </div>
@@ -621,7 +700,7 @@ function CompareTab({ videos, onSaveFeedback }:{
                     </div>
                     {/* Right: student thumb */}
                     <div className="w-1/2 relative overflow-hidden">
-                      <img src={sub.thumbnail} alt="" className="w-full h-full object-cover opacity-70"/>
+                      <MediaPreview videoUrl={sub.videoUrl} poster={sub.thumbnail} className="w-full h-full object-cover opacity-70" placeholder="Chua co video HV." />
                       <div className="absolute inset-0 bg-purple-900/20"/>
                       <span className="absolute top-1.5 right-1.5 bg-purple-600 text-white px-1.5 py-0.5 rounded" style={{fontSize:"0.55rem",fontWeight:700}}>HV</span>
                     </div>
@@ -950,20 +1029,18 @@ export function CoachVideoStudio() {
     getCoachVideoAnalytics(numericId)
       .then(setSelectedAnalytics)
       .catch(() => {
-        // Fallback to mock analytics instead of showing error
-        setSelectedAnalytics({
-          videoId: numericId,
-          views: selectedVideo.views,
-          likes: selectedVideo.likes,
-          saves: 0,
-          submissions: selectedVideo.submissions.length,
-          pendingSubmissions: selectedVideo.submissions.filter(sub => sub.status === "pending").length,
-          averageScore: 0,
-        });
+        setSelectedAnalytics(null);
+        setAnalyticsNotice("Khong tai duoc analytics tu API.");
       });
   }, [selectedVideo?.id]);
 
   const handleUpload = async (partial:Partial<CoachVideo>) => {
+    const session = getAuthSession();
+    const coachId = session?.coachId ?? session?.userId;
+    if (!partial.file || !coachId) {
+      window.alert("Khong the upload video vi thieu file hoac thong tin coach.");
+      return;
+    }
     const nv:CoachVideo = {
       id:`v${Date.now()}`, title:partial.title??"Video mới", description:partial.description??"",
       thumbnail:partial.thumbnail??REF.gym360, duration:"00:00", durationSec:0,
@@ -973,10 +1050,6 @@ export function CoachVideoStudio() {
       resolution:partial.resolution??"1920×1080", assignedStudents:[],
       notes:partial.notes??"", submissions:[],
     };
-    setVideos(p=>[nv,...p]); setTab("library"); setSelectedId(nv.id);
-    const session = getAuthSession();
-    const coachId = session?.coachId ?? session?.userId;
-    if (!partial.file || !coachId) return;
     try {
       const uploaded = await uploadCoachVideo({
         coachId,
@@ -988,10 +1061,11 @@ export function CoachVideoStudio() {
         file: partial.file,
       });
       const mapped = mapUploadedVideo(uploaded);
-      setVideos(prev => prev.map(item => item.id === nv.id ? mapped : item));
+      setVideos(prev => [mapped, ...prev]);
+      setTab("library");
       setSelectedId(mapped.id);
     } catch {
-      // Keep the local optimistic video if upload API is unavailable.
+      window.alert("Upload video that bai. Vui long kiem tra backend va thu lai.");
     }
   };
 
