@@ -1,4 +1,5 @@
 import { expireAuthSession, getAccessToken } from "../utils/authSession";
+import { clearApiCache, resolveCachedApiData } from "../stores/apiCacheStore";
 
 interface ApiResponse<T> {
   success: boolean;
@@ -14,6 +15,18 @@ interface ApiRequestOptions extends RequestInit {
 
 const API_BASE_URL = "https://www.minhthien.io.vn";
 
+function getRequestMethod(options: RequestInit) {
+  return (options.method || "GET").toUpperCase();
+}
+
+function shouldUseApiCache(options: RequestInit) {
+  return getRequestMethod(options) === "GET";
+}
+
+function getApiCacheKey(path: string, authenticated: boolean, token?: string) {
+  return `${authenticated ? token || "anonymous" : "public"}:${path}`;
+}
+
 export async function apiRequest<T>(
   path: string,
   options: ApiRequestOptions = {},
@@ -27,6 +40,7 @@ export async function apiRequest<T>(
   } = options;
   const token = authenticated ? getAccessToken() : undefined;
   const requestHeaders = new Headers(headers);
+  const cacheEnabled = shouldUseApiCache(requestOptions);
 
   if (!(requestOptions.body instanceof FormData)) {
     requestHeaders.set("Content-Type", "application/json");
@@ -56,7 +70,13 @@ export async function apiRequest<T>(
 
   const data = payload?.data;
   if (response.ok && allowEmptyData && payload?.success !== false) {
-    return data as T;
+    const emptyData = data as T;
+    if (!cacheEnabled) {
+      clearApiCache();
+      return emptyData;
+    }
+
+    return resolveCachedApiData(getApiCacheKey(path, authenticated, token), emptyData);
   }
 
   if (
@@ -76,7 +96,12 @@ export async function apiRequest<T>(
     );
   }
 
-  return data;
+  if (!cacheEnabled) {
+    clearApiCache();
+    return data;
+  }
+
+  return resolveCachedApiData(getApiCacheKey(path, authenticated, token), data);
 }
 
 export async function rawApiRequest<T>(
@@ -86,6 +111,7 @@ export async function rawApiRequest<T>(
   const { authenticated = true, headers, ...requestOptions } = options;
   const token = authenticated ? getAccessToken() : undefined;
   const requestHeaders = new Headers(headers);
+  const cacheEnabled = shouldUseApiCache(requestOptions);
 
   if (!(requestOptions.body instanceof FormData)) {
     requestHeaders.set("Content-Type", "application/json");
@@ -124,5 +150,12 @@ export async function rawApiRequest<T>(
     );
   }
 
-  return payload as T;
+  const data = payload as T;
+
+  if (!cacheEnabled) {
+    clearApiCache();
+    return data;
+  }
+
+  return resolveCachedApiData(getApiCacheKey(path, authenticated, token), data);
 }
