@@ -15,12 +15,15 @@ function buildTraineeProfileFormData(request: TraineeProfileRequest) {
 }
 
 export function getMyTraineeProfile() {
-  return apiRequest<Trainee>("/api/trainees/me");
+  return apiRequest<Trainee>("/api/trainees/me", {
+    acceptDataWhenSuccessFalse: true,
+  });
 }
 
 export function createTraineeProfile(request: TraineeProfileRequest) {
   return apiRequest<Trainee>("/api/trainees/profile", {
     method: "POST",
+    acceptDataWhenSuccessFalse: true,
     body: buildTraineeProfileFormData(request),
   });
 }
@@ -28,6 +31,7 @@ export function createTraineeProfile(request: TraineeProfileRequest) {
 export function updateMyTraineeProfile(request: TraineeProfileRequest) {
   return apiRequest<Trainee>("/api/trainees/me", {
     method: "PUT",
+    acceptDataWhenSuccessFalse: true,
     body: buildTraineeProfileFormData(request),
   });
 }
