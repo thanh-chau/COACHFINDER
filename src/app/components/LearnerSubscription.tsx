@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import {
   Check, X, Zap, Sparkles, ChevronRight,
-  CreditCard, Smartphone, Building2, Shield,
-  ArrowLeft, CheckCircle2, Star, Brain,
-  Gift, Clock, AlertCircle, Lock, Flame
+  Shield, Wallet,
+  CheckCircle2, Star, Brain,
+  Gift, Lock, Flame
 } from "lucide-react";
 import {
   getTraineeSubscriptionCatalog,
@@ -101,10 +101,7 @@ function mapCatalogPlan(plan: SubscriptionPlanCard): LearnerPlan {
 }
 
 const PAYMENT_METHODS = [
-  { id: "card", label: "Thẻ tín dụng / ghi nợ", icon: CreditCard, brands: ["Visa", "MC", "JCB"] },
-  { id: "momo", label: "Ví MoMo", icon: Smartphone, color: "text-pink-500" },
-  { id: "bank", label: "Chuyển khoản ngân hàng", icon: Building2, color: "text-blue-500" },
-  { id: "vnpay", label: "VNPAY QR", icon: Smartphone, color: "text-red-500" },
+  { id: "wallet", label: "Ví CoachFinder", icon: Wallet, brands: ["Số dư ví"] },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -123,7 +120,7 @@ function PlanColor(color: string) {
 }
 
 // ─── Payment Modal ────────────────────────────────────────────────────────────
-type ModalStep = "method" | "form" | "success";
+type ModalStep = "method" | "success";
 
 function PaymentModal({
   plan,
@@ -137,31 +134,16 @@ function PaymentModal({
   onPurchased: () => void;
 }) {
   const [step, setStep] = useState<ModalStep>("method");
-  const [method, setMethod] = useState("card");
+  const [method, setMethod] = useState("wallet");
   const [loading, setLoading] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
-  const [card, setCard] = useState({ number: "", name: "", expiry: "", cvv: "" });
-  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const price = yearly ? plan.yearlyPrice : plan.monthlyPrice;
   const saving = yearly ? plan.monthlyPrice * 12 - plan.yearlyPrice : 0;
   const c = PlanColor(plan.color);
   const PlanIcon = plan.icon;
 
-  const validate = () => {
-    const e: Record<string, string> = {};
-    if (method === "card") {
-      if (!card.number.replace(/\s/g, "").match(/^\d{16}$/)) e.number = "Số thẻ không hợp lệ";
-      if (!card.name.trim()) e.name = "Vui lòng nhập tên chủ thẻ";
-      if (!card.expiry.match(/^\d{2}\/\d{2}$/)) e.expiry = "Định dạng MM/YY";
-      if (!card.cvv.match(/^\d{3,4}$/)) e.cvv = "CVV không hợp lệ";
-    }
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  };
-
   const handlePay = async () => {
-    if (!validate()) return;
     setLoading(true);
     setPaymentError(null);
     try {
@@ -178,14 +160,6 @@ function PaymentModal({
     }
   };
 
-  const formatCard = (val: string) =>
-    val.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
-
-  const formatExpiry = (val: string) => {
-    const d = val.replace(/\D/g, "").slice(0, 4);
-    return d.length > 2 ? d.slice(0, 2) + "/" + d.slice(2) : d;
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
@@ -197,10 +171,10 @@ function PaymentModal({
         <div className={`relative px-6 pt-6 pb-5 ${step === "success" ? "bg-gradient-to-br from-emerald-500 to-teal-500" : "bg-gray-950"}`}>
           {step !== "success" && (
             <button
-              onClick={step === "form" ? () => setStep("method") : onClose}
+              onClick={onClose}
               className="absolute top-4 left-4 p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
             >
-              {step === "form" ? <ArrowLeft className="w-4 h-4" /> : <X className="w-4 h-4" />}
+              <X className="w-4 h-4" />
             </button>
           )}
 
@@ -279,7 +253,7 @@ function PaymentModal({
           {/* ── STEP: METHOD ── */}
           {step === "method" && (
             <div className="space-y-3">
-              <p style={{ fontWeight: 700, fontSize: "0.88rem" }} className="text-gray-700 mb-4">Chọn phương thức thanh toán</p>
+              <p style={{ fontWeight: 700, fontSize: "0.88rem" }} className="text-gray-700 mb-4">Thanh toán mặc định bằng ví của tài khoản</p>
               {PAYMENT_METHODS.map((pm) => {
                 const PMIcon = pm.icon;
                 return (
@@ -324,132 +298,16 @@ function PaymentModal({
               </div>
 
               <button
-                onClick={() => setStep("form")}
+                onClick={handlePay}
                 className={`w-full py-3.5 text-white rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2 ${c.btn}`}
                 style={{ fontWeight: 700, fontSize: "0.95rem" }}
               >
-                Tiếp tục <ChevronRight className="w-4 h-4" />
+                Thanh toán bằng ví <ChevronRight className="w-4 h-4" />
               </button>
               <div className="flex items-center justify-center gap-1.5">
                 <Lock className="w-3 h-3 text-gray-400" />
                 <span style={{ fontSize: "0.72rem" }} className="text-gray-400">Thanh toán bảo mật SSL 256-bit</span>
               </div>
-            </div>
-          )}
-
-          {/* ── STEP: FORM ── */}
-          {step === "form" && (
-            <div className="space-y-4">
-              {method === "card" ? (
-                <>
-                  <div>
-                    <label className="block text-gray-700 mb-1.5" style={{ fontSize: "0.83rem", fontWeight: 600 }}>Số thẻ</label>
-                    <div className={`relative flex items-center border-2 rounded-xl bg-gray-50 focus-within:bg-white focus-within:border-orange-400 transition-all ${errors.number ? "border-red-300" : "border-gray-200"}`}>
-                      <CreditCard className="absolute left-3.5 w-4 h-4 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="1234 5678 9012 3456"
-                        value={card.number}
-                        onChange={e => setCard({ ...card, number: formatCard(e.target.value) })}
-                        className="w-full bg-transparent pl-10 pr-4 py-3 outline-none text-gray-800 placeholder-gray-400 font-mono"
-                        style={{ fontSize: "0.9rem" }}
-                        maxLength={19}
-                      />
-                    </div>
-                    {errors.number && <p className="text-red-500 mt-1 flex items-center gap-1" style={{ fontSize: "0.75rem" }}><AlertCircle className="w-3 h-3" />{errors.number}</p>}
-                  </div>
-                  <div>
-                    <label className="block text-gray-700 mb-1.5" style={{ fontSize: "0.83rem", fontWeight: 600 }}>Tên chủ thẻ</label>
-                    <div className={`relative flex items-center border-2 rounded-xl bg-gray-50 focus-within:bg-white focus-within:border-orange-400 transition-all ${errors.name ? "border-red-300" : "border-gray-200"}`}>
-                      <input
-                        type="text"
-                        placeholder="NGUYEN VAN A"
-                        value={card.name}
-                        onChange={e => setCard({ ...card, name: e.target.value.toUpperCase() })}
-                        className="w-full bg-transparent px-4 py-3 outline-none text-gray-800 placeholder-gray-400 uppercase"
-                        style={{ fontSize: "0.9rem" }}
-                      />
-                    </div>
-                    {errors.name && <p className="text-red-500 mt-1 flex items-center gap-1" style={{ fontSize: "0.75rem" }}><AlertCircle className="w-3 h-3" />{errors.name}</p>}
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-gray-700 mb-1.5" style={{ fontSize: "0.83rem", fontWeight: 600 }}>Ngày hết hạn</label>
-                      <div className={`border-2 rounded-xl bg-gray-50 focus-within:bg-white focus-within:border-orange-400 transition-all ${errors.expiry ? "border-red-300" : "border-gray-200"}`}>
-                        <input
-                          type="text"
-                          placeholder="MM/YY"
-                          value={card.expiry}
-                          onChange={e => setCard({ ...card, expiry: formatExpiry(e.target.value) })}
-                          className="w-full bg-transparent px-4 py-3 outline-none text-gray-800 placeholder-gray-400 font-mono"
-                          style={{ fontSize: "0.9rem" }}
-                          maxLength={5}
-                        />
-                      </div>
-                      {errors.expiry && <p className="text-red-500 mt-1" style={{ fontSize: "0.72rem" }}>{errors.expiry}</p>}
-                    </div>
-                    <div>
-                      <label className="block text-gray-700 mb-1.5" style={{ fontSize: "0.83rem", fontWeight: 600 }}>CVV</label>
-                      <div className={`relative border-2 rounded-xl bg-gray-50 focus-within:bg-white focus-within:border-orange-400 transition-all ${errors.cvv ? "border-red-300" : "border-gray-200"}`}>
-                        <input
-                          type="password"
-                          placeholder="•••"
-                          value={card.cvv}
-                          onChange={e => setCard({ ...card, cvv: e.target.value.replace(/\D/g, "").slice(0, 4) })}
-                          className="w-full bg-transparent px-4 py-3 outline-none text-gray-800 placeholder-gray-400 font-mono"
-                          style={{ fontSize: "0.9rem" }}
-                          maxLength={4}
-                        />
-                      </div>
-                      {errors.cvv && <p className="text-red-500 mt-1" style={{ fontSize: "0.72rem" }}>{errors.cvv}</p>}
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="text-center py-8">
-                  {/* QR / bank transfer placeholder */}
-                  <div className="w-48 h-48 bg-gray-100 rounded-2xl mx-auto flex items-center justify-center mb-4 border-2 border-dashed border-gray-300">
-                    <div className="text-center">
-                      <div style={{ fontSize: "3rem" }}>
-                        {method === "momo" ? "💜" : method === "vnpay" ? "📱" : "🏦"}
-                      </div>
-                      <p style={{ fontSize: "0.78rem" }} className="text-gray-500 mt-2">Quét mã QR</p>
-                    </div>
-                  </div>
-                  <p style={{ fontSize: "0.85rem" }} className="text-gray-500">
-                    {method === "bank"
-                      ? "MB Bank · STK: 0123456789 · Tên: COACHFINDER JSC"
-                      : `Mở app ${method === "momo" ? "MoMo" : "VNPAY"} và quét mã QR để thanh toán`}
-                  </p>
-                  <div className="flex items-center justify-center gap-1.5 mt-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 mx-auto" style={{ maxWidth: 300 }}>
-                    <Clock className="w-3.5 h-3.5 text-amber-500" />
-                    <span style={{ fontSize: "0.78rem", fontWeight: 600 }} className="text-amber-600">Mã QR hết hạn sau 15:00 phút</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Security badges */}
-              <div className="flex items-center justify-center gap-4 py-2">
-                {["SSL", "PCI DSS", "3D Secure"].map(b => (
-                  <div key={b} className="flex items-center gap-1 text-gray-400">
-                    <Shield className="w-3 h-3" />
-                    <span style={{ fontSize: "0.68rem", fontWeight: 700 }}>{b}</span>
-                  </div>
-                ))}
-              </div>
-
-              <button
-                onClick={handlePay}
-                disabled={loading}
-                className={`w-full py-3.5 text-white rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-70 ${c.btn}`}
-                style={{ fontWeight: 700, fontSize: "0.95rem" }}
-              >
-                {loading ? (
-                  <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Đang xử lý...</>
-                ) : (
-                  <><Lock className="w-4 h-4" /> Thanh toán {formatPrice(price)}</>
-                )}
-              </button>
             </div>
           )}
         </div>
@@ -713,7 +571,7 @@ export function LearnerSubscription() {
         {[
           { icon: Shield, title: "Bảo đảm hoàn tiền", desc: "Hoàn tiền 100% trong 7 ngày nếu không hài lòng, không cần lý do." },
           { icon: Clock, title: "Huỷ bất kỳ lúc nào", desc: "Không ràng buộc hợp đồng dài hạn. Huỷ gói chỉ trong 1 cú click." },
-          { icon: Lock, title: "Thanh toán bảo mật", desc: "Dữ liệu thẻ được mã hoá SSL. Không lưu thông tin thẻ trên server." },
+          { icon: Lock, title: "Thanh toán bảo mật", desc: "Thanh toán gói được trừ trực tiếp từ ví CoachFinder của tài khoản." },
         ].map(({ icon: Icon, title, desc }) => (
           <div key={title} className="bg-gray-50 border border-gray-100 rounded-2xl p-4 flex gap-3">
             <div className="w-9 h-9 rounded-xl bg-white border border-gray-200 flex items-center justify-center shrink-0 shadow-sm">

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import {
   LayoutDashboard, Search, Calendar, Brain, BarChart2, Video,
@@ -57,7 +57,7 @@ const HEADER_TITLES: Record<string, { title: string; sub: string }> = {
 };
 
 type ProgressChartRow = { week: string; hours: number };
-type MyCoachRow = { name: string; sport: string; rating: number; avatar: string; sessions: number; nextSession: string };
+type MyCoachRow = { id: string; name: string; sport: string; rating: number; avatar: string; sessions: number; nextSession: string };
 type UpcomingSessionRow = { coach: string; sport: string; time: string; type: string; avatar: string; status: "confirmed" | "pending" };
 type SuggestedCoachRow = { name: string; sport: string; price: string; avatar: string; tag: string };
 
@@ -104,15 +104,17 @@ function mapUpcomingSessions(bookings: BookingListItem[]): UpcomingSessionRow[] 
 function mapMyCoaches(bookings: BookingListItem[]): MyCoachRow[] {
   const byCoach = new Map<string, BookingListItem[]>();
   bookings.forEach(booking => {
-    const key = booking.coachName || "Huấn luyện viên";
+    const key = booking.coachId ? String(booking.coachId) : (booking.coachName || "Huấn luyện viên");
     byCoach.set(key, [...(byCoach.get(key) || []), booking]);
   });
 
-  return Array.from(byCoach.entries()).slice(0, 3).map(([name, coachBookings]) => {
+  return Array.from(byCoach.entries()).map(([id, coachBookings]) => {
+    const name = coachBookings[0]?.coachName || "Huấn luyện viên";
     const next = coachBookings
       .filter(item => item.status === "PENDING" || item.status === "CONFIRMED")
       .sort((a, b) => `${a.date}T${a.startTime}`.localeCompare(`${b.date}T${b.startTime}`))[0];
     return {
+      id,
       name,
       sport: coachBookings[0]?.sport || "Huấn luyện",
       rating: 4.8,
@@ -203,11 +205,12 @@ export function LearnerDashboard() {
       getChatUnreadCount().catch(() => ({ unreadCount: 0 })),
     ]).then(([progressOverview, heatmap, bookings, coachPage, achievements, currentSubscription, unread]) => {
       if (!active) return;
-      if (progressOverview) setOverview(progressOverview);
+      const myCoaches = mapMyCoaches(bookings);
+      if (progressOverview) setOverview({ ...progressOverview, activeCoaches: myCoaches.length });
       
       setProgressRows(mapProgressChart(heatmap));
       setSessionRows(mapUpcomingSessions(bookings));
-      setCoachRows(mapMyCoaches(bookings));
+      setCoachRows(myCoaches);
       setSuggestedRows(mapSuggestedCoaches(coachPage?.content ?? []));
       setAchievementRows(mapAchievements(achievements));
       setSubscription(currentSubscription);
@@ -505,7 +508,7 @@ export function LearnerDashboard() {
                           </div>
                         ) : (
                           coachRows.map((c) => (
-                            <div key={c.name} className="p-3.5 rounded-xl border border-gray-100 hover:border-orange-200 hover:shadow-sm transition-all duration-200 cursor-pointer">
+                            <div key={c.id} className="p-3.5 rounded-xl border border-gray-100 hover:border-orange-200 hover:shadow-sm transition-all duration-200 cursor-pointer">
                               <div className="flex items-center gap-3 mb-2.5">
                                 <img src={c.avatar} alt="" className="w-11 h-11 rounded-xl object-cover" />
                                 <div className="flex-1 min-w-0">

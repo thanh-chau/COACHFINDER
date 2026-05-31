@@ -39,6 +39,7 @@ export interface BookingResponse extends CreateBookingRequest {
 
 export interface BookingListItem {
   id: number;
+  coachId?: number;
   coachName?: string;
   coachAvatar?: string;
   traineeName?: string;
