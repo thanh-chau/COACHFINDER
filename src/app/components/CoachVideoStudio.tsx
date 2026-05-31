@@ -92,6 +92,16 @@ function formatDuration(seconds: number | null) {
   return `${minutes}:${String(rest).padStart(2, "0")}`;
 }
 
+function normalizeTags(tags: unknown): string[] {
+  if (Array.isArray(tags)) {
+    return tags.map(String).map(tag => tag.trim()).filter(Boolean);
+  }
+  if (typeof tags === "string") {
+    return tags.split(",").map(tag => tag.trim()).filter(Boolean);
+  }
+  return [];
+}
+
 function mapSubmission(submission: CoachVideoSubmission): StudentSubmission {
   const score = submission.totalScore ?? 0;
   return {
@@ -131,7 +141,7 @@ function mapApiVideo(video: VideoItem, submissions: CoachVideoSubmission[]): Coa
     durationSec: video.duration || 0,
     type: video.videoType === "VIDEO_360" || video.format === "360" ? "360" : "normal",
     category: video.category || "Thể hình",
-    tags: video.tags || [],
+    tags: normalizeTags(video.tags),
     visibility: video.visibility === "PUBLIC" ? "public" : video.visibility === "PRIVATE" ? "private" : "students",
     views: video.viewCount,
     likes: video.likes,

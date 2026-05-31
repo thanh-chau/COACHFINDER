@@ -83,6 +83,7 @@ function mapCatalogPlan(plan: SubscriptionPlanCard): LearnerPlan {
   const code = plan.planCode;
   const isFree = code === "FREE";
   const isPremium = code === "PREMIUM";
+  const features = Array.isArray(plan.features) ? plan.features : [];
   return {
     id: code.toLowerCase(),
     planCode: code,
@@ -96,7 +97,7 @@ function mapCatalogPlan(plan: SubscriptionPlanCard): LearnerPlan {
     badge: plan.ribbonText,
     cta: plan.actionLabel,
     current: plan.current,
-    features: plan.features.map(feature => feature.text),
+    features: features.map(feature => feature.text).filter(Boolean),
   };
 }
 
@@ -329,7 +330,7 @@ export function LearnerSubscription() {
     setLoadingPlans(true);
     getTraineeSubscriptionCatalog(billingCycle)
       .then((catalog) => {
-        setPlans(catalog.plans.map(mapCatalogPlan));
+        setPlans((Array.isArray(catalog.plans) ? catalog.plans : []).map(mapCatalogPlan));
         setPlansError(null);
       })
       .catch((err) => {
@@ -415,7 +416,7 @@ export function LearnerSubscription() {
 
       {/* ── PLAN CARDS ──────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {plans.map((plan) => {
+        {(Array.isArray(plans) ? plans : []).map((plan) => {
           const c = PlanColor(plan.color);
           const PlanIcon = plan.icon;
           const price = yearly ? plan.yearlyPrice : plan.monthlyPrice;
@@ -479,7 +480,7 @@ export function LearnerSubscription() {
 
               {/* Features */}
               <div className="space-y-2.5 flex-1 mb-6">
-                {plan.features.map((label) => (
+                {(Array.isArray(plan.features) ? plan.features : []).map((label) => (
                   <div key={label} className="flex items-center gap-2.5">
                     <div className={`w-4.5 h-4.5 rounded-full flex items-center justify-center shrink-0 ${c.bg}`}>
                       <Check className={`w-2.5 h-2.5 ${c.text}`} strokeWidth={3} />

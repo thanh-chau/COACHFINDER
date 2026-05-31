@@ -94,7 +94,8 @@ function monthLabel(value: string) {
 }
 
 function mapBodyMetricRows(entries: BodyMetricEntry[]): BodyMetricChartRow[] {
-  const rows = entries
+  const source = Array.isArray(entries) ? entries : [];
+  const rows = source
     .filter((entry) => entry.weight || entry.bodyFat || entry.muscleMass)
     .map((entry) => {
       const weight = entry.weight ?? 0;
@@ -110,8 +111,9 @@ function mapBodyMetricRows(entries: BodyMetricEntry[]): BodyMetricChartRow[] {
 }
 
 function mapExerciseRows(entries: ExerciseProgressEntry[]): ExerciseChartItem[] {
+  const source = Array.isArray(entries) ? entries : [];
   const colors = ["#10b981", "#3b82f6", "#f97316", "#8b5cf6", "#f59e0b"];
-  const grouped = entries.reduce<Record<string, ExerciseProgressEntry[]>>((acc, entry) => {
+  const grouped = source.reduce<Record<string, ExerciseProgressEntry[]>>((acc, entry) => {
     const key = entry.exerciseName || "Exercise";
     acc[key] = [...(acc[key] ?? []), entry];
     return acc;
@@ -140,6 +142,7 @@ function mapExerciseRows(entries: ExerciseProgressEntry[]): ExerciseChartItem[] 
 }
 
 function mapHeatmapRows(points: Array<{ date: string; value: number }>) {
+  if (!Array.isArray(points)) return WEEKLY_HEATMAP;
   if (!points.length) return WEEKLY_HEATMAP;
   const recent = points.slice(-84);
   const weeks: number[][] = [];
@@ -151,6 +154,7 @@ function mapHeatmapRows(points: Array<{ date: string; value: number }>) {
 }
 
 function mapAchievements(items: Achievement[]) {
+  if (!Array.isArray(items)) return ACHIEVEMENTS;
   if (!items.length) return ACHIEVEMENTS;
   return items.map((item, index) => ({
     id: item.id,
@@ -163,7 +167,7 @@ function mapAchievements(items: Achievement[]) {
 }
 
 function mapAIScoreRows(items: CoachVideoSubmission[]): AIScoreRow[] {
-  const scored = items.filter(item => item.totalScore != null);
+  const scored = (Array.isArray(items) ? items : []).filter(item => item.totalScore != null);
   const grouped = scored.reduce<Record<string, number[]>>((acc, item) => {
     const key = monthLabel(item.submittedAt);
     acc[key] = [...(acc[key] ?? []), (item.totalScore ?? 0) * 10];
@@ -177,7 +181,7 @@ function mapAIScoreRows(items: CoachVideoSubmission[]): AIScoreRow[] {
 
 function mapAIScoreBreakdown(items: CoachVideoSubmission[]): AIScoreBreakdown[] {
   const colors = ["#10b981", "#3b82f6", "#f59e0b", "#8b5cf6"];
-  return items
+  return (Array.isArray(items) ? items : [])
     .filter(item => item.totalScore != null)
     .slice(0, 4)
     .map((item, index) => ({
@@ -435,10 +439,11 @@ function ExerciseProgressSection({ data = EXERCISE_PROGRESS }: { data?: Exercise
   const selectedEx = data.find((e) => e.id === selected) ?? data[0] ?? EXERCISE_PROGRESS[0];
 
   // combined chart data
-  const combinedData = (data[0]?.history ?? []).map((_, i) => {
-    const row: Record<string, string | number> = { month: data[0].history[i].month };
+  const longestHistory = data.reduce((max, ex) => ex.history.length > max.length ? ex.history : max, data[0]?.history ?? []);
+  const combinedData = longestHistory.map((point, i) => {
+    const row: Record<string, string | number> = { month: point.month };
     data.forEach((ex) => {
-      row[ex.id] = ex.history[i].value;
+      row[ex.id] = ex.history[i]?.value ?? 0;
     });
     return row;
   });
