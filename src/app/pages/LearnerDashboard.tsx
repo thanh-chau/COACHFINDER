@@ -143,6 +143,14 @@ function mapAchievements(rows: Achievement[]) {
 
 export function LearnerDashboard() {
   const [activeNav, setActiveNav] = useState("overview");
+  const [targetUsername, setTargetUsername] = useState<string | null>(null);
+
+  const handleNavigate = (view: string, payload?: string) => {
+    setActiveNav(view);
+    if (view === "msg" && payload) {
+      setTargetUsername(payload);
+    }
+  };
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
   const [chatCount, setChatCount] = useState(0);
@@ -335,19 +343,19 @@ export function LearnerDashboard() {
             {activeNav === "find" && <FindCoach />}
 
             {/* ── SCHEDULE ── */}
-            {activeNav === "schedule" && <TrainingSchedule onNavigate={setActiveNav} />}
+            {activeNav === "schedule" && <TrainingSchedule onNavigate={handleNavigate} />}
 
             {/* ── AI ANALYSIS ── */}
-            {activeNav === "ai" && <AIAnalysis onNavigate={setActiveNav} />}
+            {activeNav === "ai" && <AIAnalysis onNavigate={handleNavigate} />}
 
             {/* ── PROGRESS ── */}
-            {activeNav === "progress" && <ProgressTracking onNavigate={setActiveNav} />}
+            {activeNav === "progress" && <ProgressTracking onNavigate={handleNavigate} />}
 
             {/* ── VIDEO LIBRARY ── */}
-            {activeNav === "video" && <VideoLibrary onNavigate={setActiveNav} />}
+            {activeNav === "video" && <VideoLibrary onNavigate={handleNavigate} />}
 
             {/* ── MESSAGING ── */}
-            {activeNav === "msg" && <Messaging userPlan="free" onNavigate={setActiveNav} />}
+            {activeNav === "msg" && <Messaging userPlan="free" onNavigate={handleNavigate} targetUsername={targetUsername} />}
 
             {/* ── OVERVIEW ── */}
             {activeNav === "overview" && (

@@ -128,7 +128,7 @@ function CoachInfoPanel({ conv, onClose }: { conv: Conversation; onClose: () => 
   );
 }
 
-export function Messaging({ userPlan = "free", onNavigate }: { userPlan?: "free" | "pro" | "premium"; onNavigate?: (view: string) => void }) {
+export function Messaging({ userPlan = "free", onNavigate, targetUsername }: { userPlan?: "free" | "pro" | "premium"; onNavigate?: (view: string) => void; targetUsername?: string | null }) {
   const [conversations, setConversations] = useState<Conversation[]>(INITIAL_CONVERSATIONS);
   const [activeId, setActiveId] = useState<string>("c1");
   const [inputText, setInputText] = useState("");
@@ -168,11 +168,30 @@ export function Messaging({ userPlan = "free", onNavigate }: { userPlan?: "free"
     let mounted = true;
     getConversations().then((items) => {
       if (!mounted || items.length === 0) return;
-      setConversations(items.map(mapApiConversation));
-      setActiveId(String(items[0].id));
+      const mapped = items.map(mapApiConversation);
+      setConversations(mapped);
+      let initialId = String(mapped[0].id);
+      if (targetUsername) {
+        const found = mapped.find(c => c.coach.name === targetUsername);
+        if (found) {
+          initialId = found.id;
+          setShowMobileList(false);
+        }
+      }
+      setActiveId(initialId);
     }).catch(() => {});
     return () => { mounted = false; };
   }, []);
+
+  useEffect(() => {
+    if (targetUsername && conversations.length > 0) {
+      const found = conversations.find(c => c.coach.name === targetUsername);
+      if (found) {
+        setActiveId(found.id);
+        setShowMobileList(false);
+      }
+    }
+  }, [targetUsername, conversations.length]);
 
   useEffect(() => {
     if (!/^\d+$/.test(activeId)) return;

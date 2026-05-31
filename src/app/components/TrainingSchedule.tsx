@@ -154,11 +154,13 @@ function SessionModal({
   onClose,
   onCancel,
   onRate,
+  onNavigate,
 }: {
   session: Session;
   onClose: () => void;
   onCancel: (id: number, reason: string) => Promise<void>;
   onRate: (id: number, rating: number) => void;
+  onNavigate?: (view: string, payload?: string) => void;
 }) {
   const [cancelStep, setCancelStep] = useState<"idle" | "confirm" | "done">("idle");
   const [cancelReason, setCancelReason] = useState("");
@@ -282,7 +284,7 @@ function SessionModal({
               <div style={{ fontSize: "0.85rem", fontWeight: 700 }} className="text-gray-900">{session.coach}</div>
               <div style={{ fontSize: "0.72rem" }} className="text-gray-400">Huấn luyện viên</div>
             </div>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-colors" style={{ fontSize: "0.78rem", fontWeight: 600 }}>
+            <button onClick={() => onNavigate?.("msg", session.coach)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-colors" style={{ fontSize: "0.78rem", fontWeight: 600 }}>
               <MessageCircle className="w-3.5 h-3.5" /> Nhắn tin
             </button>
           </div>
@@ -632,7 +634,7 @@ function SessionItem({ session, onClick, compact }: { session: Session; onClick:
 
 // ─── Main TrainingSchedule ────────────────────────────────────────────────────
 interface TrainingScheduleProps {
-  onNavigate?: (view: string) => void;
+  onNavigate?: (view: string, payload?: string) => void;
 }
 
 export function TrainingSchedule({ onNavigate }: TrainingScheduleProps) {
@@ -968,6 +970,7 @@ export function TrainingSchedule({ onNavigate }: TrainingScheduleProps) {
           onClose={() => setSessionModal(null)}
           onCancel={handleCancel}
           onRate={handleRate}
+          onNavigate={onNavigate}
         />
       )}
     </div>

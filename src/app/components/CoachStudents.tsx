@@ -568,7 +568,7 @@ function StudentDetail({
         {/* Quick actions */}
         <div className="flex gap-2">
           {[
-            { icon: MessageCircle, label: "Nhắn tin", action: () => onNavigate?.("msg") },
+            { icon: MessageCircle, label: "Nhắn tin", action: () => onNavigate?.("msg", s.name) },
             { icon: Calendar,      label: "Đặt lịch", action: () => {} },
             { icon: Phone,         label: "Gọi",      action: () => {} },
             { icon: Video,         label: "Video",     action: () => {} },

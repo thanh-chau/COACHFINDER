@@ -178,6 +178,36 @@ function buildOverviewStats(analytics?: CoachAnalyticsOverview | null, income?: 
     monthRevenue: income?.monthRevenue ?? analytics?.totalRevenue ?? DEFAULT_OVERVIEW.monthRevenue,
     averageRating: analytics?.averageRating ?? DEFAULT_OVERVIEW.averageRating,
     weekSessions: analytics?.confirmedBookings ?? DEFAULT_OVERVIEW.weekSessions,
+  const avatars = [STUDENT_1, STUDENT_2, STUDENT_3];
+
+  return source.map((booking, index) => ({
+    student: booking.traineeName || "Học viên",
+    time: `${booking.startTime.slice(0, 5)} - ${booking.endTime.slice(0, 5)}`,
+    type: booking.type === "ONLINE" ? "Online" : "Offline",
+    status: booking.status === "COMPLETED" ? "done" : "upcoming",
+    avatar: booking.traineeAvatar || avatars[index % avatars.length],
+  }));
+}
+
+function mapRecentPayments(transactions: WalletTransaction[]): RecentPaymentRow[] {
+  return transactions
+    .filter(item => item.amount > 0)
+    .slice(0, 4)
+    .map(item => ({
+      student: item.processedByName || item.description || "Thanh toán",
+      amount: formatCurrency(item.amount),
+      date: formatRelativeDate(item.createdAt),
+      type: item.referenceType || item.type,
+    }));
+}
+
+function buildOverviewStats(analytics?: CoachAnalyticsOverview | null, income?: { monthRevenue: number } | null) {
+  return {
+    ...DEFAULT_OVERVIEW,
+    totalStudents: analytics?.totalStudents ?? DEFAULT_OVERVIEW.totalStudents,
+    monthRevenue: income?.monthRevenue ?? analytics?.totalRevenue ?? DEFAULT_OVERVIEW.monthRevenue,
+    averageRating: analytics?.averageRating ?? DEFAULT_OVERVIEW.averageRating,
+    weekSessions: analytics?.confirmedBookings ?? DEFAULT_OVERVIEW.weekSessions,
     totalVideos: analytics?.totalVideos ?? DEFAULT_OVERVIEW.totalVideos,
     totalVideoViews: analytics?.totalVideoViews ?? DEFAULT_OVERVIEW.totalVideoViews,
   };
@@ -185,6 +215,14 @@ function buildOverviewStats(analytics?: CoachAnalyticsOverview | null, income?: 
 
 export function CoachDashboard() {
   const [activeNav, setActiveNav] = useState("overview");
+  const [targetUsername, setTargetUsername] = useState<string | null>(null);
+
+  const handleNavigate = (view: string, payload?: string) => {
+    setActiveNav(view);
+    if (view === "msg" && payload) {
+      setTargetUsername(payload);
+    }
+  };
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
   const [loadingOverview, setLoadingOverview] = useState(true);
@@ -334,7 +372,7 @@ export function CoachDashboard() {
             return (
             <button
               key={id}
-              onClick={() => { setActiveNav(id); setSidebarOpen(false); }}
+              onClick={() => handleNavigate(id)}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 ${
                 activeNav === id
                   ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/20"
@@ -363,7 +401,7 @@ export function CoachDashboard() {
           {[{ icon: Settings, label: "Cài đặt", id: "settings" }, { icon: LogOut, label: "Đăng xuất", id: "logout" }].map(({ icon: Icon, label, id }) => (
             <button
               key={id}
-              onClick={() => { if (id === "logout") logout(); else { setActiveNav(id); setSidebarOpen(false); } }}
+              onClick={() => { if (id === "logout") logout(); else { handleNavigate(id); setSidebarOpen(false); } }}
               className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-gray-400 hover:bg-white/[0.06] hover:text-gray-200 transition-all duration-200"
             >
               <Icon className="w-[18px] h-[18px] shrink-0" />
@@ -386,7 +424,7 @@ export function CoachDashboard() {
             <div style={{ fontSize: "0.78rem" }} className="text-gray-400 truncate">{new Date().toLocaleDateString("vi-VN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · {overview.todaySessions} buổi dạy hôm nay</div>
           </div>
           <div className="flex items-center gap-2.5">
-            <button onClick={() => setActiveNav("schedule")} className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:from-blue-600 hover:to-indigo-600 transition-all shadow-md shadow-blue-200" style={{ fontSize: "0.82rem", fontWeight: 700 }}>
+            <button onClick={() => handleNavigate("schedule")} className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:from-blue-600 hover:to-indigo-600 transition-all shadow-md shadow-blue-200" style={{ fontSize: "0.82rem", fontWeight: 700 }}>
               <Plus className="w-3.5 h-3.5" /> Thêm buổi dạy
             </button>
             <NotificationBell />
@@ -405,10 +443,10 @@ export function CoachDashboard() {
           <div className="p-5 lg:p-6 space-y-5 lg:space-y-6 max-w-[1440px] mx-auto w-full">
 
             {/* ── STUDENTS ── */}
-            <div className={activeNav === "students" ? "block h-full" : "hidden"}><CoachStudents onNavigate={setActiveNav} /></div>
+            <div className={activeNav === "students" ? "block h-full" : "hidden"}><CoachStudents onNavigate={handleNavigate} /></div>
 
             {/* ── SCHEDULE ── */}
-            <div className={activeNav === "schedule" ? "block h-full" : "hidden"}><CoachSchedule onNavigate={setActiveNav} /></div>
+            <div className={activeNav === "schedule" ? "block h-full" : "hidden"}><CoachSchedule onNavigate={handleNavigate} /></div>
 
             {/* ── VIDEO STUDIO ── */}
             <div className={activeNav === "studio" ? "block h-full" : "hidden"}><CoachVideoStudio /></div>
@@ -420,8 +458,7 @@ export function CoachDashboard() {
             <div className={activeNav === "analytics" ? "block h-full" : "hidden"}><CoachAnalytics /></div>
 
             {/* ── MESSAGES ── */}
-            <div className={activeNav === "msg" ? "block h-full" : "hidden"}><CoachMessages /></div>
-
+            <div className={activeNav === "msg" ? "block h-full" : "hidden"}><CoachMessages targetUsername={targetUsername} /></div>
             {/* ── SUBSCRIPTION ── */}
             <div className={activeNav === "subscription" ? "block h-full" : "hidden"}><CoachSubscription /></div>
 

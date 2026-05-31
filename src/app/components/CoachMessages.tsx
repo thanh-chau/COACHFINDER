@@ -197,7 +197,7 @@ function InfoPanel({ conv, onClose }:{ conv:Conversation; onClose:()=>void }) {
 }
 
 // ─── Main Component ─────────────────────────────────────────────────────────────
-export function CoachMessages() {
+export function CoachMessages({ targetUsername }: { targetUsername?: string | null }) {
   const [convs,setConvs]         = useState<Conversation[]>(INITIAL_CONVS);
   const [loading,setLoading]     = useState(true);
   const [activeId,setActiveId]   = useState<string>("c1");
@@ -273,7 +273,15 @@ export function CoachMessages() {
         }
         const mapped = items.map(mapApiConversation);
         setConvs(mapped);
-        setActiveId(String(items[0].id));
+        let initialId = String(items[0].id);
+        if (targetUsername) {
+          const found = mapped.find(c => c.name === targetUsername);
+          if (found) {
+             initialId = found.id;
+             setShowMobile("chat");
+          }
+        }
+        setActiveId(initialId);
       })
       .catch(() => {
         // Keep bundled sample conversations as fallback.
@@ -285,6 +293,16 @@ export function CoachMessages() {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (targetUsername && convs.length > 0) {
+      const found = convs.find(c => c.name === targetUsername);
+      if (found) {
+        setActiveId(found.id);
+        setShowMobile("chat");
+      }
+    }
+  }, [targetUsername, convs.length]);
 
   useEffect(() => {
     if (!/^\d+$/.test(activeId)) return;
