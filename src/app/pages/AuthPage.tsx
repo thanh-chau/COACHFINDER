@@ -178,7 +178,7 @@ function LoginForm({ onSwitch }: { onSwitch: () => void }) {
     try {
       const auth = await loginWithFacebook(token.trim());
       saveAuthSession(auth);
-      navigate("/learner/profile/setup");
+      navigate(getDashboardPath(auth.role));
     } catch (error) {
       setLoginError(error instanceof Error ? error.message : `Dang nhap ${provider} khong thanh cong.`);
     }
@@ -354,7 +354,7 @@ function LearnerForm({ onBack, onSwitch }: { onBack: () => void; onSwitch: () =>
         role: "TRAINEES",
       });
       saveAuthSession(auth);
-      navigate(getDashboardPath(auth.role));
+      navigate("/learner/profile/setup");
     } catch (error) {
       setRegisterError(error instanceof Error ? error.message : "Đăng ký không thành công. Vui lòng thử lại.");
     }

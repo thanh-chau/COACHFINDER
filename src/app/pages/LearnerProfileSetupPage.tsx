@@ -160,16 +160,16 @@ export function LearnerProfileSetupPage() {
             <Sparkles className="w-6 h-6 text-orange-300" />
           </div>
           <h1 style={{ fontSize: "1.45rem", fontWeight: 800, lineHeight: 1.35 }} className="mb-3">
-            Hoàn thiện hồ sơ để HLV hiểu mục tiêu của bạn
+            Hoàn thiện hồ sơ để HLV tìm thấy bạn
           </h1>
           <p className="text-gray-300 mb-6" style={{ fontSize: "0.84rem", lineHeight: 1.7 }}>
-            Xin chào {session.fullName || session.username}. Hồ sơ giúp cá nhân hóa lịch tập, gợi ý HLV và theo dõi tiến độ tốt hơn.
+            Xin chào {session.fullName || session.username}. Hồ sơ được lưu sau khi hoàn tất thành công.
           </p>
           <div className="space-y-4">
             {[
-              { icon: Target, text: "Mục tiêu giúp HLV xây lộ trình phù hợp" },
+              { icon: Camera, text: "Ảnh rõ ràng giúp hồ sơ đáng tin cậy hơn" },
+              { icon: Target, text: "Mục tiêu tập luyện giúp HLV lọc nhanh" },
               { icon: HeartPulse, text: "Thông số cơ thể hỗ trợ theo dõi tiến độ" },
-              { icon: Camera, text: "Ảnh đại diện giúp tài khoản dễ nhận diện hơn" },
             ].map(({ icon: Icon, text }) => (
               <div key={text} className="flex items-start gap-3">
                 <Icon className="w-4 h-4 text-orange-300 shrink-0 mt-0.5" />
@@ -181,9 +181,9 @@ export function LearnerProfileSetupPage() {
 
         <section className="rounded-3xl bg-white border border-gray-100 shadow-sm p-6 lg:p-8">
           <div className="mb-6">
-            <h2 className="text-gray-900" style={{ fontSize: "1.45rem", fontWeight: 800 }}>{isEditing ? "Cập nhật hồ sơ học viên" : "Thiết lập hồ sơ học viên"}</h2>
+            <h2 className="text-gray-900" style={{ fontSize: "1.45rem", fontWeight: 800 }}>{isEditing ? "Cập nhật hồ sơ công khai" : "Thiết lập hồ sơ công khai"}</h2>
             <p className="text-gray-500 mt-1" style={{ fontSize: "0.85rem" }}>
-              Thông tin này dùng cho lịch tập, tiến độ và trải nghiệm học viên.
+              Thông tin này sẽ hiển thị cho HLV khi tìm và quản lý học viên.
             </p>
           </div>
 
