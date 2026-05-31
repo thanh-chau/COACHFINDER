@@ -178,36 +178,6 @@ function buildOverviewStats(analytics?: CoachAnalyticsOverview | null, income?: 
     monthRevenue: income?.monthRevenue ?? analytics?.totalRevenue ?? DEFAULT_OVERVIEW.monthRevenue,
     averageRating: analytics?.averageRating ?? DEFAULT_OVERVIEW.averageRating,
     weekSessions: analytics?.confirmedBookings ?? DEFAULT_OVERVIEW.weekSessions,
-  const avatars = [STUDENT_1, STUDENT_2, STUDENT_3];
-
-  return source.map((booking, index) => ({
-    student: booking.traineeName || "Học viên",
-    time: `${booking.startTime.slice(0, 5)} - ${booking.endTime.slice(0, 5)}`,
-    type: booking.type === "ONLINE" ? "Online" : "Offline",
-    status: booking.status === "COMPLETED" ? "done" : "upcoming",
-    avatar: booking.traineeAvatar || avatars[index % avatars.length],
-  }));
-}
-
-function mapRecentPayments(transactions: WalletTransaction[]): RecentPaymentRow[] {
-  return transactions
-    .filter(item => item.amount > 0)
-    .slice(0, 4)
-    .map(item => ({
-      student: item.processedByName || item.description || "Thanh toán",
-      amount: formatCurrency(item.amount),
-      date: formatRelativeDate(item.createdAt),
-      type: item.referenceType || item.type,
-    }));
-}
-
-function buildOverviewStats(analytics?: CoachAnalyticsOverview | null, income?: { monthRevenue: number } | null) {
-  return {
-    ...DEFAULT_OVERVIEW,
-    totalStudents: analytics?.totalStudents ?? DEFAULT_OVERVIEW.totalStudents,
-    monthRevenue: income?.monthRevenue ?? analytics?.totalRevenue ?? DEFAULT_OVERVIEW.monthRevenue,
-    averageRating: analytics?.averageRating ?? DEFAULT_OVERVIEW.averageRating,
-    weekSessions: analytics?.confirmedBookings ?? DEFAULT_OVERVIEW.weekSessions,
     totalVideos: analytics?.totalVideos ?? DEFAULT_OVERVIEW.totalVideos,
     totalVideoViews: analytics?.totalVideoViews ?? DEFAULT_OVERVIEW.totalVideoViews,
   };
