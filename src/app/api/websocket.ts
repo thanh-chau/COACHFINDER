@@ -20,7 +20,10 @@ export interface VideoCallSignal {
   payload?: any;
 }
 
-const API_BASE_URL = "https://be.minhthien.io.vn";
+const API_BASE_URLS = [
+  "https://be.minhthien.io.vn",
+  "https://www.be.minhthien.io.vn",
+];
 
 class ChatWebSocketService {
   private client: Client | null = null;
@@ -36,7 +39,7 @@ class ChatWebSocketService {
     if (!token) return;
 
     this.client = new Client({
-      webSocketFactory: () => new SockJS(`${API_BASE_URL}/ws/chat`),
+      webSocketFactory: () => new SockJS(`${API_BASE_URLS[0]}/ws/chat`),
       connectHeaders: {
         Authorization: `Bearer ${token}`
       },

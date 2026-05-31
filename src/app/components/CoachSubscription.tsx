@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { changeCoachSubscription, getCoachSubscriptionCatalog } from "../api/subscriptions";
 import type { SubscriptionBillingCycle, SubscriptionCatalog, SubscriptionPlanCard, SubscriptionPlanCode } from "../types/subscription";
+import { WalletPanel } from "./WalletPanel";
 
 const plans = [
   {
@@ -249,6 +250,13 @@ export function CoachSubscription() {
           </div>
         </div>
       </div>
+
+      <WalletPanel
+        mode="coach"
+        allowTopUp
+        allowWithdraw={false}
+        allowBankAccount={false}
+      />
 
       {actionMessage && (
         <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-blue-700" style={{ fontSize: "0.84rem", fontWeight: 600 }}>

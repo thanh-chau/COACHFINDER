@@ -104,6 +104,13 @@ export function WalletPanel({
 
   const currency = wallet?.currency || "VND";
   const recentTransactions = useMemo(() => transactions.slice(0, 8), [transactions]);
+  const title = mode === "coach"
+    ? allowTopUp && allowWithdraw
+      ? "Ví HLV & thanh toán"
+      : allowTopUp
+        ? "Ví thanh toán HLV"
+        : "Ví & rút tiền"
+    : "Ví thanh toán";
 
   const loadWallet = async (initial = false) => {
     if (initial) setLoading(true);
@@ -234,7 +241,7 @@ export function WalletPanel({
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-gray-900" style={{ fontWeight: 800, fontSize: "1.08rem" }}>
-            {mode === "coach" ? "Ví & rút tiền" : "Ví thanh toán"}
+            {title}
           </h2>
           <p className="text-gray-500" style={{ fontSize: "0.8rem" }}>
             Dữ liệu lấy từ `/api/v1/wallets/*`, không dùng số dư mẫu.

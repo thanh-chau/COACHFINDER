@@ -4,9 +4,9 @@ import { getFeaturedCoaches } from "../api/coaches";
 import type { Coach } from "../types/coach";
 
 const COACH1 = "https://images.unsplash.com/photo-1750698545009-679820502908?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtYWxlJTIwZml0bmVzcyUyMGNvYWNoJTIwcG9ydHJhaXQlMjBwcm9mZXNzaW9uYWx8ZW58MXx8fHwxNzcyNjM1NTg1fDA&ixlib=rb-4.1.0&q=80&w=1080";
-const COACH2 = "https://images.unsplash.com/photo-1672829985408-2191772a9bf1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmZW1hbGUlMjBzcG9ydHMlMjBjb2FjaCUyMHBvcnRyYWl0JTIwc21pbGluZ3xlbnwxfHx8fDE3NzI2MzU1ODV8MA&ixlib=rb-4.1.0&q=80&w=1080";
-const COACH3 = "https://images.unsplash.com/photo-1758875569414-120ebc62ada3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmaXRuZXNzJTIwY29hY2glMjBneW0lMjB0cmFpbmluZyUyMHNlc3Npb258ZW58MXx8fHwxNzcyNjM1NTc5fDA&ixlib=rb-4.1.0&q=80&w=1080";
-const COACH4 = "https://images.unsplash.com/photo-1730251446354-bc3570752717?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxydW5uaW5nJTIwY29hY2glMjBhdGhsZXRlJTIwdHJhY2slMjBmaWVsZHxlbnwxfHx8fDE3NzI2MzU1ODV8MA&ixlib=rb-4.1.0&q=80&w=1080";
+const COACH2 = "https://images.unsplash.com/photo-1672829985408-2191772a9bf1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHxmZW1hbGUlMjBzcG9ydHMlMjBjb2FjaCUyMHBvcnRyYWl0JTIwc21pbGluZ3xlbnwxfHx8fDE3NzI2MzU1ODV8MA&ixlib=rb-4.1.0&q=80&w=1080";
+const COACH3 = "https://images.unsplash.com/photo-1758875569414-120ebc62ada3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHxmaXRuZXNzJTIwY29hY2glMjBneW0lMjB0cmFpbmluZyUyMHNlc3Npb258ZW58MXx8fHwxNzcyNjM1NTc5fDA&ixlib=rb-4.1.0&q=80&w=1080";
+const COACH4 = "https://images.unsplash.com/photo-1730251446354-bc3570752717?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHxydW5uaW5nJTIwY29hY2glMjBhdGhsZXRlJTIwdHJhY2slMjBmaWVsZHxlbnwxfHx8fDE3NzI2MzU1ODV8MA&ixlib=rb-4.1.0&q=80&w=1080";
 
 const coaches = [
   {
@@ -85,7 +85,7 @@ function mapApiCoach(coach: Coach, index: number) {
     rating: coach.rating ?? fallback.rating,
     reviews: coach.reviewCount ?? fallback.reviews,
     location: coach.location || fallback.location,
-    price: typeof coach.price === "number" ? `${coach.price.toLocaleString("vi-VN")}Ä‘/giá»` : fallback.price,
+    price: typeof coach.price === "number" ? `${coach.price.toLocaleString("vi-VN")}đ/giờ` : fallback.price,
     tags: coach.category ? [coach.category] : fallback.tags,
     experience: fallback.experience,
     badge: fallback.badge,
@@ -98,7 +98,6 @@ function mapApiCoach(coach: Coach, index: number) {
 export function FeaturedCoaches() {
   const [liked, setLiked] = useState<number[]>([]);
   const [displayCoaches, setDisplayCoaches] = useState(coaches);
-  const [usingFallback, setUsingFallback] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -106,10 +105,9 @@ export function FeaturedCoaches() {
       .then((items) => {
         if (!mounted || items.length === 0) return;
         setDisplayCoaches(items.slice(0, 4).map(mapApiCoach));
-        setUsingFallback(false);
       })
       .catch(() => {
-        if (mounted) setUsingFallback(true);
+        // Keep fallback landing data if the public API is unavailable.
       });
     return () => {
       mounted = false;
@@ -123,11 +121,12 @@ export function FeaturedCoaches() {
   return (
     <section className="py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end md:justify-between mb-12">
           <div>
             <div className="inline-flex items-center gap-2 bg-green-50 border border-green-100 rounded-full px-4 py-1.5 mb-4">
-              <span className="text-green-600" style={{ fontSize: "0.85rem", fontWeight: 600 }}>⭐ HLV nổi bật tuần này</span>
+              <span className="text-green-600" style={{ fontSize: "0.85rem", fontWeight: 600 }}>
+                ⭐ HLV nổi bật tuần này
+              </span>
             </div>
             <h2 style={{ fontSize: "clamp(1.8rem, 3vw, 2.5rem)", fontWeight: 800, lineHeight: 1.2 }} className="text-gray-900">
               Gặp Gỡ Các HLV Xuất Sắc
@@ -141,14 +140,12 @@ export function FeaturedCoaches() {
           </button>
         </div>
 
-        {/* Coach cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {displayCoaches.map((coach) => (
             <div
               key={coach.id}
               className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-gray-100 group"
             >
-              {/* Image */}
               <div className="relative h-52 overflow-hidden">
                 <img
                   src={coach.avatar}
@@ -157,12 +154,10 @@ export function FeaturedCoaches() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
 
-                {/* Badge */}
                 <div className={`absolute top-3 left-3 ${coach.badgeColor} text-white px-2.5 py-0.5 rounded-full`} style={{ fontSize: "0.7rem", fontWeight: 700 }}>
                   {coach.badge}
                 </div>
 
-                {/* Like button */}
                 <button
                   onClick={() => toggleLike(coach.id)}
                   className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center hover:scale-110 transition-transform"
@@ -174,7 +169,6 @@ export function FeaturedCoaches() {
                   />
                 </button>
 
-                {/* Rating overlay */}
                 <div className="absolute bottom-3 left-3 flex items-center gap-1 bg-white/90 rounded-full px-2.5 py-1">
                   <Star className="w-3.5 h-3.5 text-amber-400" fill="#fbbf24" />
                   <span style={{ fontSize: "0.8rem", fontWeight: 700 }} className="text-gray-800">{coach.rating}</span>
@@ -182,7 +176,6 @@ export function FeaturedCoaches() {
                 </div>
               </div>
 
-              {/* Content */}
               <div className="p-4">
                 <div className="flex items-center gap-1.5 mb-0.5">
                   <h3 style={{ fontWeight: 700, fontSize: "1rem" }} className="text-gray-900">{coach.name}</h3>
@@ -191,13 +184,12 @@ export function FeaturedCoaches() {
                 <p style={{ fontSize: "0.8rem" }} className="text-gray-500 mb-2">{coach.title}</p>
 
                 <div className="flex items-center gap-1 text-gray-500 mb-3">
-                  <MapPin className="w-3.5 h-3.5" />
+                  <MapPin className="w-3.5 h-3.5 shrink-0" />
                   <span style={{ fontSize: "0.8rem" }}>{coach.location}</span>
                   <span className="mx-1 text-gray-300">•</span>
                   <span style={{ fontSize: "0.8rem" }}>{coach.experience}</span>
                 </div>
 
-                {/* Tags */}
                 <div className="flex flex-wrap gap-1.5 mb-4">
                   {coach.tags.map((tag) => (
                     <span key={tag} className="bg-gray-50 border border-gray-100 text-gray-600 px-2 py-0.5 rounded-full" style={{ fontSize: "0.7rem" }}>
@@ -206,12 +198,12 @@ export function FeaturedCoaches() {
                   ))}
                 </div>
 
-                <div className="flex items-center justify-between pt-3 border-t border-gray-50">
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900">{coach.price}</div>
+                <div className="flex items-center justify-between gap-3 pt-3 border-t border-gray-50">
+                  <div className="min-w-0">
+                    <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900 whitespace-nowrap">{coach.price}</div>
                     <div style={{ fontSize: "0.72rem" }} className="text-gray-400">{coach.students} học viên</div>
                   </div>
-                  <button className="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl hover:from-orange-600 hover:to-red-600 transition-all duration-200" style={{ fontSize: "0.8rem", fontWeight: 600 }}>
+                  <button className="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl hover:from-orange-600 hover:to-red-600 transition-all duration-200 shrink-0" style={{ fontSize: "0.8rem", fontWeight: 600 }}>
                     Đặt lịch
                   </button>
                 </div>

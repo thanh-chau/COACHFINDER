@@ -13,7 +13,10 @@ interface ApiRequestOptions extends RequestInit {
   allowEmptyData?: boolean;
 }
 
-const API_BASE_URL = "https://be.minhthien.io.vn";
+const API_BASE_URLS = [
+  "https://be.minhthien.io.vn",
+  "https://www.be.minhthien.io.vn",
+];
 
 function getRequestMethod(options: RequestInit) {
   return (options.method || "GET").toUpperCase();
@@ -25,6 +28,20 @@ function shouldUseApiCache(options: RequestInit) {
 
 function getApiCacheKey(path: string, authenticated: boolean, token?: string) {
   return `${authenticated ? token || "anonymous" : "public"}:${path}`;
+}
+
+async function fetchFromApiBaseUrls(path: string, init: RequestInit) {
+  let lastError: unknown;
+
+  for (const baseUrl of API_BASE_URLS) {
+    try {
+      return await fetch(`${baseUrl}${path}`, init);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError;
 }
 
 export async function apiRequest<T>(
@@ -51,7 +68,7 @@ export async function apiRequest<T>(
 
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetchFromApiBaseUrls(path, {
       ...requestOptions,
       headers: requestHeaders,
     });
@@ -122,7 +139,7 @@ export async function rawApiRequest<T>(
 
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetchFromApiBaseUrls(path, {
       ...requestOptions,
       headers: requestHeaders,
     });

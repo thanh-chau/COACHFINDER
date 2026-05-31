@@ -618,7 +618,7 @@ export function CoachIncome() {
 
       {tab==="overview"     && <OverviewTab monthlyData={monthlyData} topStudents={topStudents} transactions={transactions}/>}
       {tab==="transactions" && <TransactionsTab transactions={transactions}/>}
-      {tab==="payout"       && <WalletPanel mode="coach" allowWithdraw allowBankAccount />}
+      {tab==="payout"       && <WalletPanel mode="coach" allowTopUp allowWithdraw allowBankAccount />}
       {tab==="plan"         && <PlanTab/>}
     </div>
   );
