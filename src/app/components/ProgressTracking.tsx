@@ -87,6 +87,29 @@ function pct(current: number, prev: number) {
   return Math.round(((current - prev) / prev) * 100);
 }
 
+function textValue(value: unknown, fallback = ""): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number") return String(value);
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return textValue(record.name ?? record.title ?? record.label, fallback);
+  }
+  return fallback;
+}
+
+function numberValue(value: unknown, fallback = 0): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return numberValue(record.value ?? record.score ?? record.total, fallback);
+  }
+  return fallback;
+}
+
 function monthLabel(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
@@ -170,7 +193,7 @@ function mapAIScoreRows(items: CoachVideoSubmission[]): AIScoreRow[] {
   const scored = (Array.isArray(items) ? items : []).filter(item => item.totalScore != null);
   const grouped = scored.reduce<Record<string, number[]>>((acc, item) => {
     const key = monthLabel(item.submittedAt);
-    acc[key] = [...(acc[key] ?? []), (item.totalScore ?? 0) * 10];
+    acc[key] = [...(acc[key] ?? []), numberValue(item.totalScore) * 10];
     return acc;
   }, {});
   return Object.entries(grouped).map(([month, scores]) => ({
@@ -186,10 +209,34 @@ function mapAIScoreBreakdown(items: CoachVideoSubmission[]): AIScoreBreakdown[] 
     .slice(0, 4)
     .map((item, index) => ({
       name: item.videoTitle || `Bài nộp ${item.id}`,
-      score: Math.round((item.totalScore ?? 0) * 10),
-      prev: Math.round((item.totalScore ?? 0) * 10),
+      score: Math.round(numberValue(item.totalScore) * 10),
+      prev: Math.round(numberValue(item.totalScore) * 10),
       color: colors[index % colors.length],
-    }));
+    }))
+    .map((row) => ({ ...row, name: textValue(row.name, "Bài nộp") }));
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return "Chưa có ngày";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("vi-VN");
+}
+
+function statusLabel(status?: string | null) {
+  const normalized = textValue(status).toUpperCase();
+  if (normalized === "REVIEWED" || normalized === "DONE") return "Đã nhận xét";
+  if (normalized === "APPROVED") return "Đạt";
+  if (normalized === "REJECTED") return "Cần cải thiện";
+  return "Chờ nhận xét";
+}
+
+function statusClass(status?: string | null) {
+  const normalized = textValue(status).toUpperCase();
+  if (normalized === "REVIEWED" || normalized === "DONE" || normalized === "APPROVED") {
+    return "bg-emerald-50 text-emerald-600 border-emerald-100";
+  }
+  if (normalized === "REJECTED") return "bg-amber-50 text-amber-600 border-amber-100";
+  return "bg-blue-50 text-blue-600 border-blue-100";
 }
 
 function TrendBadge({ value, suffix = "%" }: { value: number; suffix?: string }) {
@@ -326,12 +373,52 @@ function AchievementsSection({ achievements = ACHIEVEMENTS }: { achievements?: A
   );
 }
 
+function fallbackTrainingRows(timeRange: TimeRange, overview: ProgressOverview | null) {
+  const totalHours = Math.max(overview?.trainingHours ?? 0, overview?.totalSessions ? overview.totalSessions * 2 : 0);
+  const totalSessions = Math.max(overview?.totalSessions ?? 0, totalHours ? Math.ceil(totalHours / 2) : 0);
+  const distribute = (count: number, activeCount: number) => {
+    const active = Math.max(1, Math.min(count, activeCount || 1));
+    return Array.from({ length: count }, (_, index) => {
+      const activeStart = count - active;
+      if (index < activeStart) return 0;
+      const base = totalHours > 0 ? totalHours / active : 1;
+      return Number((base * (index === count - 1 ? 1.2 : 0.9)).toFixed(1));
+    });
+  };
+
+  if (timeRange === "week") {
+    const labels = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
+    const hours = distribute(labels.length, totalSessions || 2);
+    return labels.map((day, index) => ({
+      day,
+      hours: hours[index],
+      calories: Math.round(hours[index] * 120),
+    }));
+  }
+
+  const count = timeRange === "year" ? 12 : timeRange === "3months" ? 3 : 12;
+  const hours = distribute(count, Math.min(count, Math.max(3, totalSessions || 3)));
+  return Array.from({ length: count }, (_, index) => {
+    return {
+      label: timeRange === "3months" ? `T${index + 1}` : `T${index + 1}`,
+      hours: hours[index],
+      calories: Math.round(hours[index] * 120),
+    };
+  });
+}
+
 function TrainingChart({ timeRange, overview }: { timeRange: TimeRange; overview: ProgressOverview | null }) {
-  const data = timeRange === "week" ? (overview?.weeklySummary ?? WEEKLY_DATA)
+  const apiData = timeRange === "week" ? (overview?.weeklySummary ?? WEEKLY_DATA)
     : timeRange === "3months" ? (overview?.quarterlySummary ?? QUARTERLY_DATA)
     : (overview?.monthlySummary ?? MONTHLY_DATA);
+  const data = Array.isArray(apiData) && apiData.length ? apiData : fallbackTrainingRows(timeRange, overview);
 
   const dataKey = timeRange === "week" ? "day" : "label";
+  const summaryItems = [
+    { label: "Giờ tập", value: overview?.trainingHours ?? 0, max: 12, color: "bg-orange-500", suffix: "h" },
+    { label: "Buổi đã tập", value: overview?.totalSessions ?? 0, max: 8, color: "bg-emerald-500", suffix: "" },
+    { label: "AI Score", value: overview?.averageAiScore ?? 0, max: 100, color: "bg-purple-500", suffix: "" },
+  ];
 
   return (
     <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
@@ -370,6 +457,22 @@ function TrainingChart({ timeRange, overview }: { timeRange: TimeRange; overview
           <Bar key="bar-cal" dataKey="calories" fill="#3b82f6" radius={[6, 6, 0, 0]} maxBarSize={32} />
         </BarChart>
       </ResponsiveContainer>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+        {summaryItems.map((item) => {
+          const pctValue = Math.min(100, Math.round((Number(item.value || 0) / item.max) * 100));
+          return (
+            <div key={item.label} className="rounded-xl border border-gray-100 bg-gray-50 p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span style={{ fontSize: "0.76rem", fontWeight: 700 }} className="text-gray-600">{item.label}</span>
+                <span style={{ fontSize: "0.82rem", fontWeight: 800 }} className="text-gray-900">{item.value}{item.suffix}</span>
+              </div>
+              <div className="h-2 rounded-full bg-white overflow-hidden">
+                <div className={`h-full rounded-full ${item.color}`} style={{ width: `${Math.max(8, pctValue)}%` }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -634,6 +737,94 @@ function AIScoreSection({ trend, breakdown }: { trend: AIScoreRow[]; breakdown: 
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────
+function SubmissionReviewsSection({ submissions }: { submissions: CoachVideoSubmission[] }) {
+  const rows = (Array.isArray(submissions) ? submissions : [])
+    .slice()
+    .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+
+  return (
+    <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900">Video đã nộp cho coach</div>
+          <div style={{ fontSize: "0.78rem" }} className="text-gray-400">Xem lại video đã nộp và nhận xét sau khi coach chấm bài</div>
+        </div>
+        <span className="px-2.5 py-1 rounded-full bg-purple-50 text-purple-600 border border-purple-100" style={{ fontSize: "0.72rem", fontWeight: 800 }}>
+          {rows.length} bài
+        </span>
+      </div>
+
+      {rows.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-200 p-5 text-center text-gray-400" style={{ fontSize: "0.84rem", fontWeight: 600 }}>
+          Chưa có video nào được nộp. Khi bạn nộp video trong thư viện 360°, bài nộp sẽ xuất hiện ở tab này.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {rows.map((item) => {
+            const scores = [
+              ["Tư thế", item.postureScore],
+              ["Kỹ thuật", item.techniqueScore],
+              ["Nhịp điệu", item.rhythmScore],
+              ["Sức mạnh", item.strengthScore],
+            ].filter(([, score]) => score != null);
+            const videoTitle = textValue(item.videoTitle, `Bài nộp ${item.id}`);
+            const videoUrl = textValue(item.videoUrl);
+            const feedback = textValue(item.feedback);
+            const totalScore = item.totalScore == null ? null : numberValue(item.totalScore);
+
+            return (
+              <div key={item.id} className="rounded-2xl border border-gray-100 bg-gray-50/70 p-4">
+                <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-4">
+                  <div className="rounded-xl overflow-hidden bg-black aspect-video">
+                    {videoUrl ? (
+                      <video src={videoUrl} controls className="w-full h-full object-contain" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-white/60" style={{ fontSize: "0.8rem", fontWeight: 700 }}>
+                        Chưa có video
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <div className="text-gray-900 truncate" style={{ fontSize: "0.95rem", fontWeight: 800 }}>{videoTitle}</div>
+                      <span className={`px-2 py-0.5 rounded-full border ${statusClass(item.status)}`} style={{ fontSize: "0.68rem", fontWeight: 800 }}>
+                        {statusLabel(item.status)}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 text-gray-400 mb-3" style={{ fontSize: "0.74rem", fontWeight: 600 }}>
+                      <span>Nộp ngày {formatDate(item.submittedAt)}</span>
+                      {totalScore != null && <span className="text-purple-600">Điểm tổng {Math.round(totalScore * 10)}/100</span>}
+                    </div>
+                    {feedback ? (
+                      <div className="rounded-xl bg-white border border-gray-100 p-3 text-gray-700" style={{ fontSize: "0.8rem", lineHeight: 1.6 }}>
+                        {feedback}
+                      </div>
+                    ) : (
+                      <div className="rounded-xl bg-white border border-dashed border-gray-200 p-3 text-gray-400" style={{ fontSize: "0.8rem", fontWeight: 600 }}>
+                        Coach chưa gửi nhận xét cho bài này.
+                      </div>
+                    )}
+                    {scores.length > 0 && (
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
+                        {scores.map(([label, score]) => (
+                          <div key={String(label)} className="rounded-xl bg-white border border-gray-100 p-2">
+                            <div className="text-gray-400" style={{ fontSize: "0.68rem", fontWeight: 700 }}>{label}</div>
+                            <div className="text-gray-900" style={{ fontSize: "0.95rem", fontWeight: 900 }}>{numberValue(score)}/10</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface Props {
   onNavigate?: (view: string) => void;
 }
@@ -648,6 +839,7 @@ export function ProgressTracking({ onNavigate }: Props) {
   const [achievements, setAchievements] = useState<AchievementCard[]>(ACHIEVEMENTS);
   const [aiScoreTrend, setAiScoreTrend] = useState<AIScoreRow[]>([]);
   const [aiScoreBreakdown, setAiScoreBreakdown] = useState<AIScoreBreakdown[]>([]);
+  const [mySubmissions, setMySubmissions] = useState<CoachVideoSubmission[]>([]);
   const [apiError, setApiError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [savingProgress, setSavingProgress] = useState(false);
@@ -680,6 +872,7 @@ export function ProgressTracking({ onNavigate }: Props) {
       setExerciseProgress(mapExerciseRows(exerciseData));
       setHeatmap(mapHeatmapRows(heatmapData));
       setAchievements(mapAchievements(achievementData));
+      setMySubmissions(Array.isArray(submissionData) ? submissionData : []);
       setAiScoreTrend(mapAIScoreRows(submissionData));
       setAiScoreBreakdown(mapAIScoreBreakdown(submissionData));
       setApiError(null);
@@ -861,7 +1054,12 @@ export function ProgressTracking({ onNavigate }: Props) {
 
       {metricTab === "body" && <BodyMetricsSection data={bodyMetrics} />}
       {metricTab === "exercise" && <ExerciseProgressSection data={exerciseProgress} />}
-      {metricTab === "ai" && <AIScoreSection trend={aiScoreTrend} breakdown={aiScoreBreakdown} />}
+      {metricTab === "ai" && (
+        <div className="space-y-5">
+          <AIScoreSection trend={aiScoreTrend} breakdown={aiScoreBreakdown} />
+          <SubmissionReviewsSection submissions={mySubmissions} />
+        </div>
+      )}
     </div>
   );
 }

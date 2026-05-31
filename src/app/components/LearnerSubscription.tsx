@@ -6,10 +6,11 @@ import {
   Gift, Lock, Flame, Clock
 } from "lucide-react";
 import {
+  getCurrentSubscription,
   getTraineeSubscriptionCatalog,
   purchaseSubscription,
 } from "../api/subscriptions";
-import type { SubscriptionBillingCycle, SubscriptionPlanCard } from "../types/subscription";
+import type { CurrentSubscription, SubscriptionBillingCycle, SubscriptionChange, SubscriptionPlanCard } from "../types/subscription";
 import { WalletPanel } from "./WalletPanel";
 
 type LearnerPlan = {
@@ -132,7 +133,7 @@ function PaymentModal({
   plan: LearnerPlan;
   yearly: boolean;
   onClose: () => void;
-  onPurchased: () => void;
+  onPurchased: (change: SubscriptionChange) => void;
 }) {
   const [step, setStep] = useState<ModalStep>("method");
   const [method, setMethod] = useState("wallet");
@@ -148,11 +149,11 @@ function PaymentModal({
     setLoading(true);
     setPaymentError(null);
     try {
-      await purchaseSubscription({
+      const change = await purchaseSubscription({
         planCode: plan.planCode,
         billingCycle: yearly ? "YEARLY" : "MONTHLY",
       });
-      onPurchased();
+      onPurchased(change);
       setStep("success");
     } catch (err) {
       setPaymentError(err instanceof Error ? err.message : "Thanh toán thất bại.");
@@ -322,19 +323,31 @@ export function LearnerSubscription() {
   const [yearly, setYearly] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<LearnerPlan | null>(null);
   const [plans, setPlans] = useState<LearnerPlan[]>(PLANS);
+  const [currentSubscription, setCurrentSubscription] = useState<CurrentSubscription | null>(null);
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [plansError, setPlansError] = useState<string | null>(null);
 
   const loadCatalog = () => {
     const billingCycle: SubscriptionBillingCycle = yearly ? "YEARLY" : "MONTHLY";
     setLoadingPlans(true);
-    getTraineeSubscriptionCatalog(billingCycle)
-      .then((catalog) => {
-        setPlans((Array.isArray(catalog.plans) ? catalog.plans : []).map(mapCatalogPlan));
+    Promise.all([
+      getTraineeSubscriptionCatalog(billingCycle),
+      getCurrentSubscription().catch(() => null),
+    ])
+      .then(([catalog, subscription]) => {
+        const activeSubscription = subscription ?? catalog.currentSubscription ?? null;
+        setPlans((Array.isArray(catalog.plans) ? catalog.plans : []).map((plan) => {
+          const mapped = mapCatalogPlan(plan);
+          if (!activeSubscription) return mapped;
+          const isActive = mapped.planCode === activeSubscription.planCode;
+          return { ...mapped, current: isActive };
+        }));
+        setCurrentSubscription(activeSubscription);
         setPlansError(null);
       })
       .catch((err) => {
         setPlans(PLANS);
+        setCurrentSubscription(null);
         setPlansError(err instanceof Error ? err.message : "Không tải được gói đăng ký.");
       })
       .finally(() => setLoadingPlans(false));
@@ -343,6 +356,20 @@ export function LearnerSubscription() {
   useEffect(() => {
     loadCatalog();
   }, [yearly]);
+
+  const handlePurchased = (change: SubscriptionChange) => {
+    setCurrentSubscription(change.subscription);
+    setPlans((prev) => prev.map((plan) => {
+      const isActive = plan.planCode === change.subscription.planCode;
+      return { ...plan, current: isActive };
+    }));
+    void loadCatalog();
+  };
+
+  const currentPlanName = currentSubscription?.displayName || plans.find(plan => plan.current)?.name || "Gói Thường";
+  const currentPlanNote = currentSubscription?.note || (currentSubscription?.planCode === "PRO"
+    ? "Bạn đang dùng Gói Pro. Các tính năng upload video và AI feedback đã được mở khóa."
+    : "Bạn đang dùng gói Thường. Nâng cấp lên Pro để mở khoá AI feedback và video phân tích kỹ thuật!");
 
   return (
     <div className="space-y-8 pb-8">
@@ -359,11 +386,11 @@ export function LearnerSubscription() {
             <div className="flex items-center gap-2 mb-0.5">
               <span style={{ fontWeight: 800, fontSize: "1.05rem" }}>Gói hiện tại: </span>
               <span className="bg-white/20 px-2.5 py-0.5 rounded-full" style={{ fontWeight: 700, fontSize: "0.82rem" }}>
-                Gói Thường
+                {currentPlanName}
               </span>
             </div>
             <p style={{ fontSize: "0.82rem", lineHeight: 1.6 }} className="text-orange-100">
-              Bạn đang dùng gói Thường. Nâng cấp lên Pro để mở khoá AI feedback và video phân tích kỹ thuật!
+              {currentPlanNote}
             </p>
           </div>
           <div className="hidden sm:flex items-center gap-2 shrink-0">
@@ -592,7 +619,7 @@ export function LearnerSubscription() {
           plan={selectedPlan}
           yearly={yearly}
           onClose={() => setSelectedPlan(null)}
-          onPurchased={loadCatalog}
+          onPurchased={handlePurchased}
         />
       )}
     </div>

@@ -94,7 +94,7 @@ function formatDuration(seconds: number | null) {
 
 function normalizeTags(tags: unknown): string[] {
   if (Array.isArray(tags)) {
-    return tags.map(String).map(tag => tag.trim()).filter(Boolean);
+    return tags.map(tag => normalizeText(tag)).map(tag => tag.trim()).filter(Boolean);
   }
   if (typeof tags === "string") {
     return tags.split(",").map(tag => tag.trim()).filter(Boolean);
@@ -112,24 +112,37 @@ function normalizeText(value: unknown, fallback = ""): string {
   return fallback;
 }
 
+function normalizeNumber(value: unknown, fallback = 0): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return normalizeNumber(record.value ?? record.count ?? record.total, fallback);
+  }
+  return fallback;
+}
+
 function mapSubmission(submission: CoachVideoSubmission): StudentSubmission {
-  const score = submission.totalScore ?? 0;
+  const score = normalizeNumber(submission.totalScore);
   return {
     id: String(submission.id),
-    studentName: submission.traineeName,
+    studentName: normalizeText(submission.traineeName, "Học viên"),
     studentAvatar: AVT.minh_anh,
     thumbnail: "",
-    videoUrl: submission.videoUrl,
+    videoUrl: normalizeText(submission.videoUrl),
     duration: "00:00",
-    uploadDate: new Date(submission.submittedAt).toLocaleDateString("vi-VN"),
+    uploadDate: submission.submittedAt ? new Date(submission.submittedAt).toLocaleDateString("vi-VN") : "",
     status: submission.status === "PASSED" ? "approved" : submission.status === "FAILED" || submission.status === "REVIEWED" ? "reviewed" : "pending",
     scores: submission.totalScore == null ? undefined : {
-      posture: submission.postureScore ?? score,
-      technique: submission.techniqueScore ?? score,
-      rhythm: submission.rhythmScore ?? score,
-      power: submission.strengthScore ?? score,
+      posture: normalizeNumber(submission.postureScore, score),
+      technique: normalizeNumber(submission.techniqueScore, score),
+      rhythm: normalizeNumber(submission.rhythmScore, score),
+      power: normalizeNumber(submission.strengthScore, score),
     },
-    coachFeedback: submission.feedback || "",
+    coachFeedback: normalizeText(submission.feedback),
     timestamps: [],
   };
 }
@@ -138,28 +151,30 @@ function mapApiVideo(video: VideoItem, submissions: CoachVideoSubmission[]): Coa
   const ownSubmissions = submissions.filter((submission) => submission.videoId === video.id);
   const assignedStudents = Array.from(new Set(
     ownSubmissions
-      .map((submission) => submission.traineeName)
+      .map((submission) => normalizeText(submission.traineeName))
       .filter(Boolean),
   ));
+  const duration = normalizeNumber(video.duration);
+  const size = normalizeNumber(video.size);
   return {
     id: String(video.id),
     title: normalizeText(video.title, "Video"),
     description: normalizeText(video.description),
-    thumbnail: video.thumbnailUrl || REF.gym360,
-    videoUrl: video.videoUrl,
-    duration: formatDuration(video.duration),
-    durationSec: video.duration || 0,
+    thumbnail: normalizeText(video.thumbnailUrl, REF.gym360),
+    videoUrl: normalizeText(video.videoUrl),
+    duration: formatDuration(duration),
+    durationSec: duration,
     type: video.videoType === "VIDEO_360" || video.format === "360" ? "360" : "normal",
     category: normalizeText(video.category, "Thể hình"),
     tags: normalizeTags(video.tags),
     visibility: video.visibility === "PUBLIC" ? "public" : video.visibility === "PRIVATE" ? "private" : "students",
-    views: video.viewCount,
-    likes: video.likes,
+    views: normalizeNumber(video.viewCount),
+    likes: normalizeNumber(video.likes),
     uploadDate: video.uploadDate ? new Date(video.uploadDate).toLocaleDateString("vi-VN") : "",
-    fileSize: video.size ? `${(video.size / 1024 / 1024).toFixed(1)} MB` : "—",
-    resolution: video.resolution || "—",
+    fileSize: size ? `${(size / 1024 / 1024).toFixed(1)} MB` : "—",
+    resolution: normalizeText(video.resolution, "—"),
     assignedStudents,
-    notes: video.description || "",
+    notes: normalizeText(video.description),
     submissions: ownSubmissions.map(mapSubmission),
   };
 }
@@ -1299,7 +1314,7 @@ export function CoachVideoStudio() {
                       ].map(item=>(
                         <div key={item.label} className="bg-white rounded-lg px-2 py-2 border border-blue-100">
                           <div className="text-gray-400" style={{fontSize:"0.62rem",fontWeight:700}}>{item.label}</div>
-                          <div className="text-gray-900" style={{fontSize:"0.9rem",fontWeight:800}}>{item.value}</div>
+                          <div className="text-gray-900" style={{fontSize:"0.9rem",fontWeight:800}}>{normalizeText(item.value, "—")}</div>
                         </div>
                       ))}
                     </div>
@@ -1338,7 +1353,7 @@ export function CoachVideoStudio() {
                     ].map(({label,value,icon:Icon})=>(
                       <div key={label} className="flex justify-between items-center">
                         <span className="flex items-center gap-1.5 text-gray-400" style={{fontSize:"0.7rem"}}><Icon className="w-3 h-3"/>{label}</span>
-                        <span style={{fontSize:"0.75rem",fontWeight:600}} className="text-gray-700">{value}</span>
+                        <span style={{fontSize:"0.75rem",fontWeight:600}} className="text-gray-700">{normalizeText(value, "—")}</span>
                       </div>
                     ))}
                   </div>

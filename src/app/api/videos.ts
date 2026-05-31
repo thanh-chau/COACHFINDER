@@ -85,10 +85,10 @@ export function uploadCoachVideo(request: {
   formData.append("videoType", request.videoType);
   formData.append("file", request.file);
 
-  return rawApiRequest<VideoItem>("/api/coach/videos/upload", {
+  return rawApiRequest<VideoItem | { data?: VideoItem }>("/api/coach/videos/upload", {
     method: "POST",
     body: formData,
-  });
+  }).then((res) => ("data" in Object(res) && (res as { data?: VideoItem }).data ? (res as { data: VideoItem }).data : res as VideoItem));
 }
 
 export function deleteCoachVideo(id: number) {
