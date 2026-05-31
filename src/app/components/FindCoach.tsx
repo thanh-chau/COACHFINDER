@@ -249,106 +249,6 @@ function CoachCard({
 }
 
 function Rating({ rating, reviews, compact = false }: { rating?: number; reviews?: number; compact?: boolean }) {
-
-function CoachAvatar({ coach, className }: { coach: Pick<Coach, "avatar" | "fullName">; className: string }) {
-  if (coach.avatar) {
-    return <img src={coach.avatar} alt={coach.fullName} className={`${className} object-cover`} />;
-  }
-
-  return (
-    <div className={`${className} bg-orange-100 text-orange-600 flex items-center justify-center font-bold`}>
-      {coach.fullName?.trim().charAt(0).toUpperCase() || "H"}
-    </div>
-  );
-}
-
-function CoachCard({
-  coach,
-  onSelect,
-  view,
-}: {
-  coach: Coach;
-  onSelect: () => void;
-  view: "grid" | "list";
-}) {
-  const teachingType = formatTeachingType(coach.teachingType);
-
-  if (view === "list") {
-    return (
-      <article className="bg-white rounded-2xl border border-gray-100 p-4 hover:shadow-md hover:border-orange-200 transition-all flex flex-col sm:flex-row gap-4">
-        <CoachAvatar coach={coach} className="w-full sm:w-24 h-40 sm:h-24 rounded-2xl shrink-0" />
-        <div className="flex-1 min-w-0">
-          <div className="flex justify-between gap-3">
-            <div>
-              <h3 className="text-gray-900" style={{ fontWeight: 800, fontSize: "1rem" }}>{coach.fullName}</h3>
-              <div className="flex items-center flex-wrap gap-2 mt-1.5">
-                {coach.category && <span className="bg-orange-50 text-orange-600 px-2.5 py-1 rounded-full" style={{ fontSize: "0.73rem", fontWeight: 600 }}>{coach.category}</span>}
-                {teachingType && <span className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full" style={{ fontSize: "0.73rem", fontWeight: 600 }}>{teachingType}</span>}
-              </div>
-            </div>
-            <div className="shrink-0 text-right">
-              <div className="text-orange-500" style={{ fontWeight: 800 }}>{formatPrice(coach.price)}</div>
-              <span className="text-gray-400" style={{ fontSize: "0.7rem" }}>/ buổi</span>
-            </div>
-          </div>
-          <p className="text-gray-500 line-clamp-2 mt-2" style={{ fontSize: "0.8rem", lineHeight: 1.6 }}>
-            {coach.bio || "Huấn luyện viên chưa cập nhật giới thiệu."}
-          </p>
-          <div className="flex items-center flex-wrap gap-4 mt-3 text-gray-500" style={{ fontSize: "0.76rem" }}>
-            <Rating rating={coach.rating} reviews={coach.reviewCount} />
-            {coach.location && <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{coach.location}</span>}
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={onSelect}
-          className="self-center px-4 py-2.5 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-colors shrink-0"
-          style={{ fontSize: "0.82rem", fontWeight: 700 }}
-        >
-          Xem hồ sơ
-        </button>
-      </article>
-    );
-  }
-
-  return (
-    <article className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-lg hover:border-orange-200 transition-all flex flex-col">
-      <CoachAvatar coach={coach} className="w-full h-44" />
-      <div className="p-4 flex flex-col flex-1">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h3 className="text-gray-900 truncate" style={{ fontWeight: 800, fontSize: "0.98rem" }}>{coach.fullName}</h3>
-            <p className="text-orange-600 mt-0.5" style={{ fontSize: "0.78rem", fontWeight: 600 }}>{coach.category || "Huấn luyện viên"}</p>
-          </div>
-          <Rating rating={coach.rating} reviews={coach.reviewCount} compact />
-        </div>
-        <div className="flex flex-wrap gap-2 mt-3">
-          {teachingType && <span className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full" style={{ fontSize: "0.7rem", fontWeight: 600 }}>{teachingType}</span>}
-          {coach.location && <span className="bg-gray-50 text-gray-500 px-2.5 py-1 rounded-full flex items-center gap-1" style={{ fontSize: "0.7rem" }}><MapPin className="w-3 h-3" />{coach.location}</span>}
-        </div>
-        <p className="text-gray-500 line-clamp-2 mt-3 flex-1" style={{ fontSize: "0.78rem", lineHeight: 1.6 }}>
-          {coach.bio || "Huấn luyện viên chưa cập nhật giới thiệu."}
-        </p>
-        <div className="flex items-center justify-between border-t border-gray-100 pt-3 mt-3">
-          <div>
-            <div className="text-orange-500" style={{ fontWeight: 800, fontSize: "0.98rem" }}>{formatPrice(coach.price)}</div>
-            <span className="text-gray-400" style={{ fontSize: "0.68rem" }}>mỗi buổi tập</span>
-          </div>
-          <button
-            type="button"
-            onClick={onSelect}
-            className="px-3.5 py-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-colors"
-            style={{ fontSize: "0.78rem", fontWeight: 700 }}
-          >
-            Xem hồ sơ
-          </button>
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function Rating({ rating, reviews, compact = false }: { rating?: number; reviews?: number; compact?: boolean }) {
   if (rating === undefined || rating === null) return <span className="text-gray-400" style={{ fontSize: "0.74rem" }}>Chưa có đánh giá</span>;
 
   return (
@@ -792,12 +692,67 @@ function BookingPanel({
           <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3.5 text-red-600">
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
             <span style={{ fontSize: "0.82rem" }}>{submitError}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="border-t border-gray-100 px-6 py-4">
+        <button type="submit" disabled={submitting || checkingAvailability || !coach.schedules?.length} className="w-full rounded-xl bg-orange-500 py-3.5 text-white hover:bg-orange-600 disabled:opacity-60 transition-colors flex items-center justify-center gap-2" style={{ fontWeight: 700, fontSize: "0.88rem" }}>
+          {submitting ? <><LoaderCircle className="w-4 h-4 animate-spin" /> Đang đặt lịch...</> : <><Calendar className="w-4 h-4" /> Xác nhận đặt lịch</>}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function DetailSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
       <h4 className="text-gray-900 mb-2" style={{ fontSize: "0.9rem", fontWeight: 700 }}>{title}</h4>
       {children}
     </section>
   );
+}
+
+function ProfileStat({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-2xl bg-gray-50 border border-gray-100 p-3 text-center">
+      <Icon className="w-4 h-4 text-orange-500 mx-auto mb-1" />
+      <div className="text-gray-900" style={{ fontWeight: 800 }}>{value}</div>
+      <div className="text-gray-400" style={{ fontSize: "0.68rem" }}>{label}</div>
+    </div>
+  );
+}
+
+export function FindCoach() {
+  const [query, setQuery] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [location, setLocation] = useState("");
+  const [priceIndex, setPriceIndex] = useState(0);
+  const [sort, setSort] = useState<CoachSearchSort>("MOST_RELEVANT");
+  const [pageNumber, setPageNumber] = useState(0);
+  const [view, setView] = useState<"grid" | "list">("grid");
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [selectedCoachId, setSelectedCoachId] = useState<number | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryError, setCategoryError] = useState("");
+  const [coaches, setCoaches] = useState<Coach[]>([]);
+  const [totalElements, setTotalElements] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    getCategories()
       .then(data => {
         if (active) setCategories(data);
       })
