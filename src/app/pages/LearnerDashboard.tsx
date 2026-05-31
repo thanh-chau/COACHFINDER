@@ -28,32 +28,7 @@ import type { Coach } from "../types/coach";
 import type { Achievement, ProgressOverview } from "../types/progress";
 import type { CurrentSubscription } from "../types/subscription";
 
-const COACH_AVATAR_1 = "https://images.unsplash.com/photo-1758875568932-0eefd3e60090?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200";
-const COACH_AVATAR_2 = "https://images.unsplash.com/photo-1755549476788-efd8bf819561?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200";
-const COACH_AVATAR_3 = "https://images.unsplash.com/photo-1660463527860-b66aebd362c9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200";
 
-const progressData = [
-  { week: "T2", hours: 3 }, { week: "T3", hours: 5 }, { week: "T4", hours: 4 },
-  { week: "T5", hours: 6 }, { week: "T6", hours: 5 }, { week: "T7", hours: 7 },
-  { week: "CN", hours: 4 },
-];
-
-const myCoaches = [
-  { name: "Trần Văn Đức", sport: "Thể hình", rating: 4.9, avatar: COACH_AVATAR_1, sessions: 18, nextSession: "T5, 14:00" },
-  { name: "Lê Thị Mai",   sport: "Yoga",     rating: 4.8, avatar: COACH_AVATAR_2, sessions: 6,  nextSession: "T6, 08:00" },
-];
-
-const upcomingSessions = [
-  { coach: "Trần Văn Đức",  sport: "Thể hình 💪", time: "Thứ Năm, 14:00 – 15:30",  type: "Online",     avatar: COACH_AVATAR_1, status: "confirmed" },
-  { coach: "Lê Thị Mai",    sport: "Yoga 🧘",     time: "Thứ Sáu, 08:00 – 09:00",  type: "Offline · Q1", avatar: COACH_AVATAR_2, status: "confirmed" },
-  { coach: "Nguyễn Hoàng",  sport: "Tennis 🎾",   time: "Thứ Bảy, 16:00 – 17:30",  type: "Offline · Q7", avatar: COACH_AVATAR_3, status: "pending" },
-];
-
-const suggestedCoaches = [
-  { name: "Phạm Minh Tuấn", sport: "CrossFit", price: "250K/buổi", avatar: COACH_AVATAR_1, tag: "🔥 Hot" },
-  { name: "Đỗ Thị Hương",   sport: "Pilates",  price: "180K/buổi", avatar: COACH_AVATAR_2, tag: "⭐ Mới" },
-  { name: "Lê Quang Hải",   sport: "Boxing",   price: "220K/buổi", avatar: COACH_AVATAR_3, tag: "🏆 Top" },
-];
 
 const navItems = [
   { icon: LayoutDashboard, label: "Tổng quan",     id: "overview" },
@@ -87,11 +62,11 @@ type UpcomingSessionRow = { coach: string; sport: string; time: string; type: st
 type SuggestedCoachRow = { name: string; sport: string; price: string; avatar: string; tag: string };
 
 const DEFAULT_OVERVIEW: ProgressOverview = {
-  totalSessions: 24,
-  trainingHours: 48,
-  averageAiScore: 87,
-  activeCoaches: 2,
-  streakDays: 14,
+  totalSessions: 0,
+  trainingHours: 0,
+  averageAiScore: 0,
+  activeCoaches: 0,
+  streakDays: 0,
 };
 
 function formatRelativeDateTime(value?: string | null) {
@@ -109,30 +84,31 @@ function mapProgressChart(rows: Array<{ date: string; value: number }>): Progres
 }
 
 function mapUpcomingSessions(bookings: BookingListItem[]): UpcomingSessionRow[] {
-  const avatars = [COACH_AVATAR_1, COACH_AVATAR_2, COACH_AVATAR_3];
   return bookings
     .filter(item => item.status === "PENDING" || item.status === "CONFIRMED")
     .sort((a, b) => `${a.date}T${a.startTime}`.localeCompare(`${b.date}T${b.startTime}`))
     .slice(0, 3)
-    .map((booking, index) => ({
-      coach: booking.coachName || "Huấn luyện viên",
-      sport: booking.sport || "Buổi tập",
-      time: `${formatRelativeDateTime(booking.date)}, ${booking.startTime.slice(0, 5)} - ${booking.endTime.slice(0, 5)}`,
-      type: booking.type === "ONLINE" ? "Online" : "Offline",
-      avatar: booking.coachAvatar || avatars[index % avatars.length],
-      status: booking.status === "CONFIRMED" ? "confirmed" : "pending",
-    }));
+    .map((booking) => {
+      const coachName = booking.coachName || "Huấn luyện viên";
+      return {
+        coach: coachName,
+        sport: booking.sport || "Buổi tập",
+        time: `${formatRelativeDateTime(booking.date)}, ${booking.startTime.slice(0, 5)} - ${booking.endTime.slice(0, 5)}`,
+        type: booking.type === "ONLINE" ? "Online" : "Offline",
+        avatar: booking.coachAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(coachName)}&background=ffedd5&color=f97316`,
+        status: booking.status === "CONFIRMED" ? "confirmed" : "pending",
+      };
+    });
 }
 
 function mapMyCoaches(bookings: BookingListItem[]): MyCoachRow[] {
-  const avatars = [COACH_AVATAR_1, COACH_AVATAR_2, COACH_AVATAR_3];
   const byCoach = new Map<string, BookingListItem[]>();
   bookings.forEach(booking => {
     const key = booking.coachName || "Huấn luyện viên";
     byCoach.set(key, [...(byCoach.get(key) || []), booking]);
   });
 
-  return Array.from(byCoach.entries()).slice(0, 3).map(([name, coachBookings], index) => {
+  return Array.from(byCoach.entries()).slice(0, 3).map(([name, coachBookings]) => {
     const next = coachBookings
       .filter(item => item.status === "PENDING" || item.status === "CONFIRMED")
       .sort((a, b) => `${a.date}T${a.startTime}`.localeCompare(`${b.date}T${b.startTime}`))[0];
@@ -140,7 +116,7 @@ function mapMyCoaches(bookings: BookingListItem[]): MyCoachRow[] {
       name,
       sport: coachBookings[0]?.sport || "Huấn luyện",
       rating: 4.8,
-      avatar: coachBookings[0]?.coachAvatar || avatars[index % avatars.length],
+      avatar: coachBookings[0]?.coachAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=ffedd5&color=f97316`,
       sessions: coachBookings.filter(item => item.status === "COMPLETED").length,
       nextSession: next ? `${formatRelativeDateTime(next.date)}, ${next.startTime.slice(0, 5)}` : "Chưa có lịch",
     };
@@ -148,12 +124,11 @@ function mapMyCoaches(bookings: BookingListItem[]): MyCoachRow[] {
 }
 
 function mapSuggestedCoaches(coaches: Coach[]): SuggestedCoachRow[] {
-  const avatars = [COACH_AVATAR_1, COACH_AVATAR_2, COACH_AVATAR_3];
-  return coaches.slice(0, 3).map((coach, index) => ({
+  return coaches.slice(0, 3).map((coach) => ({
     name: coach.fullName,
     sport: coach.category || "Huấn luyện",
     price: coach.price ? `${Math.round(coach.price / 1000)}K/buổi` : "Liên hệ",
-    avatar: coach.avatar || avatars[index % avatars.length],
+    avatar: coach.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(coach.fullName || "Coach")}&background=ffedd5&color=f97316`,
     tag: coach.rating && coach.rating >= 4.8 ? "Top" : "Gợi ý",
   }));
 }
@@ -440,24 +415,30 @@ export function LearnerDashboard() {
                         </button>
                       </div>
                       <div className="space-y-2.5">
-                        {sessionRows.map((s, i) => (
-                          <div key={i} className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100 cursor-pointer" onClick={() => setActiveNav("schedule")}>
-                            <img src={s.avatar} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5 mb-0.5">
-                                <span style={{ fontWeight: 600, fontSize: "0.85rem" }} className="text-gray-900 truncate">{s.coach}</span>
-                                <span className={`px-1.5 py-0.5 rounded text-[0.65rem] font-bold ${s.status === 'confirmed' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
-                                  {s.status === 'confirmed' ? 'Đã xác nhận' : 'Chờ xác nhận'}
-                                </span>
-                              </div>
-                              <div style={{ fontSize: "0.72rem" }} className="text-gray-500">{s.time}</div>
-                              <div style={{ fontSize: "0.72rem" }} className="text-gray-400 mt-0.5">{s.sport} · {s.type}</div>
-                            </div>
-                            <button className="shrink-0 w-8 h-8 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center hover:bg-orange-100 hover:text-orange-600 transition-colors">
-                              <Video className="w-4 h-4" />
-                            </button>
+                        {sessionRows.length === 0 ? (
+                          <div className="text-center py-6 text-gray-400" style={{ fontSize: "0.85rem" }}>
+                            Bạn chưa có lịch tập nào sắp tới.
                           </div>
-                        ))}
+                        ) : (
+                          sessionRows.map((s, i) => (
+                            <div key={i} className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100 cursor-pointer" onClick={() => setActiveNav("schedule")}>
+                              <img src={s.avatar} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                  <span style={{ fontWeight: 600, fontSize: "0.85rem" }} className="text-gray-900 truncate">{s.coach}</span>
+                                  <span className={`px-1.5 py-0.5 rounded text-[0.65rem] font-bold ${s.status === 'confirmed' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                                    {s.status === 'confirmed' ? 'Đã xác nhận' : 'Chờ xác nhận'}
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: "0.72rem" }} className="text-gray-500">{s.time}</div>
+                                <div style={{ fontSize: "0.72rem" }} className="text-gray-400 mt-0.5">{s.sport} · {s.type}</div>
+                              </div>
+                              <button className="shrink-0 w-8 h-8 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center hover:bg-orange-100 hover:text-orange-600 transition-colors">
+                                <Video className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))
+                        )}
                       </div>
                       <button
                         onClick={() => setActiveNav("ai")}
@@ -510,27 +491,33 @@ export function LearnerDashboard() {
                         <span className="bg-orange-50 text-orange-500 px-2.5 py-0.5 rounded-full border border-orange-100" style={{ fontSize: "0.7rem", fontWeight: 700 }}>{coachRows.length} HLV</span>
                       </div>
                       <div className="space-y-3">
-                        {coachRows.map((c) => (
-                          <div key={c.name} className="p-3.5 rounded-xl border border-gray-100 hover:border-orange-200 hover:shadow-sm transition-all duration-200 cursor-pointer">
-                            <div className="flex items-center gap-3 mb-2.5">
-                              <img src={c.avatar} alt="" className="w-11 h-11 rounded-xl object-cover" />
-                              <div className="flex-1 min-w-0">
-                                <div style={{ fontWeight: 700, fontSize: "0.88rem" }} className="text-gray-900 truncate">{c.name}</div>
-                                <div style={{ fontSize: "0.72rem" }} className="text-gray-400 mt-0.5">{c.sport}</div>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                                <span style={{ fontSize: "0.78rem", fontWeight: 700 }} className="text-gray-700">{c.rating}</span>
-                              </div>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="bg-gray-100 text-gray-600 px-2.5 py-0.5 rounded-full" style={{ fontSize: "0.7rem", fontWeight: 500 }}>
-                                {c.sessions} buổi đã học
-                              </span>
-                              <span className="text-orange-500" style={{ fontSize: "0.72rem", fontWeight: 600 }}>📅 {c.nextSession}</span>
-                            </div>
+                        {coachRows.length === 0 ? (
+                          <div className="text-center py-6 text-gray-400" style={{ fontSize: "0.85rem" }}>
+                            Bạn chưa có Huấn luyện viên nào.
                           </div>
-                        ))}
+                        ) : (
+                          coachRows.map((c) => (
+                            <div key={c.name} className="p-3.5 rounded-xl border border-gray-100 hover:border-orange-200 hover:shadow-sm transition-all duration-200 cursor-pointer">
+                              <div className="flex items-center gap-3 mb-2.5">
+                                <img src={c.avatar} alt="" className="w-11 h-11 rounded-xl object-cover" />
+                                <div className="flex-1 min-w-0">
+                                  <div style={{ fontWeight: 700, fontSize: "0.88rem" }} className="text-gray-900 truncate">{c.name}</div>
+                                  <div style={{ fontSize: "0.72rem" }} className="text-gray-400 mt-0.5">{c.sport}</div>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                                  <span style={{ fontSize: "0.78rem", fontWeight: 700 }} className="text-gray-700">{c.rating}</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="bg-gray-100 text-gray-600 px-2.5 py-0.5 rounded-full" style={{ fontSize: "0.7rem", fontWeight: 500 }}>
+                                  {c.sessions} buổi đã học
+                                </span>
+                                <span className="text-orange-500" style={{ fontSize: "0.72rem", fontWeight: 600 }}>📅 {c.nextSession}</span>
+                              </div>
+                            </div>
+                          ))
+                        )}
                       </div>
                     </div>
 
@@ -566,19 +553,21 @@ export function LearnerDashboard() {
                         <span style={{ fontWeight: 700, fontSize: "0.9rem" }} className="text-gray-900">Thành tích gần đây</span>
                       </div>
                       <div className="space-y-3">
-                        {(achievementRows || [
-                          { badge: "🔥", label: "Streak 14 ngày",        date: "Hôm nay" },
-                          { badge: "🏆", label: "Hoàn thành 20 buổi",    date: "3 ngày trước" },
-                          { badge: "💪", label: "Squat đạt 90+ điểm AI", date: "Tuần trước" },
-                        ]).map((a) => (
-                          <div key={a.label} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/60 transition-colors">
-                            <span style={{ fontSize: "1.2rem" }} className="shrink-0">{a.badge}</span>
-                            <div className="flex-1 min-w-0">
-                              <div style={{ fontSize: "0.82rem", fontWeight: 600 }} className="text-gray-800">{a.label}</div>
-                              <div style={{ fontSize: "0.68rem" }} className="text-gray-400 mt-0.5">{a.date}</div>
-                            </div>
+                        {achievementRows.length === 0 ? (
+                          <div className="text-center py-6 text-gray-400" style={{ fontSize: "0.85rem" }}>
+                            Bạn chưa có thành tích nào. Hãy tích cực tập luyện nhé!
                           </div>
-                        ))}
+                        ) : (
+                          achievementRows.map((a) => (
+                            <div key={a.label} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/60 transition-colors">
+                              <span style={{ fontSize: "1.2rem" }} className="shrink-0">{a.badge}</span>
+                              <div className="flex-1 min-w-0">
+                                <div style={{ fontSize: "0.82rem", fontWeight: 600 }} className="text-gray-800">{a.label}</div>
+                                <div style={{ fontSize: "0.68rem" }} className="text-gray-400 mt-0.5">{a.date}</div>
+                              </div>
+                            </div>
+                          ))
+                        )}
                       </div>
                     </div>
                   </div>
