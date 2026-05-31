@@ -267,25 +267,37 @@ export function CoachMessages({ targetUsername }: { targetUsername?: string | nu
     getConversations()
       .then((items) => {
         if (!mounted) return;
-        if (items.length === 0) {
-          setLoading(false);
-          return;
-        }
-        const mapped = items.map(mapApiConversation);
-        setConvs(mapped);
-        let initialId = String(items[0].id);
+        let mapped = items.map(mapApiConversation);
+        let initialId = mapped.length > 0 ? String(mapped[0].id) : "";
         if (targetUsername) {
           const found = mapped.find(c => c.name === targetUsername);
           if (found) {
              initialId = found.id;
-             setShowMobile("chat");
+          } else {
+             const mockConv: Conversation = {
+               id: "new_conv_" + Date.now(),
+               name: targetUsername,
+               avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(targetUsername)}&background=3b82f6&color=ffffff`,
+               sport: "Học viên mới",
+               status: "online",
+               lastMsg: "Bắt đầu cuộc trò chuyện...",
+               lastTime: "Bây giờ",
+               unread: 0,
+               pinned: false,
+               messages: [],
+               sessions: 0,
+               progress: 0,
+               joined: "Hôm nay"
+             };
+             mapped.unshift(mockConv);
+             initialId = mockConv.id;
           }
+          setShowMobile("chat");
         }
-        setActiveId(initialId);
+        setConvs(mapped);
+        if (initialId) setActiveId(initialId);
       })
-      .catch(() => {
-        // Keep bundled sample conversations as fallback.
-      })
+      .catch(() => {})
       .finally(() => {
         if (mounted) setLoading(false);
       });
@@ -300,9 +312,28 @@ export function CoachMessages({ targetUsername }: { targetUsername?: string | nu
       if (found) {
         setActiveId(found.id);
         setShowMobile("chat");
+      } else if (!convs.some(c => String(c.id).startsWith("new_conv_") && c.name === targetUsername)) {
+         const mockConv: Conversation = {
+           id: "new_conv_" + Date.now(),
+           name: targetUsername,
+           avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(targetUsername)}&background=3b82f6&color=ffffff`,
+           sport: "Học viên mới",
+           status: "online",
+           lastMsg: "Bắt đầu cuộc trò chuyện...",
+           lastTime: "Bây giờ",
+           unread: 0,
+           pinned: false,
+           messages: [],
+           sessions: 0,
+           progress: 0,
+           joined: "Hôm nay"
+         };
+         setConvs(prev => [mockConv, ...prev]);
+         setActiveId(mockConv.id);
+         setShowMobile("chat");
       }
     }
-  }, [targetUsername, convs.length]);
+  }, [targetUsername]);
 
   useEffect(() => {
     if (!/^\d+$/.test(activeId)) return;

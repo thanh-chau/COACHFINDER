@@ -167,18 +167,30 @@ export function Messaging({ userPlan = "free", onNavigate, targetUsername }: { u
   useEffect(() => {
     let mounted = true;
     getConversations().then((items) => {
-      if (!mounted || items.length === 0) return;
-      const mapped = items.map(mapApiConversation);
-      setConversations(mapped);
-      let initialId = String(mapped[0].id);
+      if (!mounted) return;
+      let mapped = items.map(mapApiConversation);
+      let initialId = mapped.length > 0 ? String(mapped[0].id) : "";
       if (targetUsername) {
         const found = mapped.find(c => c.coach.name === targetUsername);
         if (found) {
           initialId = found.id;
-          setShowMobileList(false);
+        } else {
+          const mockConv: Conversation = {
+            id: "new_conv_" + Date.now(),
+            coach: { name: targetUsername, avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(targetUsername)}&background=ffedd5&color=f97316`, sport: "Huấn luyện viên", rating: 5, sessions: 0, online: true },
+            lastMessage: "Bắt đầu trò chuyện...",
+            lastTime: "Bây giờ",
+            unread: 0,
+            messages: [],
+            subscribed: true
+          };
+          mapped.unshift(mockConv);
+          initialId = mockConv.id;
         }
+        setShowMobileList(false);
       }
-      setActiveId(initialId);
+      setConversations(mapped);
+      if (initialId) setActiveId(initialId);
     }).catch(() => {});
     return () => { mounted = false; };
   }, []);
@@ -189,9 +201,22 @@ export function Messaging({ userPlan = "free", onNavigate, targetUsername }: { u
       if (found) {
         setActiveId(found.id);
         setShowMobileList(false);
+      } else if (!conversations.some(c => String(c.id).startsWith("new_conv_") && c.coach.name === targetUsername)) {
+        const mockConv: Conversation = {
+            id: "new_conv_" + Date.now(),
+            coach: { name: targetUsername, avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(targetUsername)}&background=ffedd5&color=f97316`, sport: "Huấn luyện viên", rating: 5, sessions: 0, online: true },
+            lastMessage: "Bắt đầu trò chuyện...",
+            lastTime: "Bây giờ",
+            unread: 0,
+            messages: [],
+            subscribed: true
+        };
+        setConversations(prev => [mockConv, ...prev]);
+        setActiveId(mockConv.id);
+        setShowMobileList(false);
       }
     }
-  }, [targetUsername, conversations.length]);
+  }, [targetUsername]);
 
   useEffect(() => {
     if (!/^\d+$/.test(activeId)) return;
