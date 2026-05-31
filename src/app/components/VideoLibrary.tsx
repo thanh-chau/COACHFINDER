@@ -49,6 +49,7 @@ interface VideoItem {
   sportEmoji: string;
   category: string;
   thumbnail: string;
+  videoUrl: string;
   duration: string;
   views: string;
   likes: number;
@@ -95,6 +96,7 @@ function mapApiVideo(video: ApiVideoItem, index: number): VideoItem {
           ? "martial"
           : "strength",
     thumbnail: video.thumbnailUrl || IMG.gym,
+    videoUrl: video.videoUrl,
     duration: formatDuration(video.duration),
     views: formatViews(video.viewCount),
     likes: video.likes,
@@ -123,6 +125,7 @@ const VIDEOS: VideoItem[] = [
     sportEmoji: "🎬",
     category: "sports",
     thumbnail: IMG.gym,
+    videoUrl: "",
     duration: "10:00",
     views: "5.4K",
     likes: 342,
@@ -562,18 +565,47 @@ function VideoDetail({ video, allVideos, onClose, onVideoSelect }: {
           <div className="flex-1 min-w-0 p-5 space-y-4">
             {/* Player */}
             {video.is360 ? (
-              <PanoramicViewer thumbnail={video.thumbnail} title={video.title} />
+              video.videoUrl ? (
+                <Video360Player sourceUrl={video.videoUrl} sourceName={video.title} />
+              ) : (
+                <div className="relative w-full overflow-hidden rounded-2xl bg-black" style={{ aspectRatio: "16/9" }}>
+                  <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover opacity-60" />
+                  <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-white" style={{ fontSize: "0.9rem", fontWeight: 700 }}>
+                    Video này chưa có videoUrl từ API.
+                  </div>
+                </div>
+              )
             ) : (
               <div className="relative w-full overflow-hidden rounded-2xl bg-black" style={{ aspectRatio: "16/9" }}>
-                <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover opacity-80" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <button className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm border border-white/40 flex items-center justify-center hover:bg-white/30 transition-colors">
-                    <Play className="w-7 h-7 text-white ml-1" />
-                  </button>
-                </div>
-                <div className="absolute bottom-3 right-3 bg-black/70 text-white px-2.5 py-1 rounded-lg" style={{ fontSize: "0.75rem", fontWeight: 600 }}>
-                  {video.duration}
-                </div>
+                {video.videoUrl ? (
+                  <video
+                    src={video.videoUrl}
+                    poster={video.thumbnail || undefined}
+                    controls
+                    playsInline
+                    className="w-full h-full object-contain bg-black"
+                    onPlay={() => void recordVideoPlaybackEvent(video.id, {
+                      eventType: "START",
+                      positionSeconds: 0,
+                      metadata: { source: "learner-video-player" },
+                    }).catch(() => undefined)}
+                    onPause={(event) => void recordVideoPlaybackEvent(video.id, {
+                      eventType: "PAUSE",
+                      positionSeconds: Math.floor(event.currentTarget.currentTime || 0),
+                      metadata: { source: "learner-video-player" },
+                    }).catch(() => undefined)}
+                  />
+                ) : (
+                  <>
+                    <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover opacity-60" />
+                    <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-white" style={{ fontSize: "0.9rem", fontWeight: 700 }}>
+                      Video này chưa có videoUrl từ API.
+                    </div>
+                    <div className="absolute bottom-3 right-3 bg-black/70 text-white px-2.5 py-1 rounded-lg" style={{ fontSize: "0.75rem", fontWeight: 600 }}>
+                      {video.duration}
+                    </div>
+                  </>
+                )}
               </div>
             )}
 

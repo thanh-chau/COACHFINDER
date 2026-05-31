@@ -10,6 +10,9 @@ import {
 interface Video360PlayerProps {
   /** Optional initial file (e.g. shared from parent upload) */
   initialFile?: File | null;
+  /** Optional remote 360 video URL from API */
+  sourceUrl?: string;
+  sourceName?: string;
 }
 
 // ─── Compass overlay ──────────────────────────────────────────────────────────
@@ -120,7 +123,7 @@ function UploadZone({ onFile }: { onFile: (f: File) => void }) {
 }
 
 // ─── Main 360° Player ─────────────────────────────────────────────────────────
-export function Video360Player({ initialFile = null }: Video360PlayerProps) {
+export function Video360Player({ initialFile = null, sourceUrl = "", sourceName = "Video 360" }: Video360PlayerProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -147,10 +150,10 @@ export function Video360Player({ initialFile = null }: Video360PlayerProps) {
 
   // ── Init Three.js scene when file changes ─────────────────────────────────
   useEffect(() => {
-    if (!file || !mountRef.current) return;
+    if ((!file && !sourceUrl) || !mountRef.current) return;
 
     const mount = mountRef.current;
-    const url = URL.createObjectURL(file);
+    const url = file ? URL.createObjectURL(file) : sourceUrl;
 
     // Video element
     const video = document.createElement("video");
@@ -244,10 +247,10 @@ export function Video360Player({ initialFile = null }: Video360PlayerProps) {
       texture.dispose();
       video.pause();
       video.src = "";
-      URL.revokeObjectURL(url);
+      if (file) URL.revokeObjectURL(url);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [file]);
+  }, [file, sourceUrl]);
 
   // ── Sync mute/volume to video ─────────────────────────────────────────────
   useEffect(() => {
@@ -339,7 +342,7 @@ export function Video360Player({ initialFile = null }: Video360PlayerProps) {
   };
 
   // ─── Upload phase ─────────────────────────────────────────────────────────
-  if (!file) {
+  if (!file && !sourceUrl) {
     return (
       <div className="space-y-4">
         {/* Tips row */}
@@ -372,9 +375,9 @@ export function Video360Player({ initialFile = null }: Video360PlayerProps) {
           <FileVideo className="w-4 h-4 text-violet-500" />
         </div>
         <div className="flex-1 min-w-0">
-          <p style={{ fontWeight: 700, fontSize: "0.85rem" }} className="text-gray-800 truncate">{file.name}</p>
+          <p style={{ fontWeight: 700, fontSize: "0.85rem" }} className="text-gray-800 truncate">{file?.name || sourceName}</p>
           <p style={{ fontSize: "0.72rem" }} className="text-gray-400">
-            {(file.size / 1024 / 1024).toFixed(1)} MB · {fmt(duration)}
+            {file ? `${(file.size / 1024 / 1024).toFixed(1)} MB - ` : ""}{fmt(duration)}
           </p>
         </div>
         <div className="flex items-center gap-2">
