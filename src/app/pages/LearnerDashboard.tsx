@@ -148,7 +148,12 @@ export function LearnerDashboard() {
   const handleNavigate = (view: string, payload?: string) => {
     setActiveNav(view);
     if (view === "msg" && payload) {
-      setTargetUsername(payload);
+      try {
+        const data = JSON.parse(payload);
+        setTargetUsername(data.name || data);
+      } catch {
+        setTargetUsername(payload);
+      }
     }
   };
   const [sidebarOpen, setSidebarOpen] = useState(false);

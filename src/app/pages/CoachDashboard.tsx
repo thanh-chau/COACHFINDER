@@ -25,6 +25,7 @@ import { logoutAccount } from "../api/auth";
 import { getCoachCalendarBookings } from "../api/bookings";
 import { coachWorkspaceApi } from "../api/coachWorkspace";
 import { getNotificationUnreadCount } from "../api/notifications";
+import { getChatUnreadCount } from "../api/chat";
 import type { BookingListItem } from "../types/booking";
 import type { CoachAnalyticsOverview, CoachStudentProgress, CoachStudentSummary } from "../types/coachWorkspace";
 import type { WalletTransaction } from "../types/wallet";
@@ -51,12 +52,12 @@ const DEFAULT_OVERVIEW = {
 
 const navItems = [
   { icon: LayoutDashboard, label: "Tổng quan", id: "overview" },
-  { icon: Users, label: "Học viên", id: "students", badge: "24" },
+  { icon: Users, label: "Học viên", id: "students" },
   { icon: Calendar, label: "Lịch dạy", id: "schedule" },
   { icon: Video, label: "Video Studio", id: "studio", badge: "Mới" },
   { icon: DollarSign, label: "Thu nhập", id: "income" },
   { icon: BarChart2, label: "Analytics", id: "analytics" },
-  { icon: MessageCircle, label: "Tin nhắn", id: "msg", badge: "5" },
+  { icon: MessageCircle, label: "Tin nhắn", id: "msg" },
   { icon: CreditCard, label: "Gói đăng ký", id: "subscription" },
 ];
 
@@ -190,11 +191,17 @@ export function CoachDashboard() {
   const handleNavigate = (view: string, payload?: string) => {
     setActiveNav(view);
     if (view === "msg" && payload) {
-      setTargetUsername(payload);
+      try {
+        const data = JSON.parse(payload);
+        setTargetUsername(data.name || data);
+      } catch {
+        setTargetUsername(payload);
+      }
     }
   };
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [chatCount, setChatCount] = useState(0);
   const [loadingOverview, setLoadingOverview] = useState(true);
   const [overview, setOverview] = useState(DEFAULT_OVERVIEW);
   const [earningsRows, setEarningsRows] = useState<EarningsRow[]>([]);
@@ -224,6 +231,9 @@ export function CoachDashboard() {
     getNotificationUnreadCount()
       .then((result) => setNotificationCount(result.unreadCount))
       .catch(() => setNotificationCount(0));
+    getChatUnreadCount()
+      .then((result) => setChatCount(result.unreadCount))
+      .catch(() => setChatCount(0));
   }, []);
 
   useEffect(() => {
@@ -338,7 +348,10 @@ export function CoachDashboard() {
         {/* Nav */}
         <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
           {navItems.map(({ icon: Icon, label, id, badge }) => {
-            const dynamicBadge = id === "students" ? String(overview.totalStudents) : badge;
+            let dynamicBadge = badge;
+            if (id === "students") dynamicBadge = String(overview.totalStudents);
+            if (id === "msg" && chatCount > 0) dynamicBadge = String(chatCount);
+            
             return (
             <button
               key={id}
