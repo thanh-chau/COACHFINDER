@@ -178,7 +178,7 @@ function LoginForm({ onSwitch }: { onSwitch: () => void }) {
     try {
       const auth = await loginWithFacebook(token.trim());
       saveAuthSession(auth);
-      navigate(getDashboardPath(auth.role));
+      navigate("/learner/profile/setup");
     } catch (error) {
       setLoginError(error instanceof Error ? error.message : `Dang nhap ${provider} khong thanh cong.`);
     }

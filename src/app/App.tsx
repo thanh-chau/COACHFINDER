@@ -14,6 +14,7 @@ import { LearnerDashboard } from "./pages/LearnerDashboard";
 import { CoachDashboard } from "./pages/CoachDashboard";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { CoachProfileSetupPage } from "./pages/CoachProfileSetupPage";
+import { LearnerProfileSetupPage } from "./pages/LearnerProfileSetupPage";
 import type { ApiRole } from "./types/auth";
 import {
   AUTH_SESSION_EXPIRED_EVENT,
@@ -143,7 +144,8 @@ function AppRoutes() {
     function handleExpiredSession() {
       if (
         location.pathname.startsWith("/dashboard") ||
-        location.pathname.startsWith("/coach/profile")
+        location.pathname.startsWith("/coach/profile") ||
+        location.pathname.startsWith("/learner/profile")
       ) {
         navigate("/auth", { replace: true });
       }
@@ -262,6 +264,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute expectedRole="TRAINEES">
               <LearnerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/learner/profile/setup"
+          element={
+            <ProtectedRoute expectedRole="TRAINEES">
+              <LearnerProfileSetupPage />
             </ProtectedRoute>
           }
         />

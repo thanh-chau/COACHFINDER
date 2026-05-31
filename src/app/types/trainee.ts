@@ -9,3 +9,12 @@ export interface Trainee {
   height?: number;
   phone?: string;
 }
+
+export interface TraineeProfileRequest {
+  goal?: string;
+  age?: number;
+  weight?: number;
+  height?: number;
+  phone?: string;
+  avatar?: File;
+}
