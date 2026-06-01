@@ -54,6 +54,24 @@ const SPORT_META_BY_GROUP: Record<string, Pick<SportCategory, "name" | "emoji" |
   gym: { name: "Thể hình", emoji: "🏋️", color: "text-violet-600", bg: "bg-violet-50" },
 };
 const MAX_AI_VIDEO_MB = 100;
+const MAX_AI_VIDEO_SECONDS = 60;
+
+function readVideoDuration(file: File) {
+  return new Promise<number>((resolve, reject) => {
+    const video = document.createElement("video");
+    const url = URL.createObjectURL(file);
+    video.preload = "metadata";
+    video.onloadedmetadata = () => {
+      URL.revokeObjectURL(url);
+      resolve(video.duration);
+    };
+    video.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Không đọc được thời lượng video."));
+    };
+    video.src = url;
+  });
+}
 
 function decodeMaybeMojibake(value: string) {
   try {
@@ -1315,7 +1333,7 @@ export function AIAnalysis({ onNavigate }: Props) {
     }
   }, [selectedSport, techKey, techniques, uploadedFile]);
 
-  const handleFile = (file: File) => {
+  const handleFile = async (file: File) => {
     if (!file.type.startsWith("video/")) return;
     setAnalysisError("");
     setAiTechnique(null);
@@ -1323,6 +1341,20 @@ export function AIAnalysis({ onNavigate }: Props) {
       setUploadedFile(null);
       setFileName("");
       setAnalysisError(`Video vượt quá ${MAX_AI_VIDEO_MB}MB. Vui lòng chọn file nhỏ hơn để AI service xử lý.`);
+      return;
+    }
+    try {
+      const duration = await readVideoDuration(file);
+      if (Number.isFinite(duration) && duration > MAX_AI_VIDEO_SECONDS) {
+        setUploadedFile(null);
+        setFileName("");
+        setAnalysisError(`Video dài ${Math.ceil(duration)} giây. AI service hiện chỉ nhận video tối đa ${MAX_AI_VIDEO_SECONDS} giây.`);
+        return;
+      }
+    } catch {
+      setUploadedFile(null);
+      setFileName("");
+      setAnalysisError("Không đọc được thông tin video. Vui lòng chọn file MP4/MOV/AVI hợp lệ.");
       return;
     }
     setUploadedFile(file);
@@ -1467,7 +1499,7 @@ export function AIAnalysis({ onNavigate }: Props) {
                     </div>
                     <div style={{ fontWeight: 700, fontSize: "0.88rem" }} className="text-gray-700 mb-1">Kéo thả video vào đây</div>
                     <div style={{ fontSize: "0.75rem" }} className="text-gray-400">hoặc click để chọn file</div>
-                    <div style={{ fontSize: "0.68rem" }} className="text-gray-300 mt-2">MP4, MOV, AVI · Tối đa {MAX_AI_VIDEO_MB}MB</div>
+                    <div style={{ fontSize: "0.68rem" }} className="text-gray-300 mt-2">MP4, MOV, AVI · Tối đa {MAX_AI_VIDEO_MB}MB · {MAX_AI_VIDEO_SECONDS}s</div>
                   </>
                 )}
               </div>

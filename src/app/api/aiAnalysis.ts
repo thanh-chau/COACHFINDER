@@ -114,6 +114,10 @@ export function analyzeSportCompanionVideo(request: {
   return fetch(`${AI_SERVICE_BASE_URL}/analyze`, {
     method: "POST",
     body: formData,
+  }).catch(() => {
+    throw new Error(
+      "Không thể kết nối AI service. Thường do video quá lớn/quá dài, request xử lý quá timeout, hoặc proxy AI chưa trả CORS cho lỗi hệ thống.",
+    );
   }).then(async response => {
     const text = await response.text();
     let payload: unknown;
