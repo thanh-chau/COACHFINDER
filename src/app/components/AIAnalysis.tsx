@@ -53,6 +53,7 @@ const SPORT_META_BY_GROUP: Record<string, Pick<SportCategory, "name" | "emoji" |
   yoga: { name: "Yoga", emoji: "🧘", color: "text-orange-600", bg: "bg-orange-50" },
   gym: { name: "Thể hình", emoji: "🏋️", color: "text-violet-600", bg: "bg-violet-50" },
 };
+const MAX_AI_VIDEO_MB = 100;
 
 function decodeMaybeMojibake(value: string) {
   try {
@@ -1318,6 +1319,12 @@ export function AIAnalysis({ onNavigate }: Props) {
     if (!file.type.startsWith("video/")) return;
     setAnalysisError("");
     setAiTechnique(null);
+    if (file.size > MAX_AI_VIDEO_MB * 1024 * 1024) {
+      setUploadedFile(null);
+      setFileName("");
+      setAnalysisError(`Video vượt quá ${MAX_AI_VIDEO_MB}MB. Vui lòng chọn file nhỏ hơn để AI service xử lý.`);
+      return;
+    }
     setUploadedFile(file);
     setFileName(file.name);
   };
@@ -1460,14 +1467,14 @@ export function AIAnalysis({ onNavigate }: Props) {
                     </div>
                     <div style={{ fontWeight: 700, fontSize: "0.88rem" }} className="text-gray-700 mb-1">Kéo thả video vào đây</div>
                     <div style={{ fontSize: "0.75rem" }} className="text-gray-400">hoặc click để chọn file</div>
-                    <div style={{ fontSize: "0.68rem" }} className="text-gray-300 mt-2">MP4, MOV, AVI · Tối đa 500MB</div>
+                    <div style={{ fontSize: "0.68rem" }} className="text-gray-300 mt-2">MP4, MOV, AVI · Tối đa {MAX_AI_VIDEO_MB}MB</div>
                   </>
                 )}
               </div>
               {/* Metadata from AI exercises */}
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-3.5">
                 <div style={{ fontWeight: 700, fontSize: "0.8rem" }} className="text-blue-700 mb-1.5 flex items-center gap-1.5">
-                  <Lightbulb className="w-3.5 h-3.5" /> D? li?u t? AI service
+                  <Lightbulb className="w-3.5 h-3.5" /> Dữ liệu từ AI service
                 </div>
                 {currentTechnique.metrics.map(metric => (
                   <div key={metric.label} className="flex items-center gap-1.5 mt-1">
