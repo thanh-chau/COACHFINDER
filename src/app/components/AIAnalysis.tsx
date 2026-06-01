@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   Upload, Brain, Zap, CheckCircle2, XCircle,
   RotateCcw, ChevronRight, TrendingUp,
@@ -11,6 +11,8 @@ import {
   analyzeSportCompanionVideo,
   fetchSportCompanionExercises,
   type SportCompanionExercise,
+  type SportCompanionFrame,
+  type SportCompanionKeypoint,
   type SportCompanionReport,
 } from "../api/aiAnalysis";
 
@@ -1233,6 +1235,182 @@ function ScoreRing({ score }: { score: number }) {
 }
 
 // ─── Main AIAnalysis ──────────────────────────────────────────────────────────
+const ARM_EDGES: Array<[string, string]> = [
+  ["left_shoulder", "left_elbow"],
+  ["left_elbow", "left_wrist"],
+  ["left_wrist", "left_thumb"],
+  ["left_wrist", "left_index"],
+  ["left_wrist", "left_pinky"],
+  ["right_shoulder", "right_elbow"],
+  ["right_elbow", "right_wrist"],
+  ["right_wrist", "right_thumb"],
+  ["right_wrist", "right_index"],
+  ["right_wrist", "right_pinky"],
+];
+
+const ARM_JOINT_LABELS: Record<string, string> = {
+  left_shoulder: "Vai trái",
+  left_elbow: "Khuỷu trái",
+  left_wrist: "Cổ tay trái",
+  left_thumb: "Ngón cái trái",
+  left_index: "Ngón trỏ trái",
+  left_pinky: "Ngón út trái",
+  right_shoulder: "Vai phải",
+  right_elbow: "Khuỷu phải",
+  right_wrist: "Cổ tay phải",
+  right_thumb: "Ngón cái phải",
+  right_index: "Ngón trỏ phải",
+  right_pinky: "Ngón út phải",
+};
+
+function ArmJointVideo({
+  src,
+  frames,
+  progress,
+  phase,
+}: {
+  src: string;
+  frames: SportCompanionFrame[];
+  progress: number;
+  phase: Phase;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const sortedFrames = useMemo(
+    () => frames
+      .filter(frame => frame.skeleton?.keypoints)
+      .sort((a, b) => a.timestamp_ms - b.timestamp_ms),
+    [frames],
+  );
+
+  useEffect(() => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let raf = 0;
+
+    const resize = () => {
+      const rect = video.getBoundingClientRect();
+      const scale = window.devicePixelRatio || 1;
+      canvas.width = Math.max(1, Math.round(rect.width * scale));
+      canvas.height = Math.max(1, Math.round(rect.height * scale));
+      canvas.style.width = `${rect.width}px`;
+      canvas.style.height = `${rect.height}px`;
+      ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    };
+
+    const pointVisible = (point?: SportCompanionKeypoint): point is SportCompanionKeypoint => (
+      Boolean(point && point.x >= 0 && point.y >= 0 && (point.visibility ?? 1) >= 0.2)
+    );
+
+    const drawPoint = (
+      point: SportCompanionKeypoint,
+      label: string,
+      color: string,
+      rect: { x: number; y: number; w: number; h: number },
+    ) => {
+      const x = rect.x + point.x * rect.w;
+      const y = rect.y + point.y * rect.h;
+      ctx.beginPath();
+      ctx.fillStyle = color;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 14;
+      ctx.arc(x, y, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "rgba(255,255,255,0.9)";
+      ctx.stroke();
+
+      ctx.font = "600 11px Inter, system-ui, sans-serif";
+      const textWidth = ctx.measureText(label).width;
+      ctx.fillStyle = "rgba(15, 23, 42, 0.78)";
+      ctx.beginPath();
+      ctx.roundRect(x + 8, y - 18, textWidth + 12, 18, 8);
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.fillText(label, x + 14, y - 5);
+    };
+
+    const draw = () => {
+      resize();
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+      ctx.clearRect(0, 0, width, height);
+
+      const currentMs = video.currentTime * 1000;
+      const frame = sortedFrames.reduce<SportCompanionFrame | null>((nearest, item) => {
+        if (!nearest) return item;
+        return Math.abs(item.timestamp_ms - currentMs) < Math.abs(nearest.timestamp_ms - currentMs) ? item : nearest;
+      }, null);
+
+      const keypoints = frame?.skeleton?.keypoints;
+      if (keypoints) {
+        const videoAspect = video.videoWidth && video.videoHeight ? video.videoWidth / video.videoHeight : width / height;
+        const boxAspect = width / height;
+        const renderRect = boxAspect > videoAspect
+          ? { w: height * videoAspect, h: height, x: (width - height * videoAspect) / 2, y: 0 }
+          : { w: width, h: width / videoAspect, x: 0, y: (height - width / videoAspect) / 2 };
+
+        ARM_EDGES.forEach(([from, to]) => {
+          const p1 = keypoints[from];
+          const p2 = keypoints[to];
+          if (!pointVisible(p1) || !pointVisible(p2)) return;
+          const color = from.startsWith("left_") ? "#10b981" : "#f59e0b";
+          ctx.beginPath();
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 4;
+          ctx.lineCap = "round";
+          ctx.shadowColor = color;
+          ctx.shadowBlur = 12;
+          ctx.moveTo(renderRect.x + p1.x * renderRect.w, renderRect.y + p1.y * renderRect.h);
+          ctx.lineTo(renderRect.x + p2.x * renderRect.w, renderRect.y + p2.y * renderRect.h);
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+        });
+
+        Object.entries(ARM_JOINT_LABELS).forEach(([name, label]) => {
+          const point = keypoints[name];
+          if (!pointVisible(point)) return;
+          drawPoint(point, label, name.startsWith("left_") ? "#10b981" : "#f59e0b", renderRect);
+        });
+      }
+
+      raf = requestAnimationFrame(draw);
+    };
+
+    raf = requestAnimationFrame(draw);
+    window.addEventListener("resize", resize);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", resize);
+    };
+  }, [sortedFrames]);
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-gray-100 bg-black shadow-sm">
+      <video
+        ref={videoRef}
+        src={src}
+        controls
+        playsInline
+        className="w-full aspect-[9/16] max-h-[680px] object-contain bg-black"
+      />
+      <canvas ref={canvasRef} className="pointer-events-none absolute inset-0" />
+      <div
+        className="absolute left-3 top-3 rounded-full bg-black/60 px-3 py-1 text-white backdrop-blur-sm"
+        style={{ fontSize: "0.72rem", fontWeight: 700 }}
+      >
+        {phase === "analyzing" ? `Đang phân tích ${Math.round(progress)}%` : `${sortedFrames.length} frame khớp tay`}
+      </div>
+    </div>
+  );
+}
+
 interface Props { onNavigate?: (v: string) => void; }
 
 export function AIAnalysis({ onNavigate }: Props) {
@@ -1251,6 +1429,7 @@ export function AIAnalysis({ onNavigate }: Props) {
   const [videoPreviewUrl, setVideoPreviewUrl] = useState("");
   const [analysisError, setAnalysisError] = useState("");
   const [aiTechnique, setAiTechnique] = useState<TechniqueData | null>(null);
+  const [analysisFrames, setAnalysisFrames] = useState<SportCompanionFrame[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -1285,6 +1464,7 @@ export function AIAnalysis({ onNavigate }: Props) {
     setUploadedFile(null);
     setFileName("");
     setAiTechnique(null);
+    setAnalysisFrames([]);
     setVideoPreviewUrl(current => {
       if (current) URL.revokeObjectURL(current);
       return "";
@@ -1303,6 +1483,7 @@ export function AIAnalysis({ onNavigate }: Props) {
   const runAnalysis = useCallback(async () => {
     setAnalysisError("");
     setAiTechnique(null);
+    setAnalysisFrames([]);
     setPhase("analyzing");
     setProgress(0);
     setStepMsg(ANALYZE_STEPS[0].msg);
@@ -1333,13 +1514,14 @@ export function AIAnalysis({ onNavigate }: Props) {
       const report = await analyzeSportCompanionVideo({
         video: uploadedFile,
         exercise,
-        skeletonOutput: "keyframes",
+        skeletonOutput: "sampled",
         enrich: true,
       });
       clearInterval(interval);
       setProgress(100);
       setStepMsg("AI đã hoàn tất phân tích video.");
       setAiTechnique(reportToTechniqueData(report, fallbackTechnique));
+      setAnalysisFrames(report.frames ?? []);
       setTimeout(() => setPhase("results"), 400);
     } catch (error) {
       clearInterval(interval);
@@ -1353,6 +1535,7 @@ export function AIAnalysis({ onNavigate }: Props) {
     if (!file.type.startsWith("video/")) return;
     setAnalysisError("");
     setAiTechnique(null);
+    setAnalysisFrames([]);
     if (file.size > MAX_AI_VIDEO_MB * 1024 * 1024) {
       clearUploadedVideo();
       setAnalysisError(`Video vượt quá ${MAX_AI_VIDEO_MB}MB. Vui lòng chọn file nhỏ hơn để AI service xử lý.`);
@@ -1381,6 +1564,7 @@ export function AIAnalysis({ onNavigate }: Props) {
   const handleSportChange = (sportKey: string) => {
     setAnalysisError("");
     setAiTechnique(null);
+    setAnalysisFrames([]);
     setSelectedSport(sportKey);
     const firstTech = Object.keys(sportOptions[sportKey]?.techniques ?? {})[0] ?? "";
     setSelectedTechnique(firstTech);
@@ -1413,21 +1597,13 @@ export function AIAnalysis({ onNavigate }: Props) {
 
           {/* Uploaded video preview */}
           {phase !== "upload" && videoPreviewUrl && (
-            <div className="relative overflow-hidden rounded-2xl border border-gray-100 bg-black shadow-sm">
-              <video
+            <div className="relative">
+              <ArmJointVideo
                 src={videoPreviewUrl}
-                controls
-                playsInline
-                className="w-full aspect-[9/16] max-h-[680px] object-contain bg-black"
+                frames={analysisFrames}
+                progress={progress}
+                phase={phase}
               />
-              {phase === "analyzing" && (
-                <div
-                  className="absolute left-3 top-3 rounded-full bg-black/60 px-3 py-1 text-white backdrop-blur-sm"
-                  style={{ fontSize: "0.72rem", fontWeight: 700 }}
-                >
-                  Đang phân tích {Math.round(progress)}%
-                </div>
-              )}
               {phase === "results" && (
                 <button
                   onClick={() => { setPhase("upload"); setAnalysisError(""); clearUploadedVideo(); }}
@@ -1473,7 +1649,7 @@ export function AIAnalysis({ onNavigate }: Props) {
                   {Object.entries(techniques).map(([key, tech]) => (
                     <button
                       key={key}
-                      onClick={() => { setSelectedTechnique(key); setAiTechnique(null); setAnalysisError(""); }}
+                      onClick={() => { setSelectedTechnique(key); setAiTechnique(null); setAnalysisFrames([]); setAnalysisError(""); }}
                       className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 transition-all ${techKey === key ? "border-violet-500 bg-violet-50" : "border-gray-200 hover:border-gray-300 bg-white"}`}
                     >
                       <span style={{ fontSize: "1.1rem" }}>{tech.emoji}</span>
@@ -1773,7 +1949,7 @@ export function AIAnalysis({ onNavigate }: Props) {
                   </div>
 
                   {/* Re-analyze */}
-                  <button onClick={() => { setPhase("upload"); setFileName(""); setUploadedFile(null); setAiTechnique(null); }}
+                  <button onClick={() => { setPhase("upload"); setAnalysisError(""); clearUploadedVideo(); }}
                     className="w-full py-3 border-2 border-dashed border-gray-300 rounded-2xl text-gray-500 hover:border-violet-400 hover:text-violet-500 transition-all flex items-center justify-center gap-2"
                     style={{ fontSize: "0.85rem", fontWeight: 600 }}>
                     <RefreshCw className="w-4 h-4" /> Phân tích kỹ thuật khác

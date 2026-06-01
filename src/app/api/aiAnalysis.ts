@@ -54,6 +54,21 @@ export interface SportCompanionFeedback {
   suggestions?: string[];
 }
 
+export interface SportCompanionKeypoint {
+  x: number;
+  y: number;
+  z?: number;
+  visibility?: number;
+}
+
+export interface SportCompanionFrame {
+  index: number;
+  timestamp_ms: number;
+  skeleton?: {
+    keypoints?: Record<string, SportCompanionKeypoint>;
+  } | null;
+}
+
 export interface SportCompanionReport {
   exercise: string;
   pose_model: string;
@@ -62,6 +77,12 @@ export interface SportCompanionReport {
   avg_score?: number;
   session_summary?: string | null;
   ai_feedback?: SportCompanionFeedback | null;
+  skeleton_schema?: {
+    keypoint_names?: string[];
+    edges?: Array<[string, string]>;
+    coordinate_space?: string;
+  };
+  frames?: SportCompanionFrame[];
   reps?: Array<{
     rep_index: number;
     score?: number | null;
