@@ -1235,7 +1235,10 @@ function ScoreRing({ score }: { score: number }) {
 }
 
 // ─── Main AIAnalysis ──────────────────────────────────────────────────────────
-const ARM_EDGES: Array<[string, string]> = [
+const BODY_EDGES: Array<[string, string]> = [
+  ["left_ear", "left_shoulder"],
+  ["right_ear", "right_shoulder"],
+  ["left_shoulder", "right_shoulder"],
   ["left_shoulder", "left_elbow"],
   ["left_elbow", "left_wrist"],
   ["left_wrist", "left_thumb"],
@@ -1246,24 +1249,36 @@ const ARM_EDGES: Array<[string, string]> = [
   ["right_wrist", "right_thumb"],
   ["right_wrist", "right_index"],
   ["right_wrist", "right_pinky"],
+  ["left_shoulder", "left_hip"],
+  ["right_shoulder", "right_hip"],
+  ["left_hip", "right_hip"],
+  ["left_hip", "left_knee"],
+  ["left_knee", "left_ankle"],
+  ["left_ankle", "left_heel"],
+  ["left_heel", "left_foot_index"],
+  ["right_hip", "right_knee"],
+  ["right_knee", "right_ankle"],
+  ["right_ankle", "right_heel"],
+  ["right_heel", "right_foot_index"],
 ];
 
-const ARM_JOINT_LABELS: Record<string, string> = {
+const BODY_JOINT_LABELS: Record<string, string> = {
+  nose: "Đầu",
   left_shoulder: "Vai trái",
   left_elbow: "Khuỷu trái",
   left_wrist: "Cổ tay trái",
-  left_thumb: "Ngón cái trái",
-  left_index: "Ngón trỏ trái",
-  left_pinky: "Ngón út trái",
+  left_hip: "Hông trái",
+  left_knee: "Gối trái",
+  left_ankle: "Cổ chân trái",
   right_shoulder: "Vai phải",
   right_elbow: "Khuỷu phải",
   right_wrist: "Cổ tay phải",
-  right_thumb: "Ngón cái phải",
-  right_index: "Ngón trỏ phải",
-  right_pinky: "Ngón út phải",
+  right_hip: "Hông phải",
+  right_knee: "Gối phải",
+  right_ankle: "Cổ chân phải",
 };
 
-function ArmJointVideo({
+function BodyJointVideo({
   src,
   frames,
   progress,
@@ -1356,11 +1371,11 @@ function ArmJointVideo({
           ? { w: height * videoAspect, h: height, x: (width - height * videoAspect) / 2, y: 0 }
           : { w: width, h: width / videoAspect, x: 0, y: (height - width / videoAspect) / 2 };
 
-        ARM_EDGES.forEach(([from, to]) => {
+        BODY_EDGES.forEach(([from, to]) => {
           const p1 = keypoints[from];
           const p2 = keypoints[to];
           if (!pointVisible(p1) || !pointVisible(p2)) return;
-          const color = from.startsWith("left_") ? "#10b981" : "#f59e0b";
+          const color = from.startsWith("left_") ? "#10b981" : from.startsWith("right_") ? "#f59e0b" : "#60a5fa";
           ctx.beginPath();
           ctx.strokeStyle = color;
           ctx.lineWidth = 4;
@@ -1373,10 +1388,10 @@ function ArmJointVideo({
           ctx.shadowBlur = 0;
         });
 
-        Object.entries(ARM_JOINT_LABELS).forEach(([name, label]) => {
+        Object.entries(BODY_JOINT_LABELS).forEach(([name, label]) => {
           const point = keypoints[name];
           if (!pointVisible(point)) return;
-          drawPoint(point, label, name.startsWith("left_") ? "#10b981" : "#f59e0b", renderRect);
+          drawPoint(point, label, name.startsWith("left_") ? "#10b981" : name.startsWith("right_") ? "#f59e0b" : "#60a5fa", renderRect);
         });
       }
 
@@ -1405,7 +1420,7 @@ function ArmJointVideo({
         className="absolute left-3 top-3 rounded-full bg-black/60 px-3 py-1 text-white backdrop-blur-sm"
         style={{ fontSize: "0.72rem", fontWeight: 700 }}
       >
-        {phase === "analyzing" ? `Đang phân tích ${Math.round(progress)}%` : `${sortedFrames.length} frame khớp tay`}
+        {phase === "analyzing" ? `Đang phân tích ${Math.round(progress)}%` : `${sortedFrames.length} frame khớp cơ thể`}
       </div>
     </div>
   );
@@ -1598,7 +1613,7 @@ export function AIAnalysis({ onNavigate }: Props) {
           {/* Uploaded video preview */}
           {phase !== "upload" && videoPreviewUrl && (
             <div className="relative">
-              <ArmJointVideo
+              <BodyJointVideo
                 src={videoPreviewUrl}
                 frames={analysisFrames}
                 progress={progress}
