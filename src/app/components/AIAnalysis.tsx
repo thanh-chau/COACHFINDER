@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
-  Upload, Brain, Zap, CheckCircle2, AlertCircle, XCircle,
-  Play, Pause, RotateCcw, ChevronRight, TrendingUp,
+  Upload, Brain, Zap, CheckCircle2, XCircle,
+  RotateCcw, ChevronRight, TrendingUp,
   Target, Video, Flame, AlertTriangle,
   BarChart2, Lightbulb, Award, RefreshCw, Camera,
   ChevronDown, ArrowRight, FileVideo, Star, Globe
@@ -1243,12 +1243,12 @@ export function AIAnalysis({ onNavigate }: Props) {
   const [fileName, setFileName] = useState("");
   const [progress, setProgress] = useState(0);
   const [stepMsg, setStepMsg] = useState(ANALYZE_STEPS[0].msg);
-  const [playing, setPlaying] = useState(true);
   const [activeTab, setActiveTab] = useState<"overview" | "detail" | "tips">("overview");
   const [show360, setShow360] = useState(false);
   const [aiSports, setAiSports] = useState<Record<string, SportCategory>>({});
   const [exerciseLoadError, setExerciseLoadError] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState("");
   const [analysisError, setAnalysisError] = useState("");
   const [aiTechnique, setAiTechnique] = useState<TechniqueData | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -1273,6 +1273,22 @@ export function AIAnalysis({ onNavigate }: Props) {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl);
+    };
+  }, [videoPreviewUrl]);
+
+  const clearUploadedVideo = useCallback(() => {
+    setUploadedFile(null);
+    setFileName("");
+    setAiTechnique(null);
+    setVideoPreviewUrl(current => {
+      if (current) URL.revokeObjectURL(current);
+      return "";
+    });
   }, []);
 
   const sportOptions = aiSports;
@@ -1338,27 +1354,28 @@ export function AIAnalysis({ onNavigate }: Props) {
     setAnalysisError("");
     setAiTechnique(null);
     if (file.size > MAX_AI_VIDEO_MB * 1024 * 1024) {
-      setUploadedFile(null);
-      setFileName("");
+      clearUploadedVideo();
       setAnalysisError(`Video vượt quá ${MAX_AI_VIDEO_MB}MB. Vui lòng chọn file nhỏ hơn để AI service xử lý.`);
       return;
     }
     try {
       const duration = await readVideoDuration(file);
       if (Number.isFinite(duration) && duration > MAX_AI_VIDEO_SECONDS) {
-        setUploadedFile(null);
-        setFileName("");
+        clearUploadedVideo();
         setAnalysisError(`Video dài ${Math.ceil(duration)} giây. AI service hiện chỉ nhận video tối đa ${MAX_AI_VIDEO_SECONDS} giây.`);
         return;
       }
     } catch {
-      setUploadedFile(null);
-      setFileName("");
+      clearUploadedVideo();
       setAnalysisError("Không đọc được thông tin video. Vui lòng chọn file MP4/MOV/AVI hợp lệ.");
       return;
     }
     setUploadedFile(file);
     setFileName(file.name);
+    setVideoPreviewUrl(current => {
+      if (current) URL.revokeObjectURL(current);
+      return URL.createObjectURL(file);
+    });
   };
 
   const handleSportChange = (sportKey: string) => {
@@ -1389,42 +1406,33 @@ export function AIAnalysis({ onNavigate }: Props) {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
-        <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-        <div>
-          <div className="text-amber-800" style={{ fontWeight: 800, fontSize: "0.9rem" }}>AI thật đã kết nối tới Sport Companion</div>
-          <p className="text-amber-700 mt-1" style={{ fontSize: "0.78rem", lineHeight: 1.6 }}>
-            Upload video để gọi https://ai.minhthien.io.vn/analyze. Trang chỉ hiển thị kết quả trả về từ AI service.
-          </p>
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
         {/* ── LEFT: Canvas + Upload ────────────────────────── */}
         <div className="lg:col-span-1 space-y-4">
 
-          {/* Canvas */}
-          {phase !== "upload" && (
-            <div className="relative">
-              <SkeletonCanvas
-                technique={currentTechnique}
-                phase={phase === "analyzing" ? "analyzing" : "results"}
-                progress={progress}
-                playing={playing}
+          {/* Uploaded video preview */}
+          {phase !== "upload" && videoPreviewUrl && (
+            <div className="relative overflow-hidden rounded-2xl border border-gray-100 bg-black shadow-sm">
+              <video
+                src={videoPreviewUrl}
+                controls
+                playsInline
+                className="w-full aspect-[9/16] max-h-[680px] object-contain bg-black"
               />
-              {phase === "results" && (
-                <button
-                  onClick={() => setPlaying(p => !p)}
-                  className="absolute bottom-3 right-3 w-9 h-9 rounded-xl bg-black/40 hover:bg-black/60 flex items-center justify-center text-white transition-colors backdrop-blur-sm"
+              {phase === "analyzing" && (
+                <div
+                  className="absolute left-3 top-3 rounded-full bg-black/60 px-3 py-1 text-white backdrop-blur-sm"
+                  style={{ fontSize: "0.72rem", fontWeight: 700 }}
                 >
-                  {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                </button>
+                  Đang phân tích {Math.round(progress)}%
+                </div>
               )}
               {phase === "results" && (
                 <button
-                  onClick={() => { setPhase("upload"); setFileName(""); setUploadedFile(null); setAiTechnique(null); }}
+                  onClick={() => { setPhase("upload"); setAnalysisError(""); clearUploadedVideo(); }}
                   className="absolute bottom-3 left-3 w-9 h-9 rounded-xl bg-black/40 hover:bg-black/60 flex items-center justify-center text-white transition-colors backdrop-blur-sm"
+                  aria-label="Chọn video khác"
                 >
                   <RotateCcw className="w-4 h-4" />
                 </button>
