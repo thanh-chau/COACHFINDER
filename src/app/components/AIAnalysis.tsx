@@ -2,11 +2,15 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Upload, Brain, Zap, CheckCircle2, AlertCircle, XCircle,
   Play, Pause, RotateCcw, ChevronRight, TrendingUp,
-  Target, Video, Clock, Flame, AlertTriangle,
+  Target, Video, Flame, AlertTriangle,
   BarChart2, Lightbulb, Award, RefreshCw, Camera,
   ChevronDown, ArrowRight, FileVideo, Star, Globe
 } from "lucide-react";
 import { Video360Player } from "./Video360Player";
+import {
+  analyzeSportCompanionVideo,
+  type SportCompanionReport,
+} from "../api/aiAnalysis";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Phase = "upload" | "analyzing" | "results";
@@ -40,6 +44,109 @@ interface SportCategory {
   color: string;
   bg: string;
   techniques: Record<string, TechniqueData>;
+}
+
+const AI_EXERCISE_BY_TECHNIQUE: Record<string, string> = {
+  badminton_smash: "badminton_jump_smash",
+  badminton_dropshot: "badminton_drop_shot",
+  badminton_clear: "badminton_clear",
+  badminton_footwork: "badminton_front_corners_footwork",
+  tennis_serve: "overhead_press",
+  tennis_forehand: "badminton_drive",
+  boxing_jab: "push_up",
+  boxing_cross: "push_up",
+  gym_squat: "squat",
+  gym_deadlift: "deadlift",
+  football_shot: "lunge",
+  football_dribble: "lunge",
+  yoga_treepose: "yoga_tree_pose",
+};
+
+function aiStatusToSeverity(status?: string): Severity {
+  if (status === "good") return "good";
+  if (status === "critical") return "error";
+  return "warning";
+}
+
+function issueSeverityToSeverity(severity?: string): Severity {
+  if (severity === "HIGH") return "error";
+  if (severity === "MEDIUM") return "warning";
+  return "good";
+}
+
+function formatMetricValue(value: number | null | undefined) {
+  if (value === null || value === undefined || Number.isNaN(value)) return "-";
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+function reportToTechniqueData(report: SportCompanionReport, fallback: TechniqueData): TechniqueData {
+  const score = Math.round(report.avg_score ?? fallback.score);
+  const repIssues = report.reps?.flatMap(rep => rep.issues ?? []) ?? [];
+  const aspects = report.ai_feedback?.aspects ?? [];
+  const bodyParts: BodyPartResult[] = aspects.length
+    ? aspects.map((aspect, index) => ({
+        name: aspect.title,
+        score: Math.round(aspect.score ?? Math.max(45, score - index * 3)),
+        severity: aiStatusToSeverity(aspect.status),
+        feedback: aspect.message || aspect.recommendation || "AI đã phân tích hạng mục này nhưng chưa có mô tả chi tiết.",
+      }))
+    : repIssues.length
+      ? repIssues.slice(0, 6).map(issue => ({
+          name: issue.code.replaceAll("_", " "),
+          score: issue.severity === "HIGH" ? 55 : issue.severity === "MEDIUM" ? 70 : 85,
+          severity: issueSeverityToSeverity(issue.severity),
+          feedback: issue.message_vi,
+        }))
+      : [
+          {
+            name: "Tổng quan phiên tập",
+            score,
+            severity: score >= 85 ? "good" : score >= 70 ? "warning" : "error",
+            feedback: report.session_summary || report.ai_feedback?.overall_summary || "AI đã hoàn tất phân tích video.",
+          },
+        ];
+
+  const suggestions = report.ai_feedback?.suggestions ?? [];
+  const priorityRecommendations = report.ai_feedback?.priority_items?.flatMap(item => [
+    item.message,
+    item.recommendation,
+  ]).filter((item): item is string => Boolean(item)) ?? [];
+  const issueRecommendations = repIssues
+    .map(issue => issue.recommendation || issue.message_vi)
+    .filter(Boolean);
+  const recommendations = [
+    report.ai_feedback?.overall_summary,
+    ...priorityRecommendations,
+    ...suggestions,
+    ...issueRecommendations,
+  ].filter((item): item is string => Boolean(item));
+
+  const firstRepMetrics = report.reps?.find(rep => rep.metrics && Object.keys(rep.metrics).length > 0)?.metrics ?? {};
+  const metrics: Metric[] = [
+    { label: "Điểm TB", value: String(score), unit: "/100", status: score >= 85 ? "good" : score >= 70 ? "warning" : "error" },
+    { label: "Rep đạt", value: String(report.passed_reps ?? 0), unit: `/${report.total_reps ?? 0}`, status: (report.passed_reps ?? 0) > 0 ? "good" : "warning" },
+    ...Object.entries(firstRepMetrics).slice(0, 2).map(([key, value]) => ({
+      label: key.replaceAll("_", " "),
+      value: formatMetricValue(value),
+      unit: "",
+      status: "good" as Severity,
+    })),
+  ];
+
+  const jointIssues = { ...fallback.jointIssues };
+  report.ai_feedback?.joint_analysis?.forEach(joint => {
+    jointIssues[joint.key] = aiStatusToSeverity(joint.status);
+  });
+
+  return {
+    ...fallback,
+    name: fallback.name,
+    score,
+    bodyParts,
+    recommendations: recommendations.slice(0, 8),
+    metrics,
+    jointIssues,
+  };
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -847,15 +954,6 @@ const SPORTS: Record<string, SportCategory> = {
   },
 };
 
-// ─── Build history from all sports ────────────────────────────────────────────
-const HISTORY_ITEMS = [
-  { sport: "badminton", technique: "smash", score: 76, date: "Hôm nay, 09:15", improvement: null as number | null },
-  { sport: "badminton", technique: "dropshot", score: 84, date: "03/03, 14:00", improvement: 3 },
-  { sport: "tennis", technique: "serve", score: 79, date: "01/03, 08:30", improvement: 5 },
-  { sport: "gym", technique: "squat", score: 78, date: "28/02, 16:00", improvement: null },
-  { sport: "boxing", technique: "jab", score: 82, date: "25/02, 10:00", improvement: 4 },
-];
-
 const ANALYZE_STEPS = [
   { progress: 8,  msg: "🎬 Đang giải mã video và trích xuất frame..." },
   { progress: 22, msg: "👤 Phát hiện và phân đoạn cơ thể người..." },
@@ -1073,10 +1171,11 @@ export function AIAnalysis({ onNavigate }: Props) {
   const [stepMsg, setStepMsg] = useState(ANALYZE_STEPS[0].msg);
   const [playing, setPlaying] = useState(true);
   const [activeTab, setActiveTab] = useState<"overview" | "detail" | "tips">("overview");
-  const [selectedHistory, setSelectedHistory] = useState<typeof HISTORY_ITEMS[0] | null>(null);
   const [show360, setShow360] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [analysisError, setAnalysisError] = useState("");
+  const [aiTechnique, setAiTechnique] = useState<TechniqueData | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const AI_USED = 2; const AI_TOTAL = 3;
 
   const sport = SPORTS[selectedSport];
   const techniques = sport.techniques;
@@ -1084,33 +1183,62 @@ export function AIAnalysis({ onNavigate }: Props) {
 
   // Ensure selectedTechnique is valid for current sport
   const techKey = techniques[selectedTechnique] ? selectedTechnique : firstTechKey;
-  const currentTechnique = selectedHistory
-    ? SPORTS[selectedHistory.sport]?.techniques[selectedHistory.technique] ?? techniques[techKey]
-    : techniques[techKey];
+  const currentTechnique = aiTechnique ?? techniques[techKey];
 
-  const runAnalysis = useCallback(() => {
+  const runAnalysis = useCallback(async () => {
+    setAnalysisError("");
+    setAiTechnique(null);
     setPhase("analyzing");
     setProgress(0);
+    setStepMsg(ANALYZE_STEPS[0].msg);
+
+    if (!uploadedFile) {
+      setAnalysisError("Vui lòng upload video trước khi phân tích.");
+      setPhase("upload");
+      return;
+    }
+
+    const exercise = AI_EXERCISE_BY_TECHNIQUE[`${selectedSport}_${techKey}`] ?? "squat";
+    const fallbackTechnique = techniques[techKey];
     let stepIdx = 0;
     const interval = setInterval(() => {
-      stepIdx++;
-      if (stepIdx >= ANALYZE_STEPS.length) {
-        clearInterval(interval);
-        setTimeout(() => setPhase("results"), 600);
-        return;
-      }
+      stepIdx = Math.min(stepIdx + 1, ANALYZE_STEPS.length - 1);
       const s = ANALYZE_STEPS[stepIdx];
-      setProgress(s.progress);
+      setProgress(current => Math.min(Math.max(current + 8, s.progress), 92));
       setStepMsg(s.msg);
-    }, 480);
-  }, []);
+    }, 650);
+
+    try {
+      const report = await analyzeSportCompanionVideo({
+        video: uploadedFile,
+        exercise,
+        skeletonOutput: "keyframes",
+        enrich: true,
+      });
+      clearInterval(interval);
+      setProgress(100);
+      setStepMsg("AI đã hoàn tất phân tích video.");
+      setAiTechnique(reportToTechniqueData(report, fallbackTechnique));
+      setTimeout(() => setPhase("results"), 400);
+    } catch (error) {
+      clearInterval(interval);
+      setAnalysisError(error instanceof Error ? error.message : "Không thể phân tích video bằng AI service.");
+      setPhase("upload");
+      setProgress(0);
+    }
+  }, [selectedSport, techKey, techniques, uploadedFile]);
 
   const handleFile = (file: File) => {
     if (!file.type.startsWith("video/")) return;
+    setAnalysisError("");
+    setAiTechnique(null);
+    setUploadedFile(file);
     setFileName(file.name);
   };
 
   const handleSportChange = (sportKey: string) => {
+    setAnalysisError("");
+    setAiTechnique(null);
     setSelectedSport(sportKey);
     const firstTech = Object.keys(SPORTS[sportKey].techniques)[0];
     setSelectedTechnique(firstTech);
@@ -1133,27 +1261,15 @@ export function AIAnalysis({ onNavigate }: Props) {
               Chọn môn thể thao → Chọn kỹ thuật → Upload video → AI phân tích chuyên sâu theo từng môn
             </p>
           </div>
-          {/* Usage */}
-          <div className="hidden sm:block shrink-0 text-right">
-            <div style={{ fontSize: "0.72rem" }} className="text-purple-200 mb-1">Lần dùng tháng này</div>
-            <div className="flex items-center gap-1.5 justify-end">
-              {[...Array(AI_TOTAL)].map((_, i) => (
-                <div key={`usage-${i}`} className={`w-7 h-2 rounded-full ${i < AI_USED ? "bg-white" : "bg-white/25"}`} />
-              ))}
-            </div>
-            <div style={{ fontSize: "0.72rem" }} className="text-purple-200 mt-1">
-              {AI_USED}/{AI_TOTAL} · <span className="text-white font-semibold">Nâng cấp Pro →</span>
-            </div>
-          </div>
         </div>
       </div>
 
       <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
         <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
         <div>
-          <div className="text-amber-800" style={{ fontWeight: 800, fontSize: "0.9rem" }}>Demo UI - can backend AI analysis endpoints</div>
+          <div className="text-amber-800" style={{ fontWeight: 800, fontSize: "0.9rem" }}>AI thật đã kết nối tới Sport Companion</div>
           <p className="text-amber-700 mt-1" style={{ fontSize: "0.78rem", lineHeight: 1.6 }}>
-            Ket qua hien tai la du lieu mau. Phase 7 da them wrapper cho upload/analyze video, history, detail va feedback de dau noi khi backend san sang.
+            Upload video để gọi https://ai.minhthien.io.vn/analyze. Trang chỉ hiển thị kết quả trả về từ AI service.
           </p>
         </div>
       </div>
@@ -1182,7 +1298,7 @@ export function AIAnalysis({ onNavigate }: Props) {
               )}
               {phase === "results" && (
                 <button
-                  onClick={() => { setPhase("upload"); setFileName(""); setSelectedHistory(null); }}
+                  onClick={() => { setPhase("upload"); setFileName(""); setUploadedFile(null); setAiTechnique(null); }}
                   className="absolute bottom-3 left-3 w-9 h-9 rounded-xl bg-black/40 hover:bg-black/60 flex items-center justify-center text-white transition-colors backdrop-blur-sm"
                 >
                   <RotateCcw className="w-4 h-4" />
@@ -1218,7 +1334,7 @@ export function AIAnalysis({ onNavigate }: Props) {
                   {Object.entries(techniques).map(([key, tech]) => (
                     <button
                       key={key}
-                      onClick={() => setSelectedTechnique(key)}
+                      onClick={() => { setSelectedTechnique(key); setAiTechnique(null); setAnalysisError(""); }}
                       className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 transition-all ${techKey === key ? "border-violet-500 bg-violet-50" : "border-gray-200 hover:border-gray-300 bg-white"}`}
                     >
                       <span style={{ fontSize: "1.1rem" }}>{tech.emoji}</span>
@@ -1300,6 +1416,12 @@ export function AIAnalysis({ onNavigate }: Props) {
                 ))}
               </div>
 
+              {analysisError && (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700" style={{ fontSize: "0.85rem", fontWeight: 600 }}>
+                  {analysisError}
+                </div>
+              )}
+
               {/* CTA */}
               <button
                 onClick={runAnalysis}
@@ -1307,7 +1429,7 @@ export function AIAnalysis({ onNavigate }: Props) {
                 style={{ fontWeight: 700, fontSize: "0.95rem" }}
               >
                 <Brain className="w-4.5 h-4.5" />
-                {fileName ? `Phân tích ${currentTechnique.name} ngay →` : "Demo thử (không cần video)"}
+                {fileName ? `Phân tích ${currentTechnique.name} bằng AI ->` : "Upload video để phân tích"}
               </button>
             </div>
           )}
@@ -1323,55 +1445,9 @@ export function AIAnalysis({ onNavigate }: Props) {
                 <div className="h-full bg-gradient-to-r from-violet-500 to-purple-500 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
               </div>
               <p style={{ fontSize: "0.78rem", lineHeight: 1.6 }} className="text-gray-500">{stepMsg}</p>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { label: "Frame", value: `${Math.floor(progress * 1.2)}`, unit: "/120" },
-                  { label: "Keypoints", value: `${Math.min(Math.floor(progress * 0.15), 14)}`, unit: "/14" },
-                  { label: "Confidence", value: `${Math.min(87 + Math.floor(progress * 0.1), 96)}`, unit: "%" },
-                  { label: "FPS", value: "30", unit: " fps" },
-                ].map(({ label, value, unit }) => (
-                  <div key={label} className="bg-gray-50 rounded-xl px-3 py-2">
-                    <div style={{ fontSize: "0.68rem" }} className="text-gray-400">{label}</div>
-                    <div style={{ fontWeight: 800, fontSize: "0.95rem" }} className="text-violet-600">{value}<span style={{ fontWeight: 400, fontSize: "0.72rem" }} className="text-gray-400">{unit}</span></div>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
 
-          {/* History */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-            <div style={{ fontWeight: 700, fontSize: "0.88rem" }} className="text-gray-900 mb-3 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-gray-400" /> Lịch sử phân tích
-            </div>
-            <div className="space-y-2">
-              {HISTORY_ITEMS.map((item, i) => {
-                const hSport = SPORTS[item.sport];
-                const hTech = hSport?.techniques[item.technique];
-                const sc = item.score;
-                const c = sc >= 85 ? "text-emerald-500" : sc >= 70 ? "text-amber-500" : "text-red-500";
-                return (
-                  <button
-                    key={`hist-${i}`}
-                    onClick={() => { setSelectedHistory(item); setSelectedSport(item.sport); setSelectedTechnique(item.technique); if (phase !== "results") setPhase("results"); }}
-                    className="w-full flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-gray-50 transition-colors text-left"
-                  >
-                    <div className="w-8 h-8 rounded-xl bg-purple-50 flex items-center justify-center text-base shrink-0">{hTech?.emoji ?? hSport?.emoji}</div>
-                    <div className="flex-1 min-w-0">
-                      <div style={{ fontSize: "0.82rem", fontWeight: 600 }} className="text-gray-800 truncate">{hTech?.name ?? "Unknown"}</div>
-                      <div style={{ fontSize: "0.68rem" }} className="text-gray-400">{hSport?.emoji} {hSport?.name} · {item.date}</div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <div style={{ fontWeight: 800, fontSize: "0.95rem" }} className={c}>{sc}</div>
-                      {item.improvement && (
-                        <div style={{ fontSize: "0.65rem", fontWeight: 600 }} className="text-emerald-500">+{item.improvement}</div>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
         </div>
 
         {/* ── RIGHT: Results ───────────────────────────────── */}
@@ -1586,7 +1662,7 @@ export function AIAnalysis({ onNavigate }: Props) {
                   </div>
 
                   {/* Re-analyze */}
-                  <button onClick={() => { setPhase("upload"); setFileName(""); setSelectedHistory(null); }}
+                  <button onClick={() => { setPhase("upload"); setFileName(""); setUploadedFile(null); setAiTechnique(null); }}
                     className="w-full py-3 border-2 border-dashed border-gray-300 rounded-2xl text-gray-500 hover:border-violet-400 hover:text-violet-500 transition-all flex items-center justify-center gap-2"
                     style={{ fontSize: "0.85rem", fontWeight: 600 }}>
                     <RefreshCw className="w-4 h-4" /> Phân tích kỹ thuật khác

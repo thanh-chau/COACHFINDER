@@ -149,9 +149,9 @@ export function AIVideoAnalysis() {
 
 
 
-        {/* Main mockup */}
+        {/* Main preview */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-20">
-          {/* Left: Video player mockup */}
+          {/* Left: Video player preview */}
           <div className="relative">
             {/* Upload area */}
             <div className="bg-gray-900 rounded-3xl border border-white/10 overflow-hidden shadow-2xl">

@@ -97,13 +97,7 @@ export function CoachStudio() {
           </p>
         </div>
 
-        <div className="mb-8 text-center">
-          <div className="inline-flex max-w-2xl items-center justify-center rounded-2xl border border-blue-200 bg-blue-50 px-4 py-2 text-blue-700" style={{ fontSize: "0.78rem", fontWeight: 700 }}>
-            Marketing demo. Neu productize thanh coach tool that, dung API video/upload/status/analytics da liet ke trong Phase 7.
-          </div>
-        </div>
-
-        {/* Dashboard mockup */}
+        {/* Dashboard preview */}
         <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden mb-16">
           {/* Dashboard topbar */}
           <div className="bg-gray-900 px-6 py-4 flex items-center justify-between">
@@ -229,7 +223,7 @@ export function CoachStudio() {
                   Upload Video 360°
                 </h4>
 
-                {/* 360 preview mockup */}
+                {/* 360 preview */}
                 <div
                   className={`relative rounded-2xl overflow-hidden aspect-video mb-3 border-2 transition-all duration-300 cursor-pointer ${
                     isDragging

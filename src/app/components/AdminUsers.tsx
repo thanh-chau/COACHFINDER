@@ -28,8 +28,6 @@ import {
   updateAdminUserStatus,
 } from "../api/admin";
 
-// Thay thế mock learners và coaches bằng state quản lý dữ liệu từ API
-// Tuy nhiên vẫn giữ dummy data mảng trống ban đầu
 const learners: any[] = [];
 const coaches: any[] = [];
 
