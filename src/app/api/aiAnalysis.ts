@@ -7,6 +7,16 @@ import { apiRequest } from "./client";
 
 const AI_SERVICE_BASE_URL = "https://ai.minhthien.io.vn";
 
+export interface SportCompanionExercise {
+  name: string;
+  display_name_vi?: string;
+  category?: string;
+  equipment?: string[];
+  movement_type?: string;
+  primary_joints?: string[];
+  issue_codes?: string[];
+}
+
 export interface SportCompanionIssue {
   code: string;
   severity: "LOW" | "MEDIUM" | "HIGH";
@@ -65,6 +75,28 @@ export interface SportCompanionReport {
     code?: string;
     message?: string;
   }>;
+}
+
+export function fetchSportCompanionExercises() {
+  return fetch(`${AI_SERVICE_BASE_URL}/exercises`).then(async response => {
+    const text = await response.text();
+    let payload: unknown;
+    try {
+      payload = text ? JSON.parse(text) : null;
+    } catch {
+      payload = text;
+    }
+
+    if (!response.ok) {
+      throw new Error(text || "Failed to load AI exercises.");
+    }
+
+    if (typeof payload === "object" && payload && "exercises" in payload) {
+      return (payload as { exercises: SportCompanionExercise[] }).exercises;
+    }
+
+    return [];
+  });
 }
 
 export function analyzeSportCompanionVideo(request: {

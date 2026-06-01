@@ -9,6 +9,8 @@ import {
 import { Video360Player } from "./Video360Player";
 import {
   analyzeSportCompanionVideo,
+  fetchSportCompanionExercises,
+  type SportCompanionExercise,
   type SportCompanionReport,
 } from "../api/aiAnalysis";
 
@@ -46,21 +48,74 @@ interface SportCategory {
   techniques: Record<string, TechniqueData>;
 }
 
-const AI_EXERCISE_BY_TECHNIQUE: Record<string, string> = {
-  badminton_smash: "badminton_jump_smash",
-  badminton_dropshot: "badminton_drop_shot",
-  badminton_clear: "badminton_clear",
-  badminton_footwork: "badminton_front_corners_footwork",
-  tennis_serve: "overhead_press",
-  tennis_forehand: "badminton_drive",
-  boxing_jab: "push_up",
-  boxing_cross: "push_up",
-  gym_squat: "squat",
-  gym_deadlift: "deadlift",
-  football_shot: "lunge",
-  football_dribble: "lunge",
-  yoga_treepose: "yoga_tree_pose",
+const SPORT_META_BY_GROUP: Record<string, Pick<SportCategory, "name" | "emoji" | "color" | "bg">> = {
+  badminton: { name: "Cầu lông", emoji: "🏸", color: "text-green-600", bg: "bg-green-50" },
+  yoga: { name: "Yoga", emoji: "🧘", color: "text-orange-600", bg: "bg-orange-50" },
+  gym: { name: "Thể hình", emoji: "🏋️", color: "text-violet-600", bg: "bg-violet-50" },
 };
+
+function decodeMaybeMojibake(value: string) {
+  try {
+    return /Ã|Â|áº|á»|Ä|Æ|ðŸ/.test(value)
+      ? decodeURIComponent(escape(value))
+      : value;
+  } catch {
+    return value;
+  }
+}
+
+function prettifyExerciseName(name: string) {
+  return name
+    .replace(/^badminton_/, "")
+    .replace(/^yoga_/, "")
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, char => char.toUpperCase());
+}
+
+function getExerciseGroup(exercise: SportCompanionExercise) {
+  if (exercise.name.startsWith("badminton_")) return "badminton";
+  if (exercise.name.startsWith("yoga_") || exercise.category === "yoga") return "yoga";
+  return "gym";
+}
+
+function buildTechniqueFromExercise(exercise: SportCompanionExercise): TechniqueData {
+  const group = getExerciseGroup(exercise);
+  const template =
+    group === "badminton"
+      ? SPORTS.badminton.techniques.smash
+      : group === "yoga"
+        ? SPORTS.yoga.techniques.treepose
+        : SPORTS.gym.techniques.squat;
+  const displayName = decodeMaybeMojibake(exercise.display_name_vi || prettifyExerciseName(exercise.name));
+  const joints = exercise.primary_joints?.length ? exercise.primary_joints.join(", ") : "Không có metadata khớp";
+  const equipment = exercise.equipment?.length ? exercise.equipment.join(", ") : "Không có metadata dụng cụ";
+
+  return {
+    ...template,
+    name: displayName,
+    emoji: SPORT_META_BY_GROUP[group]?.emoji ?? template.emoji,
+    bodyParts: [],
+    recommendations: [],
+    metrics: [
+      { label: "Bài tập", value: exercise.name, unit: "", status: "good" },
+      { label: "Loại", value: exercise.movement_type || "-", unit: "", status: "good" },
+      { label: "Khớp", value: joints, unit: "", status: "good" },
+      { label: "Dụng cụ", value: equipment, unit: "", status: "good" },
+    ],
+  };
+}
+
+function groupExercisesBySport(exercises: SportCompanionExercise[]) {
+  return exercises.reduce<Record<string, SportCategory>>((acc, exercise) => {
+    const group = getExerciseGroup(exercise);
+    const meta = SPORT_META_BY_GROUP[group] ?? SPORT_META_BY_GROUP.gym;
+    if (!acc[group]) {
+      acc[group] = { ...meta, techniques: {} };
+    }
+    acc[group].techniques[exercise.name] = buildTechniqueFromExercise(exercise);
+    return acc;
+  }, {});
+}
 
 function aiStatusToSeverity(status?: string): Severity {
   if (status === "good") return "good";
@@ -1163,8 +1218,8 @@ interface Props { onNavigate?: (v: string) => void; }
 
 export function AIAnalysis({ onNavigate }: Props) {
   const [phase, setPhase] = useState<Phase>("upload");
-  const [selectedSport, setSelectedSport] = useState("badminton");
-  const [selectedTechnique, setSelectedTechnique] = useState("smash");
+  const [selectedSport, setSelectedSport] = useState("");
+  const [selectedTechnique, setSelectedTechnique] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const [fileName, setFileName] = useState("");
   const [progress, setProgress] = useState(0);
@@ -1172,18 +1227,43 @@ export function AIAnalysis({ onNavigate }: Props) {
   const [playing, setPlaying] = useState(true);
   const [activeTab, setActiveTab] = useState<"overview" | "detail" | "tips">("overview");
   const [show360, setShow360] = useState(false);
+  const [aiSports, setAiSports] = useState<Record<string, SportCategory>>({});
+  const [exerciseLoadError, setExerciseLoadError] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [analysisError, setAnalysisError] = useState("");
   const [aiTechnique, setAiTechnique] = useState<TechniqueData | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const sport = SPORTS[selectedSport];
+  useEffect(() => {
+    let cancelled = false;
+    fetchSportCompanionExercises()
+      .then(exercises => {
+        if (cancelled) return;
+        const grouped = groupExercisesBySport(exercises);
+        setAiSports(grouped);
+        const firstSport = Object.keys(grouped)[0] ?? "";
+        const firstTechnique = firstSport ? Object.keys(grouped[firstSport].techniques)[0] ?? "" : "";
+        setSelectedSport(firstSport);
+        setSelectedTechnique(firstTechnique);
+        setExerciseLoadError("");
+      })
+      .catch(error => {
+        if (cancelled) return;
+        setExerciseLoadError(error instanceof Error ? error.message : "Không thể tải danh sách bài tập từ AI service.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const sportOptions = aiSports;
+  const sport = sportOptions[selectedSport] ?? Object.values(sportOptions)[0] ?? { ...SPORT_META_BY_GROUP.gym, techniques: {} };
   const techniques = sport.techniques;
   const firstTechKey = Object.keys(techniques)[0];
 
   // Ensure selectedTechnique is valid for current sport
   const techKey = techniques[selectedTechnique] ? selectedTechnique : firstTechKey;
-  const currentTechnique = aiTechnique ?? techniques[techKey];
+  const currentTechnique = aiTechnique ?? techniques[techKey] ?? SPORTS.gym.techniques.squat;
 
   const runAnalysis = useCallback(async () => {
     setAnalysisError("");
@@ -1198,7 +1278,13 @@ export function AIAnalysis({ onNavigate }: Props) {
       return;
     }
 
-    const exercise = AI_EXERCISE_BY_TECHNIQUE[`${selectedSport}_${techKey}`] ?? "squat";
+    if (!techKey) {
+      setAnalysisError("Chưa tải được danh sách bài tập từ AI service.");
+      setPhase("upload");
+      return;
+    }
+
+    const exercise = techKey;
     const fallbackTechnique = techniques[techKey];
     let stepIdx = 0;
     const interval = setInterval(() => {
@@ -1240,7 +1326,7 @@ export function AIAnalysis({ onNavigate }: Props) {
     setAnalysisError("");
     setAiTechnique(null);
     setSelectedSport(sportKey);
-    const firstTech = Object.keys(SPORTS[sportKey].techniques)[0];
+    const firstTech = Object.keys(sportOptions[sportKey]?.techniques ?? {})[0] ?? "";
     setSelectedTechnique(firstTech);
   };
 
@@ -1310,11 +1396,17 @@ export function AIAnalysis({ onNavigate }: Props) {
           {/* Upload phase */}
           {phase === "upload" && (
             <div className="space-y-4">
+              {exerciseLoadError && (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700" style={{ fontSize: "0.85rem", fontWeight: 600 }}>
+                  {exerciseLoadError}
+                </div>
+              )}
+
               {/* Sport picker */}
               <div>
                 <p style={{ fontWeight: 700, fontSize: "0.85rem" }} className="text-gray-700 mb-2">🏅 Chọn môn thể thao</p>
                 <div className="grid grid-cols-3 gap-2">
-                  {Object.entries(SPORTS).map(([key, s]) => (
+                  {Object.entries(sportOptions).map(([key, s]) => (
                     <button
                       key={key}
                       onClick={() => handleSportChange(key)}
@@ -1372,46 +1464,17 @@ export function AIAnalysis({ onNavigate }: Props) {
                   </>
                 )}
               </div>
-
-              {/* Tips - sport specific */}
+              {/* Metadata from AI exercises */}
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-3.5">
                 <div style={{ fontWeight: 700, fontSize: "0.8rem" }} className="text-blue-700 mb-1.5 flex items-center gap-1.5">
-                  <Lightbulb className="w-3.5 h-3.5" /> Mẹo quay video {sport.name}
+                  <Lightbulb className="w-3.5 h-3.5" /> D? li?u t? AI service
                 </div>
-                {(selectedSport === "badminton" ? [
-                  "Quay từ phía sau hoặc bên hông sân",
-                  "Bắt toàn bộ chuyển động từ chuẩn bị → đánh → recovery",
-                  "Đảm bảo ánh sáng sân đủ rõ",
-                  "Quay 3–5 quả liên tiếp cùng kỹ thuật",
-                ] : selectedSport === "tennis" ? [
-                  "Quay từ phía sau baseline hoặc bên hông",
-                  "Bắt cả pha chuẩn bị và follow-through",
-                  "Quay cả phần chân di chuyển",
-                  "Tốt nhất là quay slow-motion 120fps",
-                ] : selectedSport === "boxing" ? [
-                  "Quay từ phía trước và bên hông",
-                  "Bắt cả pha guard và retract",
-                  "Nền tối giúp AI nhận diện tốt hơn",
-                  "Quay 5–10 combo liên tiếp",
-                ] : selectedSport === "football" ? [
-                  "Quay từ phía bên khi sút bóng",
-                  "Bắt cả pha chạy đà và follow-through",
-                  "Quay nhiều góc nếu có thể",
-                  "Tốt nhất ở sân có nền cỏ rõ ràng",
-                ] : selectedSport === "yoga" ? [
-                  "Quay từ phía trước và bên hông",
-                  "Giữ tư thế ít nhất 10 giây khi quay",
-                  "Mặc đồ ôm sát để AI nhận diện khớp",
-                  "Nền đơn giản, ánh sáng đều",
-                ] : [
-                  "Quay góc 45° từ bên hông",
-                  "Đủ ánh sáng, nền tương phản tốt",
-                  "Quay 2–5 rep đầy đủ",
-                  "Không bị che khuất khi quay",
-                ]).map(tip => (
-                  <div key={tip} className="flex items-center gap-1.5 mt-1">
+                {currentTechnique.metrics.map(metric => (
+                  <div key={metric.label} className="flex items-center gap-1.5 mt-1">
                     <span className="w-1 h-1 rounded-full bg-blue-400 shrink-0" />
-                    <span style={{ fontSize: "0.75rem" }} className="text-blue-600">{tip}</span>
+                    <span style={{ fontSize: "0.75rem" }} className="text-blue-600">
+                      {metric.label}: {metric.value}{metric.unit}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -1425,7 +1488,8 @@ export function AIAnalysis({ onNavigate }: Props) {
               {/* CTA */}
               <button
                 onClick={runAnalysis}
-                className="w-full py-3.5 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-2xl hover:from-violet-700 hover:to-purple-700 transition-all shadow-lg shadow-violet-200 flex items-center justify-center gap-2.5"
+                disabled={!techKey}
+                className="w-full py-3.5 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-2xl hover:from-violet-700 hover:to-purple-700 transition-all shadow-lg shadow-violet-200 flex items-center justify-center gap-2.5 disabled:cursor-not-allowed disabled:opacity-60"
                 style={{ fontWeight: 700, fontSize: "0.95rem" }}
               >
                 <Brain className="w-4.5 h-4.5" />
