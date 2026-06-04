@@ -1,5 +1,5 @@
-﻿import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
+﻿import { useCallback, useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router";
 import {
   LayoutDashboard, Search, Calendar, Brain, BarChart2, Video,
   MessageCircle, CreditCard, Settings, LogOut, Dumbbell, X, Menu,
@@ -45,6 +45,18 @@ const bottomNav = [
   { icon: Settings, label: "Cài đặt",    id: "settings" },
   { icon: LogOut,   label: "Đăng xuất",  id: "logout" },
 ];
+
+const LEARNER_DASHBOARD_PATH = "/dashboard/learner";
+const LEARNER_NAV_IDS = new Set([
+  ...navItems.map((item) => item.id),
+  ...bottomNav.map((item) => item.id).filter((id) => id !== "logout"),
+]);
+
+function getLearnerViewFromPath(pathname: string) {
+  const suffix = pathname.slice(LEARNER_DASHBOARD_PATH.length).replace(/^\/+/, "");
+  const view = decodeURIComponent(suffix.split("/")[0] || "overview");
+  return LEARNER_NAV_IDS.has(view) ? view : "overview";
+}
 
 const HEADER_TITLES: Record<string, { title: string; sub: string }> = {
   find:         { title: "Tìm huấn luyện viên 🔍",     sub: "Khám phá HLV phù hợp với bạn" },
@@ -144,15 +156,10 @@ function mapAchievements(rows: Achievement[]) {
 }
 
 export function LearnerDashboard() {
-  const [activeNav, setActiveNav] = useState("overview");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [activeNav, setActiveNav] = useState(() => getLearnerViewFromPath(location.pathname));
   const [targetUsername, setTargetUsername] = useState<string | null>(null);
-
-  const handleNavigate = (view: string, payload?: string) => {
-    setActiveNav(view);
-    if (view === "msg" && payload) {
-      setTargetUsername(payload);
-    }
-  };
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
   const [chatCount, setChatCount] = useState(0);
@@ -163,7 +170,6 @@ export function LearnerDashboard() {
   const [sessionRows, setSessionRows] = useState<UpcomingSessionRow[]>([]);
   const [suggestedRows, setSuggestedRows] = useState<SuggestedCoachRow[]>([]);
   const [achievementRows, setAchievementRows] = useState<Array<{ badge: string; label: string; date: string }>>([]);
-  const navigate = useNavigate();
   const session = getAuthSession();
   const learnerName = session?.fullName?.trim() || session?.username || "Học viên";
   const learnerInitials = learnerName
@@ -185,6 +191,20 @@ export function LearnerDashboard() {
     clearAuthSession();
     navigate("/auth");
   };
+
+  useEffect(() => {
+    setActiveNav(getLearnerViewFromPath(location.pathname));
+  }, [location.pathname]);
+
+  const handleNavigate = useCallback((view: string, payload?: string) => {
+    const nextView = LEARNER_NAV_IDS.has(view) ? view : "overview";
+    setActiveNav(nextView);
+    setSidebarOpen(false);
+    if (nextView === "msg" && payload) {
+      setTargetUsername(payload);
+    }
+    navigate(nextView === "overview" ? LEARNER_DASHBOARD_PATH : `${LEARNER_DASHBOARD_PATH}/${nextView}`);
+  }, [navigate]);
 
   useEffect(() => {
     getNotificationUnreadCount()
@@ -272,7 +292,7 @@ export function LearnerDashboard() {
             return (
             <button
               key={id}
-              onClick={() => { setActiveNav(id); setSidebarOpen(false); }}
+              onClick={() => handleNavigate(id)}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 ${
                 activeNav === id
                   ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/20"
@@ -301,7 +321,7 @@ export function LearnerDashboard() {
           {bottomNav.map(({ icon: Icon, label, id }) => (
             <button
               key={id}
-              onClick={() => { if (id === "logout") logout(); else { setActiveNav(id); setSidebarOpen(false); } }}
+              onClick={() => { if (id === "logout") logout(); else handleNavigate(id); }}
               className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-gray-400 hover:bg-white/[0.06] hover:text-gray-200 transition-all duration-200"
             >
               <Icon className="w-[18px] h-[18px] shrink-0" />
@@ -421,7 +441,7 @@ export function LearnerDashboard() {
                     <div className="bg-white rounded-2xl p-5 lg:p-6 border border-gray-100 shadow-sm">
                       <div className="flex items-center justify-between mb-4">
                         <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900">Lịch tập sắp tới</div>
-                        <button onClick={() => setActiveNav("schedule")} className="text-orange-500 hover:text-orange-600 flex items-center gap-1 hover:gap-2 transition-all" style={{ fontSize: "0.8rem", fontWeight: 600 }}>
+                        <button onClick={() => handleNavigate("schedule")} className="text-orange-500 hover:text-orange-600 flex items-center gap-1 hover:gap-2 transition-all" style={{ fontSize: "0.8rem", fontWeight: 600 }}>
                           Xem tất cả <ChevronRight className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -432,7 +452,7 @@ export function LearnerDashboard() {
                           </div>
                         ) : (
                           sessionRows.map((s, i) => (
-                            <div key={i} className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100 cursor-pointer" onClick={() => setActiveNav("schedule")}>
+                            <div key={i} className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100 cursor-pointer" onClick={() => handleNavigate("schedule")}>
                               <img src={s.avatar} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" />
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1.5 mb-0.5">
@@ -452,7 +472,7 @@ export function LearnerDashboard() {
                         )}
                       </div>
                       <button
-                        onClick={() => setActiveNav("ai")}
+                        onClick={() => handleNavigate("ai")}
                         className="mt-4 w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-purple-200 rounded-xl text-purple-500 hover:bg-purple-50 hover:border-purple-300 transition-all duration-200"
                         style={{ fontSize: "0.85rem", fontWeight: 600 }}
                       >
@@ -474,7 +494,7 @@ export function LearnerDashboard() {
                           { icon: Calendar,  label: "Xem lịch tập",            color: "bg-blue-500",   nav: "schedule" },
                           { icon: Video,     label: "Xem Video 360°",          color: "bg-emerald-500", nav: "video" },
                         ].map(({ icon: Icon, label, color, nav }) => (
-                          <button key={label} onClick={() => setActiveNav(nav)} className="w-full flex items-center gap-3 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] px-3.5 py-3 rounded-xl transition-all duration-200 text-left group">
+                          <button key={label} onClick={() => handleNavigate(nav)} className="w-full flex items-center gap-3 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] px-3.5 py-3 rounded-xl transition-all duration-200 text-left group">
                             <div className={`w-8 h-8 rounded-lg ${color} flex items-center justify-center shrink-0 shadow-sm`}>
                               <Icon className="w-4 h-4 text-white" />
                             </div>
@@ -483,7 +503,7 @@ export function LearnerDashboard() {
                           </button>
                         ))}
                         <button
-                          onClick={() => setActiveNav("subscription")}
+                          onClick={() => handleNavigate("subscription")}
                           className="w-full flex items-center gap-3 bg-gradient-to-r from-orange-500/15 to-red-500/10 border border-orange-500/25 hover:from-orange-500/25 hover:to-red-500/15 px-3.5 py-3 rounded-xl transition-all duration-200 text-left group"
                         >
                           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shrink-0 shadow-lg shadow-orange-500/30">
@@ -549,7 +569,7 @@ export function LearnerDashboard() {
                               </div>
                               <div style={{ fontSize: "0.72rem" }} className="text-gray-400 mt-0.5">{c.sport} · {c.price}</div>
                             </div>
-                            <button onClick={() => setActiveNav("find")} className="shrink-0 px-3 py-1.5 bg-orange-50 text-orange-500 border border-orange-200 rounded-lg hover:bg-orange-100 hover:border-orange-300 transition-all duration-200" style={{ fontSize: "0.72rem", fontWeight: 600 }}>
+                            <button onClick={() => handleNavigate("find")} className="shrink-0 px-3 py-1.5 bg-orange-50 text-orange-500 border border-orange-200 rounded-lg hover:bg-orange-100 hover:border-orange-300 transition-all duration-200" style={{ fontSize: "0.72rem", fontWeight: 600 }}>
                               Xem
                             </button>
                           </div>

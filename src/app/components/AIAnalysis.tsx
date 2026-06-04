@@ -1622,7 +1622,7 @@ export function AIAnalysis({ onNavigate }: Props) {
               {phase === "results" && (
                 <button
                   onClick={() => { setPhase("upload"); setAnalysisError(""); clearUploadedVideo(); }}
-                  className="absolute bottom-3 left-3 w-9 h-9 rounded-xl bg-black/40 hover:bg-black/60 flex items-center justify-center text-white transition-colors backdrop-blur-sm"
+                  className="absolute right-3 top-3 w-9 h-9 rounded-xl bg-black/40 hover:bg-black/60 flex items-center justify-center text-white transition-colors backdrop-blur-sm"
                   aria-label="Chọn video khác"
                 >
                   <RotateCcw className="w-4 h-4" />

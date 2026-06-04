@@ -7,8 +7,8 @@ import { CoachMessages } from "../components/CoachMessages";
 import { CoachSubscription } from "../components/CoachSubscription";
 import { CoachSettings } from "../components/CoachSettings";
 import { NotificationBell } from "../components/NotificationBell";
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { useCallback, useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router";
 import {
   LayoutDashboard, Users, Calendar, Video, DollarSign,
   BarChart2, MessageCircle, Settings, LogOut, Bell,
@@ -61,6 +61,17 @@ const navItems = [
   { icon: CreditCard, label: "Gói đăng ký", id: "subscription" },
 ];
 
+const COACH_DASHBOARD_PATH = "/dashboard/coach";
+const COACH_NAV_IDS = new Set([
+  ...navItems.map((item) => item.id),
+  "settings",
+]);
+
+function getCoachViewFromPath(pathname: string) {
+  const suffix = pathname.slice(COACH_DASHBOARD_PATH.length).replace(/^\/+/, "");
+  const view = decodeURIComponent(suffix.split("/")[0] || "overview");
+  return COACH_NAV_IDS.has(view) ? view : "overview";
+}
 function formatCompactCurrency(amount: number) {
   if (amount >= 1000000) return `${(amount / 1000000).toFixed(amount % 1000000 === 0 ? 0 : 1)}M`;
   if (amount >= 1000) return `${Math.round(amount / 1000)}K`;
@@ -185,15 +196,11 @@ function buildOverviewStats(analytics?: CoachAnalyticsOverview | null, income?: 
 }
 
 export function CoachDashboard() {
-  const [activeNav, setActiveNav] = useState("overview");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [activeNav, setActiveNav] = useState(() => getCoachViewFromPath(location.pathname));
   const [targetUsername, setTargetUsername] = useState<string | null>(null);
 
-  const handleNavigate = (view: string, payload?: string) => {
-    setActiveNav(view);
-    if (view === "msg" && payload) {
-      setTargetUsername(payload);
-    }
-  };
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
   const [chatCount, setChatCount] = useState(0);
@@ -203,7 +210,6 @@ export function CoachDashboard() {
   const [studentRows, setStudentRows] = useState<DashboardStudentRow[]>([]);
   const [sessionRows, setSessionRows] = useState<TodaySessionRow[]>([]);
   const [paymentRows, setPaymentRows] = useState<RecentPaymentRow[]>([]);
-  const navigate = useNavigate();
   const session = getAuthSession();
   const coachName = session?.fullName?.trim() || session?.username || "Huấn luyện viên";
   const coachInitials = coachName
@@ -221,6 +227,19 @@ export function CoachDashboard() {
     clearAuthSession();
     navigate("/auth");
   };
+  useEffect(() => {
+    setActiveNav(getCoachViewFromPath(location.pathname));
+  }, [location.pathname]);
+
+  const handleNavigate = useCallback((view: string, payload?: string) => {
+    const nextView = COACH_NAV_IDS.has(view) ? view : "overview";
+    setActiveNav(nextView);
+    setSidebarOpen(false);
+    if (nextView === "msg" && payload) {
+      setTargetUsername(payload);
+    }
+    navigate(nextView === "overview" ? COACH_DASHBOARD_PATH : `${COACH_DASHBOARD_PATH}/${nextView}`);
+  }, [navigate]);
 
   useEffect(() => {
     getNotificationUnreadCount()
@@ -379,7 +398,7 @@ export function CoachDashboard() {
           {[{ icon: Settings, label: "Cài đặt", id: "settings" }, { icon: LogOut, label: "Đăng xuất", id: "logout" }].map(({ icon: Icon, label, id }) => (
             <button
               key={id}
-              onClick={() => { if (id === "logout") logout(); else { handleNavigate(id); setSidebarOpen(false); } }}
+              onClick={() => { if (id === "logout") logout(); else handleNavigate(id); }}
               className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-gray-400 hover:bg-white/[0.06] hover:text-gray-200 transition-all duration-200"
             >
               <Icon className="w-[18px] h-[18px] shrink-0" />
@@ -538,7 +557,7 @@ export function CoachDashboard() {
                               <CheckCircle2 className="w-3 h-3" /> Hoàn thành
                             </span>
                           ) : (
-                            <button onClick={() => setActiveNav("schedule")} className="flex items-center gap-1.5 bg-blue-500 text-white px-3 py-1.5 rounded-lg hover:bg-blue-600 transition-colors" style={{ fontSize: "0.72rem", fontWeight: 700 }}>
+                            <button onClick={() => handleNavigate("schedule")} className="flex items-center gap-1.5 bg-blue-500 text-white px-3 py-1.5 rounded-lg hover:bg-blue-600 transition-colors" style={{ fontSize: "0.72rem", fontWeight: 700 }}>
                               <Play className="w-3 h-3" /> Bắt đầu
                             </button>
                           )}
@@ -596,7 +615,7 @@ export function CoachDashboard() {
                       { icon: BarChart2, label: "Xem Analytics chi tiết", color: "bg-amber-500", nav: "analytics" },
                       { icon: Award, label: "Nâng cấp Elite Coach", color: "bg-gradient-to-r from-purple-500 to-violet-500", nav: "subscription" },
                     ].map(({ icon: Icon, label, color, hot, nav }) => (
-                      <button key={label} onClick={() => setActiveNav(nav)} className="w-full flex items-center gap-3 bg-white/5 hover:bg-white/10 px-3.5 py-2.5 rounded-xl transition-colors text-left">
+                      <button key={label} onClick={() => handleNavigate(nav)} className="w-full flex items-center gap-3 bg-white/5 hover:bg-white/10 px-3.5 py-2.5 rounded-xl transition-colors text-left">
                         <div className={`w-7 h-7 rounded-lg ${color} flex items-center justify-center shrink-0`}>
                           <Icon className="w-3.5 h-3.5 text-white" />
                         </div>
@@ -665,7 +684,7 @@ export function CoachDashboard() {
                   <p style={{ fontSize: "0.8rem", lineHeight: 1.6 }} className="text-blue-100 mb-4">
                     Bạn đã upload {overview.totalVideos} video 360°. Học viên đã xem {overview.totalVideoViews} lần tháng này.
                   </p>
-                  <button onClick={() => setActiveNav("studio")} className="w-full flex items-center justify-center gap-2 py-2.5 bg-white/15 hover:bg-white/25 border border-white/20 rounded-xl transition-colors" style={{ fontSize: "0.85rem", fontWeight: 600 }}>
+                  <button onClick={() => handleNavigate("studio")} className="w-full flex items-center justify-center gap-2 py-2.5 bg-white/15 hover:bg-white/25 border border-white/20 rounded-xl transition-colors" style={{ fontSize: "0.85rem", fontWeight: 600 }}>
                     <Upload className="w-4 h-4" /> Upload video mới
                   </button>
                 </div>
@@ -679,3 +698,4 @@ export function CoachDashboard() {
     </div>
   );
 }
+

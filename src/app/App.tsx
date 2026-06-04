@@ -260,7 +260,7 @@ function AppRoutes() {
           }
         />
         <Route
-          path="/dashboard/learner"
+          path="/dashboard/learner/*"
           element={
             <ProtectedRoute expectedRole="TRAINEES">
               <LearnerDashboard />
@@ -276,7 +276,7 @@ function AppRoutes() {
           }
         />
         <Route
-          path="/dashboard/coach"
+          path="/dashboard/coach/*"
           element={
             <ProtectedRoute expectedRole="COACHES">
               <CoachDashboard />
@@ -292,7 +292,7 @@ function AppRoutes() {
           }
         />
         <Route
-          path="/dashboard/admin"
+          path="/dashboard/admin/*"
           element={
             <ProtectedRoute expectedRole="ADMIN">
               <AdminDashboard />

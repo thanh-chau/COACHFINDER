@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, useTransition } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import {
   LayoutDashboard,
   Users,
@@ -76,6 +76,14 @@ const ADMIN_TAB_IDS = [
   "settings",
 ];
 
+const ADMIN_DASHBOARD_PATH = "/dashboard/admin";
+const ADMIN_NAV_IDS = new Set(ADMIN_TAB_IDS);
+
+function getAdminViewFromPath(pathname: string) {
+  const suffix = pathname.slice(ADMIN_DASHBOARD_PATH.length).replace(/^\/+/, "");
+  const view = decodeURIComponent(suffix.split("/")[0] || "overview");
+  return ADMIN_NAV_IDS.has(view) ? view : "overview";
+}
 const quickStats = [
   {
     label: "Doanh thu hôm nay",
@@ -98,13 +106,14 @@ const quickStats = [
 ];
 
 export function AdminDashboard() {
-  const [activeNav, setActiveNav] = useState("overview");
-  const [mountedTabs, setMountedTabs] = useState<Record<string, boolean>>({ overview: true });
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [activeNav, setActiveNav] = useState(() => getAdminViewFromPath(location.pathname));
+  const [mountedTabs, setMountedTabs] = useState<Record<string, boolean>>(() => ({ overview: true, [getAdminViewFromPath(location.pathname)]: true }));
   const [, startTransition] = useTransition();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [notificationCount, setNotificationCount] = useState(0);
-  const navigate = useNavigate();
   const session = getAuthSession();
   const adminName = session?.fullName?.trim() || session?.username || "Quản trị viên";
   const adminInitials = adminName
@@ -155,11 +164,19 @@ export function AdminDashboard() {
     });
   }, [startTransition]);
 
+  useEffect(() => {
+    const nextView = getAdminViewFromPath(location.pathname);
+    setActiveNav(nextView);
+    mountTab(nextView);
+  }, [location.pathname, mountTab]);
+
   const navigateTab = useCallback((id: string) => {
-    setActiveNav(id);
+    const nextView = ADMIN_NAV_IDS.has(id) ? id : "overview";
+    setActiveNav(nextView);
     setSidebarOpen(false);
-    window.requestAnimationFrame(() => mountTab(id));
-  }, [mountTab]);
+    navigate(nextView === "overview" ? ADMIN_DASHBOARD_PATH : `${ADMIN_DASHBOARD_PATH}/${nextView}`);
+    window.requestAnimationFrame(() => mountTab(nextView));
+  }, [mountTab, navigate]);
 
   const formatCompactMoney = (value?: number) => {
     const amount = value || 0;
@@ -1048,3 +1065,4 @@ function AdminSettingsPlaceholder() {
     </div>
   );
 }
+
