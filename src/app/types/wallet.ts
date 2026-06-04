@@ -46,6 +46,12 @@ export interface WalletTopUp {
   walletBalance: number;
 }
 
+export interface WalletTopUpRequest {
+  amount: number;
+  returnUrl?: string;
+  cancelUrl?: string;
+}
+
 export interface WalletBankAccount {
   id: number;
   userId: number;
@@ -80,4 +86,3 @@ export interface WalletWithdraw {
   withdrawalStatus: string;
   createdAt: string;
 }
-

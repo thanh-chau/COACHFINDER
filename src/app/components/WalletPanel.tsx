@@ -71,6 +71,13 @@ function isCredit(tx: WalletTransaction) {
   return tx.amount >= 0;
 }
 
+function getSubscriptionCallbackUrl(mode: WalletPanelMode) {
+  const path = mode === "coach"
+    ? "/dashboard/coach/subscription"
+    : "/dashboard/learner/subscription";
+  return `${window.location.origin}${path}`;
+}
+
 export function WalletPanel({
   mode,
   allowTopUp = mode === "learner",
@@ -157,7 +164,12 @@ export function WalletPanel({
     setTopUpLoading(true);
     setActionNotice(null);
     try {
-      const result = await createWalletTopUp(amount);
+      const callbackUrl = getSubscriptionCallbackUrl(mode);
+      const result = await createWalletTopUp({
+        amount,
+        returnUrl: callbackUrl,
+        cancelUrl: callbackUrl,
+      });
       setTopUp(result);
       setActionNotice("Đã tạo yêu cầu nạp tiền.");
       await loadWallet();

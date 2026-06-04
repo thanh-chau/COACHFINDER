@@ -3,6 +3,7 @@ import type {
   WalletBankAccount,
   WalletBankAccountUpsertRequest,
   WalletTopUp,
+  WalletTopUpRequest,
   WalletTransaction,
   WalletWithdraw,
 } from "../types/wallet";
@@ -16,10 +17,10 @@ export function getMyWalletTransactions() {
   return apiRequest<WalletTransaction[]>("/api/v1/wallets/me/transactions");
 }
 
-export function createWalletTopUp(amount: number) {
+export function createWalletTopUp(request: WalletTopUpRequest) {
   return apiRequest<WalletTopUp>("/api/v1/wallets/top-up", {
     method: "POST",
-    body: JSON.stringify({ amount }),
+    body: JSON.stringify(request),
   });
 }
 
@@ -44,4 +45,3 @@ export function withdrawFromWallet(amount: number, note?: string) {
     body: JSON.stringify({ amount, note }),
   });
 }
-
