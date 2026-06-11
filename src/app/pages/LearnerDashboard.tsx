@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Search, Calendar, Brain, BarChart2, Video,
   MessageCircle, CreditCard, Settings, LogOut, Dumbbell, X, Menu,
   Bell, Flame, CheckCircle2, Clock, Trophy, Users, TrendingUp,
-  ChevronRight, Star, Play, Award, Zap
+  ChevronRight, Star, Play, Award, Zap, MessageSquareHeart
 } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip } from "recharts";
 import { LearnerSubscription } from "../components/LearnerSubscription";
@@ -27,6 +27,7 @@ import type { BookingListItem } from "../types/booking";
 import type { Coach } from "../types/coach";
 import type { Achievement, ProgressOverview } from "../types/progress";
 import type { CurrentSubscription } from "../types/subscription";
+import { WebsiteFeedbackForm } from "../components/WebsiteFeedbackForm";
 
 
 
@@ -39,6 +40,7 @@ const navItems = [
   { icon: Video,           label: "Video 360°",    id: "video" },
   { icon: MessageCircle,   label: "Tin nhắn",      id: "msg",          badge: "2" },
   { icon: CreditCard,      label: "Gói của tôi",   id: "subscription" },
+  { icon: MessageSquareHeart, label: "Đánh giá web", id: "feedback" },
 ];
 
 const bottomNav = [
@@ -66,6 +68,7 @@ const HEADER_TITLES: Record<string, { title: string; sub: string }> = {
   progress:     { title: "Tiến độ luyện tập 📊",       sub: "Theo dõi hành trình của bạn" },
   video:        { title: "Video 360° 🎥",              sub: "Thư viện video từ HLV chuyên nghiệp" },
   msg:          { title: "Tin nhắn 💬",                sub: "Trò chuyện với HLV của bạn" },
+  feedback:     { title: "Đánh giá CoachFinder",       sub: "Chia sẻ trải nghiệm sử dụng nền tảng" },
 };
 
 type ProgressChartRow = { week: string; hours: number };
@@ -379,6 +382,8 @@ export function LearnerDashboard() {
 
             {/* ── MESSAGING ── */}
             {activeNav === "msg" && <Messaging userPlan="free" onNavigate={handleNavigate} targetUsername={targetUsername} />}
+
+            {activeNav === "feedback" && <WebsiteFeedbackForm />}
 
             {/* ── OVERVIEW ── */}
             {activeNav === "overview" && (

@@ -32,6 +32,32 @@ export interface WalletTransaction {
   createdAt: string;
 }
 
+export interface WalletHistoryItem
+  extends Omit<WalletTransaction, "id" | "balanceBefore" | "balanceAfter"> {
+  id: string;
+  source: "WALLET_TRANSACTION" | "TOP_UP_ORDER";
+  balanceBefore: number | null;
+  balanceAfter: number | null;
+  status: string;
+}
+
+export interface WalletTransactionPage {
+  content: WalletHistoryItem[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
+}
+
+export interface WalletTransactionFilters {
+  type?: string;
+  status?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  size?: number;
+}
+
 export interface WalletTopUp {
   orderCode: number;
   amount: number;

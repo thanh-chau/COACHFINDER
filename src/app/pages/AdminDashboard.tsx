@@ -19,6 +19,7 @@ import {
   Zap,
   Search,
   Activity,
+  MessageSquareHeart,
 } from "lucide-react";
 import { AdminOverview } from "../components/AdminOverview";
 import { AdminTransactions } from "../components/AdminTransactions";
@@ -26,6 +27,7 @@ import { AdminSubscriptions } from "../components/AdminSubscriptions";
 import { AdminUsers } from "../components/AdminUsers";
 import { AdminFinance } from "../components/AdminFinance";
 import { NotificationBell } from "../components/NotificationBell";
+import { AdminWebsiteFeedback } from "../components/AdminWebsiteFeedback";
 import { clearAuthSession, getAuthSession } from "../utils/authSession";
 import { logoutAccount } from "../api/auth";
 import { DashboardOverview, fetchAdminOverview } from "../api/admin";
@@ -65,6 +67,11 @@ const navItems = [
     label: "Báo cáo tài chính",
     id: "finance",
   },
+  {
+    icon: MessageSquareHeart,
+    label: "Đánh giá web",
+    id: "feedback",
+  },
 ];
 
 const ADMIN_TAB_IDS = [
@@ -73,6 +80,7 @@ const ADMIN_TAB_IDS = [
   "transactions",
   "subscriptions",
   "finance",
+  "feedback",
   "settings",
 ];
 
@@ -239,6 +247,10 @@ export function AdminDashboard() {
     finance: {
       title: "Báo cáo tài chính",
       sub: "Tháng 3/2026 · Tổng doanh thu: 220M đ",
+    },
+    feedback: {
+      title: "Đánh giá CoachFinder",
+      sub: "Theo dõi phản hồi và mức độ hài lòng của người dùng",
     },
     settings: {
       title: "Cài đặt nền tảng",
@@ -532,6 +544,9 @@ export function AdminDashboard() {
             </div>
             <div className={activeNav === "finance" ? "block" : "hidden"}>
               {mountedTabs["finance"] && <AdminFinance />}
+            </div>
+            <div className={activeNav === "feedback" ? "block" : "hidden"}>
+              {mountedTabs["feedback"] && <AdminWebsiteFeedback />}
             </div>
             <div className={activeNav === "settings" ? "block" : "hidden"}>
               {mountedTabs["settings"] && <AdminSettings />}

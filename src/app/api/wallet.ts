@@ -4,7 +4,8 @@ import type {
   WalletBankAccountUpsertRequest,
   WalletTopUp,
   WalletTopUpRequest,
-  WalletTransaction,
+  WalletTransactionFilters,
+  WalletTransactionPage,
   WalletWithdraw,
 } from "../types/wallet";
 import { apiRequest } from "./client";
@@ -13,8 +14,17 @@ export function getMyWallet() {
   return apiRequest<Wallet>("/api/v1/wallets/me");
 }
 
-export function getMyWalletTransactions() {
-  return apiRequest<WalletTransaction[]>("/api/v1/wallets/me/transactions");
+export function getMyWalletTransactions(filters: WalletTransactionFilters = {}) {
+  const query = new URLSearchParams();
+  if (filters.type) query.set("type", filters.type);
+  if (filters.status) query.set("status", filters.status);
+  if (filters.from) query.set("from", filters.from);
+  if (filters.to) query.set("to", filters.to);
+  query.set("page", String(filters.page ?? 0));
+  query.set("size", String(filters.size ?? 10));
+  return apiRequest<WalletTransactionPage>(
+    `/api/v1/wallets/me/transactions?${query.toString()}`,
+  );
 }
 
 export function createWalletTopUp(request: WalletTopUpRequest) {

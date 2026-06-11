@@ -5,6 +5,10 @@ import {
   ArrowUpRight,
   Banknote,
   CheckCircle2,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
   CreditCard,
   ExternalLink,
   Loader2,
@@ -20,7 +24,12 @@ import {
   saveMyBankAccount,
   withdrawFromWallet,
 } from "../api/wallet";
-import type { Wallet, WalletBankAccount, WalletTopUp, WalletTransaction } from "../types/wallet";
+import type {
+  Wallet,
+  WalletBankAccount,
+  WalletHistoryItem,
+  WalletTopUp,
+} from "../types/wallet";
 
 type WalletPanelMode = "learner" | "coach";
 
@@ -30,6 +39,28 @@ interface WalletPanelProps {
   allowWithdraw?: boolean;
   allowBankAccount?: boolean;
 }
+
+const TRANSACTION_TYPES = [
+  "TOP_UP",
+  "WITHDRAWAL",
+  "SUBSCRIPTION_PURCHASE",
+  "SUBSCRIPTION_REVENUE",
+  "BOOKING_PAYMENT",
+  "BOOKING_COMMISSION",
+  "BOOKING_COACH_PAYOUT",
+  "REFUND",
+  "ADJUSTMENT",
+];
+
+const STATUSES = [
+  "PENDING",
+  "PROCESSING",
+  "SUCCESS",
+  "FAILED",
+  "CANCELLED",
+  "EXPIRED",
+  "REJECTED",
+];
 
 const formatMoney = (value: number, currency = "VND") =>
   new Intl.NumberFormat("vi-VN", {
@@ -44,37 +75,46 @@ function typeLabel(type: string) {
   const labels: Record<string, string> = {
     TOP_UP: "Nạp tiền",
     WITHDRAWAL: "Rút tiền",
+    SUBSCRIPTION_PURCHASE: "Mua gói dịch vụ",
+    SUBSCRIPTION_REVENUE: "Doanh thu gói",
     BOOKING_PAYMENT: "Thanh toán lịch tập",
-    BOOKING_COACH_PAYOUT: "Doanh thu buổi tập",
     BOOKING_COMMISSION: "Hoa hồng nền tảng",
-    SUBSCRIPTION_PAYMENT: "Thanh toán gói",
+    BOOKING_COACH_PAYOUT: "Doanh thu buổi tập",
     REFUND: "Hoàn tiền",
+    ADJUSTMENT: "Điều chỉnh số dư",
   };
   return labels[type] ?? type.replaceAll("_", " ");
 }
 
 function statusLabel(status: string | null) {
-  if (!status) return "Hoàn tất";
   const labels: Record<string, string> = {
-    PENDING: "Chờ xử lý",
+    PENDING: "Chờ thanh toán",
     PROCESSING: "Đang xử lý",
-    APPROVED: "Đã duyệt",
-    REJECTED: "Từ chối",
-    COMPLETED: "Hoàn tất",
-    PAID: "Đã thanh toán",
+    SUCCESS: "Thành công",
+    FAILED: "Thất bại",
     CANCELLED: "Đã hủy",
+    EXPIRED: "Hết hạn",
+    REJECTED: "Từ chối",
   };
-  return labels[status] ?? status;
+  return status ? labels[status] ?? status : "Thành công";
 }
 
-function isCredit(tx: WalletTransaction) {
-  return tx.amount >= 0;
+function statusClass(status: string) {
+  if (status === "SUCCESS") return "bg-emerald-50 text-emerald-700";
+  if (status === "PENDING" || status === "PROCESSING")
+    return "bg-amber-50 text-amber-700";
+  return "bg-rose-50 text-rose-700";
 }
 
-function getSubscriptionCallbackUrl(mode: WalletPanelMode) {
-  const path = mode === "coach"
-    ? "/dashboard/coach/subscription"
-    : "/dashboard/learner/subscription";
+function isCredit(transaction: WalletHistoryItem) {
+  return transaction.amount >= 0;
+}
+
+function callbackUrl(mode: WalletPanelMode) {
+  const path =
+    mode === "coach"
+      ? "/dashboard/coach/subscription"
+      : "/dashboard/learner/subscription";
   return `${window.location.origin}${path}`;
 }
 
@@ -85,16 +125,34 @@ export function WalletPanel({
   allowBankAccount = mode === "coach",
 }: WalletPanelProps) {
   const [wallet, setWallet] = useState<Wallet | null>(null);
-  const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
+  const [recent, setRecent] = useState<WalletHistoryItem[]>([]);
   const [bankAccount, setBankAccount] = useState<WalletBankAccount | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [history, setHistory] = useState<WalletHistoryItem[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyPage, setHistoryPage] = useState(0);
+  const [historyTotalPages, setHistoryTotalPages] = useState(1);
+  const [historyTotal, setHistoryTotal] = useState(0);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [filters, setFilters] = useState({
+    type: "",
+    status: "",
+    from: "",
+    to: "",
+  });
 
   const [topUpAmount, setTopUpAmount] = useState("200000");
   const [topUp, setTopUp] = useState<WalletTopUp | null>(null);
   const [topUpLoading, setTopUpLoading] = useState(false);
-
+  const [withdrawAmount, setWithdrawAmount] = useState("500000");
+  const [withdrawNote, setWithdrawNote] = useState("");
+  const [withdrawLoading, setWithdrawLoading] = useState(false);
+  const [bankSaving, setBankSaving] = useState(false);
   const [bankForm, setBankForm] = useState({
     bankCode: "",
     bankName: "",
@@ -102,36 +160,25 @@ export function WalletPanel({
     accountHolderName: "",
     branch: "",
   });
-  const [bankSaving, setBankSaving] = useState(false);
-
-  const [withdrawAmount, setWithdrawAmount] = useState("500000");
-  const [withdrawNote, setWithdrawNote] = useState("");
-  const [withdrawLoading, setWithdrawLoading] = useState(false);
-  const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   const currency = wallet?.currency || "VND";
-  const recentTransactions = useMemo(() => transactions.slice(0, 8), [transactions]);
-  const title = mode === "coach"
-    ? allowTopUp && allowWithdraw
-      ? "Ví HLV & thanh toán"
-      : allowTopUp
-        ? "Ví thanh toán HLV"
-        : "Ví & rút tiền"
-    : "Ví thanh toán";
+  const title = mode === "coach" ? "Ví HLV và thanh toán" : "Ví thanh toán";
+  const recentRows = useMemo(() => recent.slice(0, 8), [recent]);
 
   const loadWallet = async (initial = false) => {
-    if (initial) setLoading(true);
-    else setRefreshing(true);
+    initial ? setLoading(true) : setRefreshing(true);
     setError(null);
     try {
-      const [walletData, txData, bankData] = await Promise.all([
+      const [walletData, transactionPage, bankData] = await Promise.all([
         getMyWallet(),
-        getMyWalletTransactions(),
-        allowBankAccount ? getMyBankAccount().catch(() => null) : Promise.resolve(null),
+        getMyWalletTransactions({ page: 0, size: 8 }),
+        allowBankAccount
+          ? getMyBankAccount().catch(() => null)
+          : Promise.resolve(null),
       ]);
-
       setWallet(walletData);
-      setTransactions(txData);
+      setRecent(transactionPage.content ?? []);
+      setHistoryTotal(transactionPage.totalElements ?? 0);
       setBankAccount(bankData);
       if (bankData) {
         setBankForm({
@@ -154,67 +201,93 @@ export function WalletPanel({
     void loadWallet(true);
   }, []);
 
+  useEffect(() => {
+    if (!historyOpen) return;
+    setHistoryLoading(true);
+    setError(null);
+    getMyWalletTransactions({
+      type: filters.type || undefined,
+      status: filters.status || undefined,
+      from: filters.from || undefined,
+      to: filters.to || undefined,
+      page: historyPage,
+      size: 10,
+    })
+      .then((result) => {
+        setHistory(result.content ?? []);
+        setHistoryTotal(result.totalElements ?? 0);
+        setHistoryTotalPages(Math.max(result.totalPages ?? 1, 1));
+      })
+      .catch((err) =>
+        setError(
+          err instanceof Error ? err.message : "Không tải được lịch sử giao dịch.",
+        ),
+      )
+      .finally(() => setHistoryLoading(false));
+  }, [historyOpen, historyPage, filters]);
+
+  const changeFilter = (key: keyof typeof filters, value: string) => {
+    setFilters((current) => ({ ...current, [key]: value }));
+    setHistoryPage(0);
+  };
+
   const handleTopUp = async () => {
     const amount = Number(topUpAmount);
     if (!Number.isFinite(amount) || amount <= 0) {
-      setActionNotice("Số tiền nạp không hợp lệ.");
+      setNotice("Số tiền nạp không hợp lệ.");
       return;
     }
-
     setTopUpLoading(true);
-    setActionNotice(null);
+    setNotice(null);
     try {
-      const callbackUrl = getSubscriptionCallbackUrl(mode);
-      const result = await createWalletTopUp({
-        amount,
-        returnUrl: callbackUrl,
-        cancelUrl: callbackUrl,
-      });
-      setTopUp(result);
-      setActionNotice("Đã tạo yêu cầu nạp tiền.");
+      const url = callbackUrl(mode);
+      setTopUp(
+        await createWalletTopUp({ amount, returnUrl: url, cancelUrl: url }),
+      );
+      setNotice("Đã tạo yêu cầu nạp tiền.");
       await loadWallet();
     } catch (err) {
-      setActionNotice(err instanceof Error ? err.message : "Không tạo được yêu cầu nạp tiền.");
+      setNotice(err instanceof Error ? err.message : "Không tạo được yêu cầu.");
     } finally {
       setTopUpLoading(false);
     }
   };
 
   const handleCheckTopUp = async () => {
-    if (!topUp?.orderCode) return;
+    if (!topUp) return;
     setTopUpLoading(true);
     try {
-      const status = await getWalletTopUpStatus(topUp.orderCode);
-      setTopUp(status);
-      setActionNotice(`Trạng thái nạp tiền: ${statusLabel(status.status)}.`);
+      const result = await getWalletTopUpStatus(topUp.orderCode);
+      setTopUp(result);
+      setNotice(`Trạng thái nạp tiền: ${statusLabel(result.status)}.`);
       await loadWallet();
     } catch (err) {
-      setActionNotice(err instanceof Error ? err.message : "Không kiểm tra được trạng thái nạp tiền.");
+      setNotice(err instanceof Error ? err.message : "Không kiểm tra được trạng thái.");
     } finally {
       setTopUpLoading(false);
     }
   };
 
   const handleSaveBank = async () => {
-    if (!bankForm.bankCode || !bankForm.bankName || !bankForm.accountNumber || !bankForm.accountHolderName) {
-      setActionNotice("Vui lòng nhập đủ thông tin ngân hàng.");
+    if (
+      !bankForm.bankCode ||
+      !bankForm.bankName ||
+      !bankForm.accountNumber ||
+      !bankForm.accountHolderName
+    ) {
+      setNotice("Vui lòng nhập đủ thông tin ngân hàng.");
       return;
     }
-
     setBankSaving(true);
-    setActionNotice(null);
     try {
       const saved = await saveMyBankAccount({
-        bankCode: bankForm.bankCode.trim(),
-        bankName: bankForm.bankName.trim(),
-        accountNumber: bankForm.accountNumber.trim(),
-        accountHolderName: bankForm.accountHolderName.trim(),
-        branch: bankForm.branch.trim() || undefined,
+        ...bankForm,
+        branch: bankForm.branch || undefined,
       });
       setBankAccount(saved);
-      setActionNotice("Đã lưu tài khoản ngân hàng.");
+      setNotice("Đã lưu tài khoản ngân hàng.");
     } catch (err) {
-      setActionNotice(err instanceof Error ? err.message : "Không lưu được tài khoản ngân hàng.");
+      setNotice(err instanceof Error ? err.message : "Không lưu được tài khoản.");
     } finally {
       setBankSaving(false);
     }
@@ -222,27 +295,25 @@ export function WalletPanel({
 
   const handleWithdraw = async () => {
     const amount = Number(withdrawAmount);
-    if (!Number.isFinite(amount) || amount < 500000) {
-      setActionNotice("Số tiền rút tối thiểu là 500.000đ.");
+    if (!Number.isFinite(amount) || amount < 1000) {
+      setNotice("Số tiền rút tối thiểu là 1.000đ.");
       return;
     }
     if (wallet && amount > wallet.balance) {
-      setActionNotice("Số tiền rút vượt quá số dư ví.");
+      setNotice("Số tiền rút vượt quá số dư ví.");
       return;
     }
     if (allowBankAccount && !bankAccount) {
-      setActionNotice("Vui lòng lưu tài khoản ngân hàng trước khi rút tiền.");
+      setNotice("Vui lòng lưu tài khoản ngân hàng trước khi rút tiền.");
       return;
     }
-
     setWithdrawLoading(true);
-    setActionNotice(null);
     try {
       await withdrawFromWallet(amount, withdrawNote.trim() || undefined);
-      setActionNotice("Đã gửi yêu cầu rút tiền. Admin sẽ xử lý yêu cầu này.");
+      setNotice("Đã gửi yêu cầu rút tiền để admin xử lý.");
       await loadWallet();
     } catch (err) {
-      setActionNotice(err instanceof Error ? err.message : "Không gửi được yêu cầu rút tiền.");
+      setNotice(err instanceof Error ? err.message : "Không gửi được yêu cầu.");
     } finally {
       setWithdrawLoading(false);
     }
@@ -250,189 +321,248 @@ export function WalletPanel({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-gray-900" style={{ fontWeight: 800, fontSize: "1.08rem" }}>
-            {title}
-          </h2>
-          <p className="text-gray-500" style={{ fontSize: "0.8rem" }}>
-            Dữ liệu lấy từ `/api/v1/wallets/*`, không dùng số dư mẫu.
+          <h2 className="text-lg font-extrabold text-gray-900">{title}</h2>
+          <p className="text-sm text-gray-500">
+            Quản lý số dư và toàn bộ hoạt động liên quan đến tiền.
           </p>
         </div>
         <button
           onClick={() => loadWallet()}
           disabled={refreshing}
-          className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-gray-600 hover:bg-gray-50 disabled:opacity-60"
-          style={{ fontSize: "0.8rem", fontWeight: 700 }}
+          className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold text-gray-600 disabled:opacity-60"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+          <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
           Làm mới
         </button>
       </div>
 
       {error && (
-        <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-red-700 flex items-start gap-2" style={{ fontSize: "0.82rem", fontWeight: 600 }}>
-          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+        <div className="flex gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+          <AlertCircle className="h-4 w-4 shrink-0" />
           {error}
         </div>
       )}
-
-      {actionNotice && (
-        <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-blue-700 flex items-start gap-2" style={{ fontSize: "0.82rem", fontWeight: 600 }}>
-          <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
-          {actionNotice}
+      {notice && (
+        <div className="flex gap-2 rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          {notice}
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-1 rounded-2xl bg-gradient-to-br from-slate-900 to-emerald-950 p-5 text-white relative overflow-hidden">
-          <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-white/5" />
-          <div className="relative">
-            <div className="flex items-center justify-between mb-5">
-              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                <WalletIcon className="w-5 h-5 text-emerald-200" />
-              </div>
-              <span className="rounded-full bg-white/10 px-2.5 py-1 text-emerald-100" style={{ fontSize: "0.68rem", fontWeight: 800 }}>
-                {wallet?.role || (mode === "coach" ? "COACHES" : "TRAINEES")}
-              </span>
-            </div>
-            <div className="text-emerald-100" style={{ fontSize: "0.72rem", fontWeight: 700 }}>
-              Số dư khả dụng
-            </div>
-            <div className="mt-1 text-white" style={{ fontSize: "1.65rem", fontWeight: 900, lineHeight: 1.1 }}>
-              {loading ? "Đang tải..." : formatMoney(wallet?.balance ?? 0, currency)}
-            </div>
-            <div className="mt-4 border-t border-white/10 pt-3 text-emerald-100" style={{ fontSize: "0.75rem" }}>
-              {wallet?.ownerName || "Tài khoản hiện tại"}
-            </div>
-            {wallet?.updatedAt && (
-              <div className="mt-1 text-emerald-200/70" style={{ fontSize: "0.68rem" }}>
-                Cập nhật {formatDate(wallet.updatedAt)}
-              </div>
-            )}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-emerald-950 p-5 text-white">
+          <WalletIcon className="h-7 w-7 text-emerald-200" />
+          <div className="mt-6 text-xs font-bold text-emerald-100">
+            Số dư khả dụng
+          </div>
+          <div className="mt-1 text-2xl font-black">
+            {loading ? "Đang tải..." : formatMoney(wallet?.balance ?? 0, currency)}
+          </div>
+          <div className="mt-5 border-t border-white/10 pt-3 text-sm text-emerald-100">
+            {wallet?.ownerName || "Tài khoản hiện tại"}
           </div>
         </div>
 
-        <div className="lg:col-span-2 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div style={{ fontWeight: 800, fontSize: "0.95rem" }} className="text-gray-900">
-              Giao dịch gần đây
-            </div>
-            <span className="text-gray-400" style={{ fontSize: "0.75rem", fontWeight: 600 }}>
-              {transactions.length} giao dịch
-            </span>
+        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm lg:col-span-2">
+          <div className="mb-4 flex items-center justify-between">
+            <div className="font-extrabold text-gray-900">Giao dịch gần đây</div>
+            <button
+              onClick={() => setHistoryOpen((value) => !value)}
+              className="text-sm font-bold text-blue-600"
+            >
+              {historyOpen ? "Thu gọn" : `Xem tất cả (${historyTotal})`}
+            </button>
           </div>
           {loading ? (
-            <div className="flex items-center gap-2 text-gray-500 py-8" style={{ fontSize: "0.85rem" }}>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Đang tải giao dịch...
-            </div>
-          ) : recentTransactions.length === 0 ? (
-            <div className="py-8 text-center text-gray-400" style={{ fontSize: "0.85rem", fontWeight: 600 }}>
-              Chưa có giao dịch ví.
+            <Loader2 className="mx-auto my-10 h-5 w-5 animate-spin text-gray-400" />
+          ) : recentRows.length === 0 ? (
+            <div className="py-10 text-center text-sm text-gray-400">
+              Chưa có giao dịch.
             </div>
           ) : (
             <div className="space-y-2">
-              {recentTransactions.map((tx) => (
-                <div key={tx.id} className="flex items-center gap-3 rounded-xl bg-gray-50 px-3 py-2.5">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isCredit(tx) ? "bg-emerald-100" : "bg-rose-100"}`}>
-                    {isCredit(tx) ? <ArrowDownToLine className="w-4 h-4 text-emerald-600" /> : <ArrowUpRight className="w-4 h-4 text-rose-600" />}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-gray-900" style={{ fontWeight: 700, fontSize: "0.82rem" }}>
-                      {tx.description || typeLabel(tx.type)}
-                    </div>
-                    <div className="truncate text-gray-400" style={{ fontSize: "0.7rem" }}>
-                      {typeLabel(tx.type)} · {statusLabel(tx.withdrawalStatus)} · {formatDate(tx.createdAt)}
-                    </div>
-                  </div>
-                  <div className={`text-right ${isCredit(tx) ? "text-emerald-600" : "text-rose-600"}`} style={{ fontWeight: 800, fontSize: "0.85rem" }}>
-                    {isCredit(tx) ? "+" : "-"}{formatMoney(Math.abs(tx.amount), currency)}
-                  </div>
-                </div>
+              {recentRows.map((transaction) => (
+                <TransactionRow
+                  key={transaction.id}
+                  transaction={transaction}
+                  currency={currency}
+                />
               ))}
             </div>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {allowTopUp && (
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <Banknote className="w-4 h-4 text-emerald-500" />
-              <div style={{ fontWeight: 800, fontSize: "0.95rem" }} className="text-gray-900">Nạp tiền vào ví</div>
-            </div>
-            <div className="flex gap-2 mb-3">
-              {[100000, 200000, 500000, 1000000].map((amount) => (
-                <button
-                  key={amount}
-                  onClick={() => setTopUpAmount(String(amount))}
-                  className={`rounded-lg border px-3 py-1.5 ${Number(topUpAmount) === amount ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-gray-200 text-gray-500"}`}
-                  style={{ fontSize: "0.73rem", fontWeight: 700 }}
-                >
-                  {formatMoney(amount, currency)}
-                </button>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="number"
-                value={topUpAmount}
-                onChange={(event) => setTopUpAmount(event.target.value)}
-                className="min-w-0 flex-1 rounded-xl border border-gray-200 px-3 py-2.5 outline-none focus:ring-2 focus:ring-emerald-100"
-                style={{ fontSize: "0.85rem", fontWeight: 700 }}
-              />
-              <button
-                onClick={handleTopUp}
-                disabled={topUpLoading}
-                className="rounded-xl bg-emerald-600 px-4 py-2.5 text-white disabled:opacity-60"
-                style={{ fontSize: "0.82rem", fontWeight: 800 }}
+      {historyOpen && (
+        <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+          <div className="border-b border-gray-100 p-5">
+            <h3 className="font-extrabold text-gray-900">
+              Toàn bộ lịch sử giao dịch
+            </h3>
+            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">
+              <select
+                value={filters.type}
+                onChange={(event) => changeFilter("type", event.target.value)}
+                className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm"
               >
-                {topUpLoading ? "Đang tạo..." : "Nạp"}
+                <option value="">Tất cả loại</option>
+                {TRANSACTION_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {typeLabel(type)}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={filters.status}
+                onChange={(event) => changeFilter("status", event.target.value)}
+                className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm"
+              >
+                <option value="">Tất cả trạng thái</option>
+                {STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {statusLabel(status)}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="date"
+                value={filters.from}
+                onChange={(event) => changeFilter("from", event.target.value)}
+                className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm"
+              />
+              <input
+                type="date"
+                value={filters.to}
+                onChange={(event) => changeFilter("to", event.target.value)}
+                className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px]">
+              <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
+                <tr>
+                  <th className="px-5 py-3">Giao dịch</th>
+                  <th className="px-5 py-3">Trạng thái</th>
+                  <th className="px-5 py-3">Thời gian</th>
+                  <th className="px-5 py-3 text-right">Số tiền</th>
+                  <th className="px-5 py-3" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {historyLoading ? (
+                  <tr>
+                    <td colSpan={5} className="py-12 text-center text-gray-500">
+                      <Loader2 className="mx-auto h-5 w-5 animate-spin" />
+                    </td>
+                  </tr>
+                ) : history.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-12 text-center text-gray-400">
+                      Không có giao dịch phù hợp.
+                    </td>
+                  </tr>
+                ) : (
+                  history.map((transaction) => (
+                    <TransactionTableRows
+                      key={transaction.id}
+                      transaction={transaction}
+                      currency={currency}
+                      expanded={expandedId === transaction.id}
+                      onToggle={() =>
+                        setExpandedId((current) =>
+                          current === transaction.id ? null : transaction.id,
+                        )
+                      }
+                    />
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex items-center justify-between border-t border-gray-100 px-5 py-4">
+            <span className="text-xs text-gray-400">
+              {historyTotal} giao dịch · Trang {historyPage + 1}/{historyTotalPages}
+            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setHistoryPage((value) => Math.max(0, value - 1))}
+                disabled={historyPage === 0}
+                className="rounded-lg border border-gray-200 p-2 disabled:opacity-40"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() =>
+                  setHistoryPage((value) =>
+                    Math.min(historyTotalPages - 1, value + 1),
+                  )
+                }
+                disabled={historyPage >= historyTotalPages - 1}
+                className="rounded-lg border border-gray-200 p-2 disabled:opacity-40"
+              >
+                <ChevronRight className="h-4 w-4" />
               </button>
             </div>
+          </div>
+        </section>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {allowTopUp && (
+          <ActionCard title="Nạp tiền vào ví" icon={<Banknote className="h-4 w-4" />}>
+            <input
+              type="number"
+              value={topUpAmount}
+              onChange={(event) => setTopUpAmount(event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5"
+            />
+            <button
+              onClick={handleTopUp}
+              disabled={topUpLoading}
+              className="mt-3 w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-extrabold text-white disabled:opacity-60"
+            >
+              {topUpLoading ? "Đang xử lý..." : "Nạp tiền"}
+            </button>
             {topUp && (
-              <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 p-3">
-                <div className="text-emerald-800" style={{ fontWeight: 800, fontSize: "0.82rem" }}>
-                  Mã nạp tiền #{topUp.orderCode} · {statusLabel(topUp.status)}
+              <div className="mt-3 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">
+                <div className="font-bold">
+                  #{topUp.orderCode} · {statusLabel(topUp.status)}
                 </div>
-                <div className="text-emerald-700 mt-1" style={{ fontSize: "0.76rem" }}>
-                  {formatMoney(topUp.amount, topUp.currency)} · {topUp.description}
-                </div>
-                <div className="flex flex-wrap gap-2 mt-3">
+                <div>{formatMoney(topUp.amount, topUp.currency)}</div>
+                <div className="mt-2 flex gap-2">
                   {topUp.checkoutUrl && (
                     <a
                       href={topUp.checkoutUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-emerald-700 border border-emerald-200"
-                      style={{ fontSize: "0.75rem", fontWeight: 800 }}
+                      className="inline-flex items-center gap-1 rounded-lg bg-white px-3 py-1.5 font-bold"
                     >
-                      Thanh toán <ExternalLink className="w-3 h-3" />
+                      Thanh toán <ExternalLink className="h-3 w-3" />
                     </a>
                   )}
                   <button
                     onClick={handleCheckTopUp}
-                    disabled={topUpLoading}
-                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-white disabled:opacity-60"
-                    style={{ fontSize: "0.75rem", fontWeight: 800 }}
+                    className="rounded-lg bg-emerald-600 px-3 py-1.5 font-bold text-white"
                   >
-                    Kiểm tra trạng thái
+                    Kiểm tra
                   </button>
                 </div>
               </div>
             )}
-          </div>
+          </ActionCard>
         )}
 
         {allowBankAccount && (
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <CreditCard className="w-4 h-4 text-blue-500" />
-              <div style={{ fontWeight: 800, fontSize: "0.95rem" }} className="text-gray-900">Tài khoản nhận tiền</div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <ActionCard
+            title="Tài khoản nhận tiền"
+            icon={<CreditCard className="h-4 w-4" />}
+          >
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {[
                 ["bankCode", "Mã ngân hàng"],
                 ["bankName", "Tên ngân hàng"],
@@ -440,68 +570,241 @@ export function WalletPanel({
                 ["accountHolderName", "Tên chủ tài khoản"],
                 ["branch", "Chi nhánh"],
               ].map(([key, label]) => (
-                <label key={key} className={key === "branch" ? "sm:col-span-2" : ""}>
-                  <span className="block text-gray-500 mb-1" style={{ fontSize: "0.72rem", fontWeight: 700 }}>{label}</span>
-                  <input
-                    value={bankForm[key as keyof typeof bankForm]}
-                    onChange={(event) => setBankForm((current) => ({ ...current, [key]: event.target.value }))}
-                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-100"
-                    style={{ fontSize: "0.82rem", fontWeight: 600 }}
-                  />
-                </label>
+                <input
+                  key={key}
+                  value={bankForm[key as keyof typeof bankForm]}
+                  onChange={(event) =>
+                    setBankForm((current) => ({
+                      ...current,
+                      [key]: event.target.value,
+                    }))
+                  }
+                  placeholder={label}
+                  className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm"
+                />
               ))}
             </div>
             <button
               onClick={handleSaveBank}
               disabled={bankSaving}
-              className="mt-4 w-full rounded-xl bg-blue-600 px-4 py-2.5 text-white disabled:opacity-60"
-              style={{ fontSize: "0.82rem", fontWeight: 800 }}
+              className="mt-3 w-full rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-extrabold text-white"
             >
-              {bankSaving ? "Đang lưu..." : bankAccount ? "Cập nhật tài khoản" : "Lưu tài khoản"}
+              {bankSaving ? "Đang lưu..." : "Lưu tài khoản"}
             </button>
-          </div>
+          </ActionCard>
         )}
 
         {allowWithdraw && (
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <ArrowUpRight className="w-4 h-4 text-rose-500" />
-              <div style={{ fontWeight: 800, fontSize: "0.95rem" }} className="text-gray-900">Yêu cầu rút tiền</div>
-            </div>
-            <label className="block mb-3">
-              <span className="block text-gray-500 mb-1" style={{ fontSize: "0.72rem", fontWeight: 700 }}>Số tiền rút</span>
-              <input
-                type="number"
-                value={withdrawAmount}
-                onChange={(event) => setWithdrawAmount(event.target.value)}
-                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 outline-none focus:ring-2 focus:ring-rose-100"
-                style={{ fontSize: "0.86rem", fontWeight: 700 }}
-              />
-            </label>
-            <label className="block mb-4">
-              <span className="block text-gray-500 mb-1" style={{ fontSize: "0.72rem", fontWeight: 700 }}>Ghi chú</span>
-              <input
-                value={withdrawNote}
-                onChange={(event) => setWithdrawNote(event.target.value)}
-                placeholder="Ví dụ: rút thu nhập tháng này"
-                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 outline-none focus:ring-2 focus:ring-rose-100"
-                style={{ fontSize: "0.82rem", fontWeight: 600 }}
-              />
-            </label>
+          <ActionCard
+            title="Yêu cầu rút tiền"
+            icon={<ArrowUpRight className="h-4 w-4" />}
+          >
+            <input
+              type="number"
+              value={withdrawAmount}
+              onChange={(event) => setWithdrawAmount(event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5"
+            />
+            <input
+              value={withdrawNote}
+              onChange={(event) => setWithdrawNote(event.target.value)}
+              placeholder="Ghi chú"
+              className="mt-3 w-full rounded-xl border border-gray-200 px-3 py-2.5"
+            />
             <button
               onClick={handleWithdraw}
               disabled={withdrawLoading}
-              className="w-full rounded-xl bg-rose-600 px-4 py-2.5 text-white disabled:opacity-60"
-              style={{ fontSize: "0.82rem", fontWeight: 800 }}
+              className="mt-3 w-full rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-extrabold text-white"
             >
               {withdrawLoading ? "Đang gửi..." : "Gửi yêu cầu rút tiền"}
             </button>
-            <p className="mt-3 text-gray-400" style={{ fontSize: "0.74rem", lineHeight: 1.6 }}>
-              Yêu cầu rút tiền dùng `/api/v1/wallets/withdraw`; admin sẽ duyệt ở màn hình tài chính.
-            </p>
-          </div>
+          </ActionCard>
         )}
       </div>
+    </div>
+  );
+}
+
+function ActionCard({
+  title,
+  icon,
+  children,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+      <div className="mb-4 flex items-center gap-2 font-extrabold text-gray-900">
+        {icon}
+        {title}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function TransactionRow({
+  transaction,
+  currency,
+}: {
+  transaction: WalletHistoryItem;
+  currency: string;
+}) {
+  const credit = isCredit(transaction);
+  return (
+    <div className="flex items-center gap-3 rounded-xl bg-gray-50 px-3 py-2.5">
+      <div
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+          credit ? "bg-emerald-100" : "bg-rose-100"
+        }`}
+      >
+        {credit ? (
+          <ArrowDownToLine className="h-4 w-4 text-emerald-600" />
+        ) : (
+          <ArrowUpRight className="h-4 w-4 text-rose-600" />
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-bold text-gray-900">
+          {transaction.description || typeLabel(transaction.type)}
+        </div>
+        <div className="truncate text-xs text-gray-400">
+          {typeLabel(transaction.type)} · {statusLabel(transaction.status)} ·{" "}
+          {formatDate(transaction.createdAt)}
+        </div>
+      </div>
+      <div
+        className={`text-sm font-extrabold ${
+          credit ? "text-emerald-600" : "text-rose-600"
+        }`}
+      >
+        {credit ? "+" : "-"}
+        {formatMoney(Math.abs(transaction.amount), currency)}
+      </div>
+    </div>
+  );
+}
+
+function TransactionTableRows({
+  transaction,
+  currency,
+  expanded,
+  onToggle,
+}: {
+  transaction: WalletHistoryItem;
+  currency: string;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const credit = isCredit(transaction);
+  return (
+    <>
+      <tr>
+        <td className="px-5 py-4">
+          <div className="font-bold text-gray-900">
+            {typeLabel(transaction.type)}
+          </div>
+          <div className="text-xs text-gray-400">
+            {transaction.description || transaction.referenceId || "-"}
+          </div>
+        </td>
+        <td className="px-5 py-4">
+          <span
+            className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(
+              transaction.status,
+            )}`}
+          >
+            {statusLabel(transaction.status)}
+          </span>
+        </td>
+        <td className="px-5 py-4 text-sm text-gray-500">
+          {formatDate(transaction.createdAt)}
+        </td>
+        <td
+          className={`px-5 py-4 text-right font-extrabold ${
+            credit ? "text-emerald-600" : "text-rose-600"
+          }`}
+        >
+          {credit ? "+" : "-"}
+          {formatMoney(Math.abs(transaction.amount), currency)}
+        </td>
+        <td className="px-5 py-4">
+          <button onClick={onToggle} className="rounded-lg p-1 hover:bg-gray-100">
+            {expanded ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+          </button>
+        </td>
+      </tr>
+      {expanded && (
+        <tr className="bg-gray-50">
+          <td colSpan={5} className="px-5 py-4">
+            <div className="grid grid-cols-2 gap-3 text-xs md:grid-cols-4">
+              <Detail label="Nguồn" value={transaction.source} />
+              <Detail
+                label="Tham chiếu"
+                value={`${transaction.referenceType || "-"} #${
+                  transaction.referenceId || "-"
+                }`}
+              />
+              <Detail
+                label="Số dư trước"
+                value={
+                  transaction.balanceBefore == null
+                    ? "-"
+                    : formatMoney(transaction.balanceBefore, currency)
+                }
+              />
+              <Detail
+                label="Số dư sau"
+                value={
+                  transaction.balanceAfter == null
+                    ? "-"
+                    : formatMoney(transaction.balanceAfter, currency)
+                }
+              />
+              <Detail
+                label="Gói dịch vụ"
+                value={
+                  transaction.subscriptionPlanCode
+                    ? `${transaction.subscriptionPlanCode} · ${
+                        transaction.subscriptionBillingCycle || "-"
+                      }`
+                    : "-"
+                }
+              />
+              <Detail
+                label="Ngân hàng"
+                value={
+                  transaction.bankName
+                    ? `${transaction.bankName} · ${
+                        transaction.bankAccountNumber || "-"
+                      }`
+                    : "-"
+                }
+              />
+              <Detail
+                label="Người xử lý"
+                value={transaction.processedByName || "-"}
+              />
+              <Detail label="Ghi chú admin" value={transaction.adminNote || "-"} />
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="font-bold text-gray-400">{label}</div>
+      <div className="mt-1 break-words text-gray-700">{value}</div>
     </div>
   );
 }

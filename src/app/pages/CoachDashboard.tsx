@@ -7,6 +7,7 @@ import { CoachMessages } from "../components/CoachMessages";
 import { CoachSubscription } from "../components/CoachSubscription";
 import { CoachSettings } from "../components/CoachSettings";
 import { NotificationBell } from "../components/NotificationBell";
+import { WebsiteFeedbackForm } from "../components/WebsiteFeedbackForm";
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import {
@@ -14,7 +15,7 @@ import {
   BarChart2, MessageCircle, Settings, LogOut, Bell,
   ChevronRight, Star, TrendingUp, Plus, Upload,
   Menu, X, Dumbbell, CheckCircle2, Clock, Play,
-  Award, Zap, Target, ArrowUpRight, CreditCard
+  Award, Zap, Target, ArrowUpRight, CreditCard, MessageSquareHeart
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -59,6 +60,7 @@ const navItems = [
   { icon: BarChart2, label: "Analytics", id: "analytics" },
   { icon: MessageCircle, label: "Tin nhắn", id: "msg" },
   { icon: CreditCard, label: "Gói đăng ký", id: "subscription" },
+  { icon: MessageSquareHeart, label: "Đánh giá web", id: "feedback" },
 ];
 
 const COACH_DASHBOARD_PATH = "/dashboard/coach";
@@ -461,6 +463,8 @@ export function CoachDashboard() {
 
             {/* ── SETTINGS ── */}
             <div className={activeNav === "settings" ? "block h-full" : "hidden"}><CoachSettings /></div>
+
+            <div className={activeNav === "feedback" ? "block h-full" : "hidden"}><WebsiteFeedbackForm /></div>
 
             {/* ── STATS ─────────────────────────────────── */}
             {activeNav === "overview" && (
