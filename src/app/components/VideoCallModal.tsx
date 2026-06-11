@@ -66,6 +66,12 @@ export function CallModal({
     setSessionCallId(nextCallId);
   };
 
+  useEffect(() => {
+    if (callId !== undefined && callId !== sessionCallIdRef.current) {
+      updateSessionCallId(callId);
+    }
+  }, [callId]);
+
   const sendSignal = (
     type: Parameters<typeof chatWebSocketService.sendCallSignal>[0]["type"],
     payload?: RTCSessionDescriptionInit | RTCIceCandidateInit,
@@ -221,6 +227,7 @@ export function CallModal({
       if (localVideoRef.current && isVideoCall) {
         localVideoRef.current.srcObject = stream;
       }
+      setStatus("Dang chuan bi ket noi...");
     }
 
     for (const track of stream.getTracks()) {
@@ -237,6 +244,8 @@ export function CallModal({
       muted: track.muted,
       readyState: track.readyState,
     })));
+
+    setStatus("Dang ket noi...");
 
     return stream;
   };
@@ -381,25 +390,42 @@ export function CallModal({
   };
 
   const createAndSendOffer = async () => {
-    const pc = await getOrCreatePeerConnection();
-    if (!pc) return;
-    await ensureLocalMedia(pc);
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    startConnectionTimeout();
-    sendSignal("OFFER", pc.localDescription ?? offer);
+    try {
+      const pc = await getOrCreatePeerConnection();
+      if (!pc) return;
+      await ensureLocalMedia(pc);
+      setStatus("Dang tao loi moi ket noi...");
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      startConnectionTimeout();
+      setStatus("Dang cho ket noi WebRTC...");
+      sendSignal("OFFER", pc.localDescription ?? offer);
+    } catch (error) {
+      console.error("[WebRTC] Failed to create/send offer", error);
+      setStatus("Khong the tao ket noi cuoc goi");
+      closeCall("CALL_END");
+    }
   };
 
   const acceptOfferAndSendAnswer = async (offer: RTCSessionDescriptionInit) => {
-    const pc = await getOrCreatePeerConnection();
-    if (!pc) return;
-    await pc.setRemoteDescription(new RTCSessionDescription(offer));
-    await flushPendingIceCandidates(pc);
-    await ensureLocalMedia(pc);
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-    startConnectionTimeout();
-    sendSignal("ANSWER", pc.localDescription ?? answer);
+    try {
+      const pc = await getOrCreatePeerConnection();
+      if (!pc) return;
+      setStatus("Dang nhan loi moi ket noi...");
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      await flushPendingIceCandidates(pc);
+      await ensureLocalMedia(pc);
+      setStatus("Dang tao phan hoi ket noi...");
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      startConnectionTimeout();
+      setStatus("Dang cho ket noi WebRTC...");
+      sendSignal("ANSWER", pc.localDescription ?? answer);
+    } catch (error) {
+      console.error("[WebRTC] Failed to accept offer/send answer", error);
+      setStatus("Khong the tra loi cuoc goi");
+      closeCall("CALL_END");
+    }
   };
 
   useEffect(() => {
