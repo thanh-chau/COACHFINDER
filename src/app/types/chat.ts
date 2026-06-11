@@ -25,6 +25,36 @@ export interface ChatMessage {
   ownMessage: boolean;
 }
 
+export type CallType = "AUDIO" | "VIDEO";
+
+export type CallSessionStatus =
+  | "RINGING"
+  | "ACCEPTED"
+  | "REJECTED"
+  | "MISSED"
+  | "CANCELLED"
+  | "ENDED"
+  | "FAILED";
+
+export interface CallSession {
+  id: number;
+  conversationId: number;
+  callerId: number;
+  callerUsername: string;
+  callerFullName: string | null;
+  calleeId: number;
+  calleeUsername: string;
+  calleeFullName: string | null;
+  callType: CallType;
+  status: CallSessionStatus;
+  startedAt: string;
+  acceptedAt: string | null;
+  endedAt: string | null;
+  durationSeconds: number | null;
+  createdAt: string;
+  ownCall: boolean;
+}
+
 export interface PageResponse<T> {
   content: T[];
   totalElements: number;

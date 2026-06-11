@@ -9,13 +9,14 @@ import {
 } from "lucide-react";
 import {
   createConversation,
+  getConversationCalls,
   getConversationMessages,
   getConversations,
   markConversationRead,
   sendConversationMessage,
 } from "../api/chat";
 import { useChatWebSocket } from "../api/websocket";
-import type { ChatMessage as ApiChatMessage, ChatTarget, Conversation as ApiConversation } from "../types/chat";
+import type { CallSession, CallType, ChatMessage as ApiChatMessage, ChatTarget, Conversation as ApiConversation } from "../types/chat";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type MsgStatus  = "sent"|"delivered"|"read";
@@ -30,7 +31,7 @@ interface Message {
 }
 
 interface Conversation {
-  id: string; name: string; avatar: string; sport: string;
+  id: string; name: string; username: string; avatar: string; sport: string;
   status: ConvStatus; lastMsg: string; lastTime: string;
   unread: number; pinned?: boolean; messages: Message[];
   sessions: number; progress: number; nextSession?: string;
@@ -68,6 +69,7 @@ function mapApiConversation(conversation: ApiConversation): Conversation {
   return {
     id: String(conversation.id),
     name: conversation.participantFullName || conversation.participantUsername,
+    username: conversation.participantUsername,
     avatar: conversation.participantAvatarUrl || DEFAULT_CONVERSATION_AVATAR,
     sport: "Học viên",
     status: "offline",
@@ -108,6 +110,26 @@ function matchesTarget(conversation: ApiConversation, target: ChatTarget | null)
   const targetName = (target.name || target.username || "").trim().toLocaleLowerCase();
   return !!targetName && [conversation.participantFullName, conversation.participantUsername]
     .some(value => value?.trim().toLocaleLowerCase() === targetName);
+}
+
+function formatCallDuration(seconds: number | null) {
+  if (!seconds) return "";
+  const minutes = Math.floor(seconds / 60);
+  const remain = seconds % 60;
+  return `${minutes}:${String(remain).padStart(2, "0")}`;
+}
+
+function callStatusLabel(status: CallSession["status"]) {
+  const labels: Record<CallSession["status"], string> = {
+    RINGING: "Dang do chuong",
+    ACCEPTED: "Da ket noi",
+    REJECTED: "Bi tu choi",
+    MISSED: "Bi nho",
+    CANCELLED: "Da huy",
+    ENDED: "Da ket thuc",
+    FAILED: "That bai",
+  };
+  return labels[status];
 }
 
 const STATUS_DOT:Record<ConvStatus,string> = {
@@ -233,6 +255,8 @@ export function CoachMessages({ targetUsername }: { targetUsername?: string | nu
   const [text,setText]           = useState("");
   const [search,setSearch]       = useState("");
   const [showInfo,setShowInfo]   = useState(false);
+  const [showCallHistory,setShowCallHistory] = useState(false);
+  const [callHistory,setCallHistory] = useState<CallSession[]>([]);
   const [showMobile,setShowMobile] = useState<"list"|"chat">("list");
   const [filter,setFilter]       = useState<"all"|"unread"|"pinned">("all");
   const [showQuick,setShowQuick] = useState(false);
@@ -354,6 +378,21 @@ export function CoachMessages({ targetUsername }: { targetUsername?: string | nu
     };
   }, [activeId]);
 
+  useEffect(() => {
+    if (!/^\d+$/.test(activeId)) return;
+    let mounted = true;
+    getConversationCalls(Number(activeId), 0, 8)
+      .then(page => {
+        if (mounted) setCallHistory(page.content);
+      })
+      .catch(() => {
+        if (mounted) setCallHistory([]);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [activeId]);
+
   const openConv = (id:string) => {
     setActiveId(id);
     setShowMobile("chat");
@@ -378,6 +417,17 @@ export function CoachMessages({ targetUsername }: { targetUsername?: string | nu
       setText("");
       setShowQuick(false);
     } catch {}
+  };
+
+  const startCall = (callType: CallType) => {
+    if (!active || !/^\d+$/.test(activeId)) return;
+    window.dispatchEvent(new CustomEvent("coachfinder:start-call", {
+      detail: {
+        targetUsername: active.username,
+        conversationId: Number(activeId),
+        callType,
+      },
+    }));
   };
   return (
     <div className="flex flex-col" style={{height:"calc(100vh - 130px)"}}>
@@ -480,8 +530,8 @@ export function CoachMessages({ targetUsername }: { targetUsername?: string | nu
                 </div>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
-                <button className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-blue-500 transition-colors"><Phone className="w-4 h-4"/></button>
-                <button className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-blue-500 transition-colors"><Video className="w-4 h-4"/></button>
+                <button onClick={() => startCall("AUDIO")} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-blue-500 transition-colors"><Phone className="w-4 h-4"/></button>
+                <button onClick={() => startCall("VIDEO")} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-blue-500 transition-colors"><Video className="w-4 h-4"/></button>
                 <button onClick={()=>setShowInfo(v=>!v)} className={`p-2 rounded-xl transition-colors ${showInfo?"bg-blue-50 text-blue-500":"hover:bg-gray-100 text-gray-400"}`}>
                   <Info className="w-4 h-4"/>
                 </button>
@@ -491,6 +541,28 @@ export function CoachMessages({ targetUsername }: { targetUsername?: string | nu
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-gray-50/30">
+              <button
+                onClick={() => setShowCallHistory(value => !value)}
+                className="mx-auto flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-gray-100 text-gray-500 hover:text-blue-500 hover:border-blue-200"
+                style={{ fontSize: "0.75rem" }}
+              >
+                Lich su cuoc goi ({callHistory.length})
+              </button>
+              {showCallHistory && (
+                <div className="max-w-md mx-auto space-y-2">
+                  {callHistory.length === 0 ? (
+                    <div className="text-center text-gray-400 bg-white rounded-2xl py-3" style={{ fontSize: "0.78rem" }}>Chua co cuoc goi</div>
+                  ) : callHistory.map(call => (
+                    <div key={call.id} className="bg-white border border-gray-100 rounded-2xl px-3 py-2 flex items-center justify-between text-gray-600">
+                      <div>
+                        <div className="font-semibold" style={{ fontSize: "0.78rem" }}>{call.callType === "VIDEO" ? "Video call" : "Goi thoai"} - {callStatusLabel(call.status)}</div>
+                        <div className="text-gray-400" style={{ fontSize: "0.68rem" }}>{formatChatTime(call.createdAt)} {formatCallDuration(call.durationSeconds) && `- ${formatCallDuration(call.durationSeconds)}`}</div>
+                      </div>
+                      <span className={`text-xs font-bold ${call.ownCall ? "text-blue-500" : "text-orange-500"}`}>{call.ownCall ? "Di" : "Den"}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               {active.messages.map(msg=>(
                 <MsgBubble key={msg.id} msg={msg} isCoach={true}/>
               ))}

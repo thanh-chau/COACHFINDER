@@ -1,11 +1,18 @@
 import { useEffect, useState } from "react";
+import { ArrowUpRight, CreditCard, DollarSign, Download, Percent, TrendingUp } from "lucide-react";
 import {
-  TrendingUp, DollarSign, Percent, CreditCard,
-  ArrowUpRight, Download
-} from "lucide-react";
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from "recharts";
 import {
   CommissionByPlan,
@@ -13,17 +20,11 @@ import {
   RevenueBySource,
   RevenueChartPoint,
   TopCoach,
-  AdminWalletOverview,
-  AdminWalletWithdrawRequest,
-  approveAdminWalletWithdrawRequest,
   fetchAdminCommissionByPlan,
   fetchAdminFinanceOverview,
   fetchAdminMonthlyRevenue,
-  fetchAdminWalletOverview,
-  fetchAdminWalletWithdrawRequests,
   fetchAdminRevenueBySource,
   fetchAdminTopCoaches,
-  rejectAdminWalletWithdrawRequest,
 } from "../api/admin";
 
 const COLORS = ["#3b82f6", "#f97316", "#8b5cf6", "#06b6d4", "#10b981"];
@@ -34,7 +35,11 @@ const PLAN_LABEL: Record<string, string> = {
 };
 
 const formatMoney = (value?: number | null) =>
-  new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(value || 0);
+  new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+    maximumFractionDigits: 0,
+  }).format(value || 0);
 
 const compactMoney = (value?: number | null) => {
   const amount = value || 0;
@@ -49,24 +54,6 @@ export function AdminFinance() {
   const [commissionByPlan, setCommissionByPlan] = useState<CommissionByPlan[]>([]);
   const [revenueBySource, setRevenueBySource] = useState<RevenueBySource[]>([]);
   const [topCoaches, setTopCoaches] = useState<TopCoach[]>([]);
-  const [walletOverview, setWalletOverview] = useState<AdminWalletOverview | null>(null);
-  const [withdrawRequests, setWithdrawRequests] = useState<AdminWalletWithdrawRequest[]>([]);
-  const [walletActionId, setWalletActionId] = useState<number | null>(null);
-  const [walletError, setWalletError] = useState("");
-
-  const loadWalletReview = async () => {
-    try {
-      const [walletResult, withdrawResult] = await Promise.all([
-        fetchAdminWalletOverview(),
-        fetchAdminWalletWithdrawRequests(),
-      ]);
-      setWalletOverview(walletResult);
-      setWithdrawRequests(withdrawResult || []);
-      setWalletError("");
-    } catch (error) {
-      setWalletError(error instanceof Error ? error.message : "Không tải được yêu cầu rút tiền.");
-    }
-  };
 
   useEffect(() => {
     Promise.all([
@@ -84,48 +71,32 @@ export function AdminFinance() {
         setTopCoaches(coachResult || []);
       })
       .catch((error) => console.error(error));
-    void loadWalletReview();
   }, []);
 
-  const reviewWithdraw = async (transactionId: number, action: "approve" | "reject") => {
-    const note = prompt(action === "approve" ? "Ghi chú phê duyệt (tùy chọn)" : "Lý do từ chối");
-    if (action === "reject" && !note) return;
-    setWalletActionId(transactionId);
-    setWalletError("");
-    try {
-      if (action === "approve") {
-        await approveAdminWalletWithdrawRequest(transactionId, note || undefined);
-      } else {
-        await rejectAdminWalletWithdrawRequest(transactionId, note || undefined);
-      }
-      await loadWalletReview();
-    } catch (error) {
-      setWalletError(error instanceof Error ? error.message : "Không thể cập nhật yêu cầu rút tiền.");
-    } finally {
-      setWalletActionId(null);
-    }
-  };
+  const monthlyData = monthly.map((item) => ({
+    month: item.period,
+    commission: Number(((item.commission || 0) / 1000000).toFixed(2)),
+    subscription: Number(((item.subscriptionRevenue || 0) / 1000000).toFixed(2)),
+    booking: Number(((item.bookingRevenue || 0) / 1000000).toFixed(2)),
+    total: Number(((item.revenue || 0) / 1000000).toFixed(2)),
+  }));
 
-  const monthlyData = monthly.map((m) => ({
-    month: m.period,
-    commission: Number(((m.commission || 0) / 1000000).toFixed(2)),
-    subscription: Number(((m.subscriptionRevenue || 0) / 1000000).toFixed(2)),
-    booking: Number(((m.bookingRevenue || 0) / 1000000).toFixed(2)),
-    total: Number(((m.revenue || 0) / 1000000).toFixed(2)),
+  const sourceData = revenueBySource.map((item) => ({
+    name: item.source.replaceAll("_", " "),
+    value: Number(((item.revenue || 0) / 1000000).toFixed(2)),
   }));
-  const sourceData = revenueBySource.map((s) => ({
-    name: s.source.replaceAll("_", " "),
-    value: Number(((s.revenue || 0) / 1000000).toFixed(2)),
-  }));
+
   const totalSource = revenueBySource.reduce((sum, item) => sum + item.revenue, 0);
-  const maxCommission = Math.max(...commissionByPlan.map((p) => p.commission), 1);
+  const maxCommission = Math.max(...commissionByPlan.map((item) => item.commission), 1);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <div>
           <div style={{ fontWeight: 800, fontSize: "1.1rem" }} className="text-gray-900">Báo cáo tài chính</div>
-          <div style={{ fontSize: "0.8rem" }} className="text-gray-400 mt-0.5">Phân tích doanh thu, hoa hồng & gói đăng ký từ API</div>
+          <div style={{ fontSize: "0.8rem" }} className="text-gray-400 mt-0.5">
+            Phân tích doanh thu, hoa hồng và gói đăng ký từ API
+          </div>
         </div>
         <button className="sm:ml-auto flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors" style={{ fontSize: "0.82rem", fontWeight: 700 }}>
           <Download className="w-3.5 h-3.5" /> Xuất PDF
@@ -147,7 +118,7 @@ export function AdminFinance() {
             <div style={{ fontWeight: 800, fontSize: "1.15rem", lineHeight: 1 }} className="text-gray-900 mb-0.5">{value}</div>
             <div style={{ fontSize: "0.72rem" }} className="text-gray-500 mb-0.5">{label}</div>
             <span className="flex items-center gap-0.5 text-emerald-600" style={{ fontSize: "0.68rem", fontWeight: 700 }}>
-              <ArrowUpRight className="w-3 h-3" />real-time
+              <ArrowUpRight className="w-3 h-3" /> real-time
             </span>
           </div>
         ))}
@@ -157,14 +128,14 @@ export function AdminFinance() {
         <div className="xl:col-span-2 bg-white rounded-2xl p-5 border border-gray-100 shadow-sm min-w-0">
           <div className="mb-5">
             <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900">Doanh thu nền tảng theo tháng</div>
-            <div style={{ fontSize: "0.78rem" }} className="text-gray-400">Tính từ wallet transactions (triệu đồng)</div>
+            <div style={{ fontSize: "0.78rem" }} className="text-gray-400">Tính từ wallet transactions, đơn vị triệu đồng</div>
           </div>
           <ResponsiveContainer width="100%" height={230}>
             <BarChart data={monthlyData} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
               <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}M`} />
-              <Tooltip formatter={(v: number, n: string) => [`${v}M đ`, n === "commission" ? "Hoa hồng" : n === "subscription" ? "Gói đăng ký" : "Học phí"]} />
+              <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={(value) => `${value}M`} />
+              <Tooltip formatter={(value: number, name: string) => [`${value}M đ`, name === "commission" ? "Hoa hồng" : name === "subscription" ? "Gói đăng ký" : "Học phí"]} />
               <Bar dataKey="commission" stackId="a" fill="#3b82f6" />
               <Bar dataKey="subscription" stackId="a" fill="#f97316" />
               <Bar dataKey="booking" stackId="a" fill="#10b981" radius={[6, 6, 0, 0]} />
@@ -178,19 +149,19 @@ export function AdminFinance() {
           <ResponsiveContainer width="100%" height={180}>
             <PieChart>
               <Pie data={sourceData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" paddingAngle={3}>
-                {sourceData.map((_, i) => <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />)}
+                {sourceData.map((_, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
               </Pie>
-              <Tooltip formatter={(v: number) => [`${v}M đ`]} />
+              <Tooltip formatter={(value: number) => [`${value}M đ`]} />
             </PieChart>
           </ResponsiveContainer>
           <div className="space-y-1.5">
-            {sourceData.map((s, i) => (
-              <div key={s.name} className="flex items-center justify-between">
+            {sourceData.map((source, index) => (
+              <div key={source.name} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
-                  <span style={{ fontSize: "0.72rem" }} className="text-gray-500">{s.name}</span>
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: COLORS[index % COLORS.length] }} />
+                  <span style={{ fontSize: "0.72rem" }} className="text-gray-500">{source.name}</span>
                 </div>
-                <span style={{ fontSize: "0.78rem", fontWeight: 700 }} className="text-gray-800">{s.value}M</span>
+                <span style={{ fontSize: "0.78rem", fontWeight: 700 }} className="text-gray-800">{source.value}M</span>
               </div>
             ))}
             <div className="border-t border-gray-100 pt-2 flex justify-between">
@@ -211,8 +182,8 @@ export function AdminFinance() {
             <AreaChart data={monthlyData} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}M`} />
-              <Tooltip formatter={(v: number) => [`${v}M đ`, "Doanh thu"]} />
+              <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={(value) => `${value}M`} />
+              <Tooltip formatter={(value: number) => [`${value}M đ`, "Doanh thu"]} />
               <Area type="monotone" dataKey="total" stroke="#3b82f6" strokeWidth={2.5} fill="#3b82f622" dot={{ fill: "#3b82f6", r: 4 }} />
             </AreaChart>
           </ResponsiveContainer>
@@ -226,17 +197,17 @@ export function AdminFinance() {
           <div className="space-y-4">
             {commissionByPlan.length === 0 ? (
               <div className="text-gray-400">Chưa có hoa hồng học phí</div>
-            ) : commissionByPlan.map((p) => (
-              <div key={p.planCode}>
+            ) : commissionByPlan.map((plan) => (
+              <div key={plan.planCode}>
                 <div className="flex items-center justify-between mb-1.5">
                   <div>
-                    <span style={{ fontWeight: 700, fontSize: "0.85rem" }} className="text-gray-800">{PLAN_LABEL[p.planCode]}</span>
-                    <span style={{ fontSize: "0.72rem" }} className="text-gray-400 ml-2">{p.transactionCount.toLocaleString("vi-VN")} GD</span>
+                    <span style={{ fontWeight: 700, fontSize: "0.85rem" }} className="text-gray-800">{PLAN_LABEL[plan.planCode]}</span>
+                    <span style={{ fontSize: "0.72rem" }} className="text-gray-400 ml-2">{plan.transactionCount.toLocaleString("vi-VN")} GD</span>
                   </div>
-                  <span style={{ fontWeight: 800, fontSize: "0.95rem" }} className={p.commission === 0 ? "text-gray-400" : "text-gray-900"}>{formatMoney(p.commission)}</span>
+                  <span style={{ fontWeight: 800, fontSize: "0.95rem" }} className={plan.commission === 0 ? "text-gray-400" : "text-gray-900"}>{formatMoney(plan.commission)}</span>
                 </div>
                 <div className="bg-gray-100 rounded-full h-2.5">
-                  <div className="h-2.5 rounded-full bg-blue-500 transition-all" style={{ width: `${(p.commission / maxCommission) * 100}%` }} />
+                  <div className="h-2.5 rounded-full bg-blue-500 transition-all" style={{ width: `${(plan.commission / maxCommission) * 100}%` }} />
                 </div>
               </div>
             ))}
@@ -253,76 +224,22 @@ export function AdminFinance() {
           <table className="w-full">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
-                {["#", "HLV", "Buổi hoàn tất", "Tổng học phí", "HLV nhận", "Platform thu"].map((h) => (
-                  <th key={h} className="px-5 py-3 text-left whitespace-nowrap" style={{ fontSize: "0.73rem", fontWeight: 700, color: "#6b7280" }}>{h}</th>
+                {["#", "HLV", "Buổi hoàn tất", "Tổng học phí", "HLV nhận", "Platform thu"].map((header) => (
+                  <th key={header} className="px-5 py-3 text-left whitespace-nowrap" style={{ fontSize: "0.73rem", fontWeight: 700, color: "#6b7280" }}>{header}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {topCoaches.length === 0 ? (
                 <tr><td colSpan={6} className="px-5 py-10 text-center text-gray-400">Chưa có dữ liệu HLV</td></tr>
-              ) : topCoaches.map((c, i) => (
-                <tr key={c.coachId} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-5 py-4">{i + 1}</td>
-                  <td className="px-5 py-4 font-semibold text-gray-900">{c.coachName}</td>
-                  <td className="px-5 py-4 font-bold">{c.completedBookings}</td>
-                  <td className="px-5 py-4 font-bold">{formatMoney(c.revenue)}</td>
-                  <td className="px-5 py-4 font-bold text-emerald-600">{formatMoney(c.payout)}</td>
-                  <td className="px-5 py-4 font-bold text-blue-600">{formatMoney(c.revenue - c.payout)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-50 flex flex-col sm:flex-row sm:items-center gap-3">
-          <div>
-            <div style={{ fontWeight: 700, fontSize: "0.95rem" }} className="text-gray-900">Duyệt yêu cầu rút tiền</div>
-            <div style={{ fontSize: "0.78rem" }} className="text-gray-400 mt-0.5">
-              Ví admin: {formatMoney(walletOverview?.wallet?.balance)} · {walletOverview?.totalTransactions || 0} giao dịch
-            </div>
-          </div>
-          <button onClick={() => void loadWalletReview()} className="sm:ml-auto rounded-xl border border-gray-200 px-3 py-2 text-gray-600 hover:bg-gray-50" style={{ fontSize: "0.78rem", fontWeight: 700 }}>
-            Tải lại
-          </button>
-        </div>
-        {walletError && <div className="mx-5 mt-4 rounded-xl border border-red-100 bg-red-50 p-3 text-red-600" style={{ fontSize: "0.8rem" }}>{walletError}</div>}
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                {["Mã", "Người rút", "Ngân hàng", "Số tiền", "Trạng thái", "Ngày tạo", "Hành động"].map((h) => (
-                  <th key={h} className="px-5 py-3 text-left whitespace-nowrap" style={{ fontSize: "0.73rem", fontWeight: 700, color: "#6b7280" }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {withdrawRequests.length === 0 ? (
-                <tr><td colSpan={7} className="px-5 py-10 text-center text-gray-400">Không có yêu cầu rút tiền đang chờ duyệt</td></tr>
-              ) : withdrawRequests.map((request) => (
-                <tr key={request.transactionId} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-5 py-4 font-mono text-gray-400">WD-{request.transactionId}</td>
-                  <td className="px-5 py-4">
-                    <div className="font-semibold text-gray-900">{request.ownerName}</div>
-                    <div className="text-gray-400" style={{ fontSize: "0.72rem" }}>{request.role}</div>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="text-gray-900" style={{ fontWeight: 700 }}>{request.bankName || request.bankCode || "-"}</div>
-                    <div className="text-gray-400" style={{ fontSize: "0.72rem" }}>{request.bankAccountHolderName || "-"} Â· {request.bankAccountNumber || "-"}</div>
-                  </td>
-                  <td className="px-5 py-4 font-bold text-emerald-600">{formatMoney(request.amount)}</td>
-                  <td className="px-5 py-4">
-                    <span className="rounded-full bg-amber-100 px-2.5 py-1 text-amber-700" style={{ fontSize: "0.7rem", fontWeight: 700 }}>{request.withdrawalStatus}</span>
-                  </td>
-                  <td className="px-5 py-4 text-gray-500" style={{ fontSize: "0.78rem" }}>{new Date(request.createdAt).toLocaleString("vi-VN")}</td>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-2">
-                      <button disabled={walletActionId === request.transactionId} onClick={() => void reviewWithdraw(request.transactionId, "approve")} className="rounded-lg bg-emerald-500 px-3 py-2 text-white hover:bg-emerald-600 disabled:opacity-60" style={{ fontSize: "0.72rem", fontWeight: 700 }}>Duyệt</button>
-                      <button disabled={walletActionId === request.transactionId} onClick={() => void reviewWithdraw(request.transactionId, "reject")} className="rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100 disabled:opacity-60" style={{ fontSize: "0.72rem", fontWeight: 700 }}>Từ chối</button>
-                    </div>
-                  </td>
+              ) : topCoaches.map((coach, index) => (
+                <tr key={coach.coachId} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-5 py-4">{index + 1}</td>
+                  <td className="px-5 py-4 font-semibold text-gray-900">{coach.coachName}</td>
+                  <td className="px-5 py-4 font-bold">{coach.completedBookings}</td>
+                  <td className="px-5 py-4 font-bold">{formatMoney(coach.revenue)}</td>
+                  <td className="px-5 py-4 font-bold text-emerald-600">{formatMoney(coach.payout)}</td>
+                  <td className="px-5 py-4 font-bold text-blue-600">{formatMoney(coach.revenue - coach.payout)}</td>
                 </tr>
               ))}
             </tbody>

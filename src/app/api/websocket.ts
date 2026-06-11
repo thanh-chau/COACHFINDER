@@ -2,7 +2,7 @@ import { Client, IMessage } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import { getAccessToken, getAuthSession } from "../utils/authSession";
 import { useEffect, useState } from "react";
-import type { ChatMessage as ApiChatMessage } from "../types/chat";
+import type { CallType, ChatMessage as ApiChatMessage } from "../types/chat";
 
 export interface ApiNotification {
   id: number;
@@ -14,9 +14,23 @@ export interface ApiNotification {
 }
 
 export interface VideoCallSignal {
-  type: "offer" | "answer" | "ice" | "end" | "call";
+  callId?: number;
+  conversationId?: number;
+  type:
+    | "CALL_INVITE"
+    | "CALL_ACCEPT"
+    | "CALL_REJECT"
+    | "CALL_CANCEL"
+    | "CALL_END"
+    | "OFFER"
+    | "ANSWER"
+    | "ICE"
+    | "BUSY"
+    | "TIMEOUT";
+  callType?: CallType;
   targetUsername: string;
   senderUsername?: string;
+  senderFullName?: string | null;
   payload?: any;
 }
 

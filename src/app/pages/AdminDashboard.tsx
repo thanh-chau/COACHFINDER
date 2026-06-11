@@ -20,6 +20,7 @@ import {
   Search,
   Activity,
   MessageSquareHeart,
+  WalletCards,
 } from "lucide-react";
 import { AdminOverview } from "../components/AdminOverview";
 import { AdminTransactions } from "../components/AdminTransactions";
@@ -28,6 +29,7 @@ import { AdminUsers } from "../components/AdminUsers";
 import { AdminFinance } from "../components/AdminFinance";
 import { NotificationBell } from "../components/NotificationBell";
 import { AdminWebsiteFeedback } from "../components/AdminWebsiteFeedback";
+import { AdminWalletHistory } from "../components/AdminWalletHistory";
 import { clearAuthSession, getAuthSession } from "../utils/authSession";
 import { logoutAccount } from "../api/auth";
 import { DashboardOverview, fetchAdminOverview } from "../api/admin";
@@ -68,6 +70,11 @@ const navItems = [
     id: "finance",
   },
   {
+    icon: WalletCards,
+    label: "Nạp & rút tiền",
+    id: "wallet-history",
+  },
+  {
     icon: MessageSquareHeart,
     label: "Đánh giá web",
     id: "feedback",
@@ -80,6 +87,7 @@ const ADMIN_TAB_IDS = [
   "transactions",
   "subscriptions",
   "finance",
+  "wallet-history",
   "feedback",
   "settings",
 ];
@@ -247,6 +255,10 @@ export function AdminDashboard() {
     finance: {
       title: "Báo cáo tài chính",
       sub: "Tháng 3/2026 · Tổng doanh thu: 220M đ",
+    },
+    "wallet-history": {
+      title: "Nạp & rút tiền",
+      sub: "Theo dõi lịch sử nạp/rút và duyệt yêu cầu rút tiền của người dùng",
     },
     feedback: {
       title: "Đánh giá CoachFinder",
@@ -544,6 +556,9 @@ export function AdminDashboard() {
             </div>
             <div className={activeNav === "finance" ? "block" : "hidden"}>
               {mountedTabs["finance"] && <AdminFinance />}
+            </div>
+            <div className={activeNav === "wallet-history" ? "block" : "hidden"}>
+              {mountedTabs["wallet-history"] && <AdminWalletHistory />}
             </div>
             <div className={activeNav === "feedback" ? "block" : "hidden"}>
               {mountedTabs["feedback"] && <AdminWebsiteFeedback />}

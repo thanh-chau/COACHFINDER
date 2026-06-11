@@ -20,16 +20,19 @@ import {
   AUTH_SESSION_EXPIRED_EVENT,
   clearAuthSession,
   getAccessToken,
+  getAuthSession,
   getDashboardPath,
   updateAuthSession,
 } from "./utils/authSession";
 import { Toaster, toast } from "sonner";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import {
+  chatWebSocketService,
   useNotificationWebSocket,
   useVideoCallWebSocket,
 } from "./api/websocket";
 import { VideoCallModal } from "./components/VideoCallModal";
+import type { CallType } from "./types/chat";
 
 const GOOGLE_CLIENT_ID =
   "798255039135-0o8kh6bhfq33qkjehg87d8q7uav28tf7.apps.googleusercontent.com";
@@ -172,18 +175,69 @@ function AppRoutes() {
   });
 
   const [incomingCall, setIncomingCall] = useState<{
+    callId: number;
     callerUsername: string;
+    callerFullName?: string | null;
+    conversationId: number;
+    callType: CallType;
   } | null>(null);
   const [activeCall, setActiveCall] = useState<{
     targetUsername: string;
     isCaller: boolean;
+    conversationId: number;
+    callType: CallType;
+    callId?: number;
   } | null>(null);
 
+  useEffect(() => {
+    function handleStartCall(event: Event) {
+      const detail = (event as CustomEvent<{
+        targetUsername: string;
+        conversationId: number;
+        callType: CallType;
+      }>).detail;
+      if (!detail?.targetUsername || !detail.conversationId || !detail.callType) return;
+      if (activeCall || incomingCall) {
+        toast.error("Ban dang co cuoc goi khac");
+        return;
+      }
+      setActiveCall({
+        targetUsername: detail.targetUsername,
+        conversationId: detail.conversationId,
+        callType: detail.callType,
+        isCaller: true,
+      });
+    }
+
+    window.addEventListener("coachfinder:start-call", handleStartCall);
+    return () => window.removeEventListener("coachfinder:start-call", handleStartCall);
+  }, [activeCall, incomingCall]);
+
   useVideoCallWebSocket((signal) => {
-    if (signal.type === "call" && signal.senderUsername) {
-      // Show incoming call
-      setIncomingCall({ callerUsername: signal.senderUsername });
-    } else if (signal.type === "end") {
+    const currentUsername = getAuthSession()?.username;
+    if (signal.type === "CALL_INVITE" && signal.senderUsername && signal.callId && signal.conversationId && signal.callType) {
+      if (signal.senderUsername === currentUsername) {
+        setActiveCall(current => current ? { ...current, callId: signal.callId } : current);
+        return;
+      }
+      if (activeCall) {
+        chatWebSocketService.sendCallSignal({
+          type: "BUSY",
+          callId: signal.callId,
+          conversationId: signal.conversationId,
+          callType: signal.callType,
+          targetUsername: signal.senderUsername!,
+        });
+        return;
+      }
+      setIncomingCall({
+        callId: signal.callId,
+        callerUsername: signal.senderUsername,
+        callerFullName: signal.senderFullName,
+        conversationId: signal.conversationId,
+        callType: signal.callType,
+      });
+    } else if (["CALL_END", "CALL_CANCEL", "TIMEOUT", "BUSY", "CALL_REJECT"].includes(signal.type)) {
       setIncomingCall(null);
       setActiveCall(null);
     }
@@ -191,8 +245,18 @@ function AppRoutes() {
 
   const acceptCall = () => {
     if (incomingCall) {
+      chatWebSocketService.sendCallSignal({
+        type: "CALL_ACCEPT",
+        callId: incomingCall.callId,
+        conversationId: incomingCall.conversationId,
+        callType: incomingCall.callType,
+        targetUsername: incomingCall.callerUsername,
+      });
       setActiveCall({
         targetUsername: incomingCall.callerUsername,
+        conversationId: incomingCall.conversationId,
+        callType: incomingCall.callType,
+        callId: incomingCall.callId,
         isCaller: false,
       });
       setIncomingCall(null);
@@ -202,11 +266,12 @@ function AppRoutes() {
   const rejectCall = () => {
     if (incomingCall) {
       // send end signal
-      import("./api/websocket").then(({ chatWebSocketService }) => {
-        chatWebSocketService.sendCallSignal({
-          type: "end",
-          targetUsername: incomingCall.callerUsername,
-        });
+      chatWebSocketService.sendCallSignal({
+        type: "CALL_REJECT",
+        callId: incomingCall.callId,
+        conversationId: incomingCall.conversationId,
+        callType: incomingCall.callType,
+        targetUsername: incomingCall.callerUsername,
       });
       setIncomingCall(null);
     }
@@ -244,6 +309,9 @@ function AppRoutes() {
       {activeCall && (
         <VideoCallModal
           targetUsername={activeCall.targetUsername}
+          conversationId={activeCall.conversationId}
+          callType={activeCall.callType}
+          callId={activeCall.callId}
           isCaller={activeCall.isCaller}
           onClose={() => setActiveCall(null)}
         />

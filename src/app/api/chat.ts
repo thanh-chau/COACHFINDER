@@ -1,4 +1,4 @@
-import type { ChatMessage, ChatTarget, Conversation, PageResponse } from "../types/chat";
+import type { CallSession, ChatMessage, ChatTarget, Conversation, PageResponse } from "../types/chat";
 import { apiRequest } from "./client";
 
 export function getConversations() {
@@ -21,6 +21,12 @@ export function createConversation(target: number | Pick<ChatTarget, "participan
 export function getConversationMessages(conversationId: number, page = 0, size = 20) {
   return apiRequest<PageResponse<ChatMessage>>(
     `/api/v1/chat/conversations/${conversationId}/messages?page=${page}&size=${size}`,
+  );
+}
+
+export function getConversationCalls(conversationId: number, page = 0, size = 10) {
+  return apiRequest<PageResponse<CallSession>>(
+    `/api/v1/chat/conversations/${conversationId}/calls?page=${page}&size=${size}`,
   );
 }
 

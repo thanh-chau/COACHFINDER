@@ -358,11 +358,18 @@ export interface AdminWalletOverview {
 
 export interface AdminWalletWithdrawRequest {
   transactionId: number;
+  walletId?: number;
   userId: number;
   ownerName: string;
   role: string;
+  type?: string;
   amount: number;
+  balanceBefore?: number;
+  balanceAfter?: number;
   currency: string;
+  description?: string | null;
+  referenceType?: string | null;
+  referenceId?: string | null;
   bankCode: string | null;
   bankName: string | null;
   bankAccountNumber: string | null;
@@ -375,8 +382,62 @@ export interface AdminWalletWithdrawRequest {
   createdAt: string;
 }
 
+export interface AdminWalletHistoryItem {
+  id: string;
+  source: string;
+  userId: number;
+  username: string | null;
+  ownerName: string | null;
+  email: string | null;
+  role: "TRAINEES" | "COACHES" | "ADMIN";
+  type: "TOP_UP" | "WITHDRAWAL";
+  amount: number;
+  balanceBefore: number | null;
+  balanceAfter: number | null;
+  currency: string;
+  status: "PENDING" | "PROCESSING" | "SUCCESS" | "FAILED" | "CANCELLED" | "EXPIRED" | "REJECTED";
+  description: string | null;
+  referenceType: string | null;
+  referenceId: string | null;
+  bankCode: string | null;
+  bankName: string | null;
+  bankAccountNumber: string | null;
+  bankAccountHolderName: string | null;
+  bankBranch: string | null;
+  adminNote: string | null;
+  processedByUserId: number | null;
+  processedByName: string | null;
+  processedAt: string | null;
+  createdAt: string;
+}
+
 export async function fetchAdminWalletOverview() {
   return apiRequest<AdminWalletOverview>("/api/v1/admin/wallets/overview");
+}
+
+export async function fetchAdminWalletTransactions(params: {
+  keyword?: string;
+  role?: string;
+  type?: string;
+  status?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  size?: number;
+}) {
+  const query = new URLSearchParams();
+  if (params.keyword) query.append("keyword", params.keyword);
+  if (params.role && params.role !== "all") query.append("role", params.role);
+  if (params.type && params.type !== "all") query.append("type", params.type);
+  if (params.status && params.status !== "all") query.append("status", params.status);
+  if (params.from) query.append("from", params.from);
+  if (params.to) query.append("to", params.to);
+  if (params.page !== undefined) query.append("page", params.page.toString());
+  if (params.size !== undefined) query.append("size", params.size.toString());
+
+  return apiRequest<PaginatedResponse<AdminWalletHistoryItem>>(
+    `/api/v1/admin/wallets/transactions?${query.toString()}`,
+  );
 }
 
 export async function fetchAdminWalletWithdrawRequests(status?: string) {
