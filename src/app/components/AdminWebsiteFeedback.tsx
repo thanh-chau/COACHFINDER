@@ -11,7 +11,6 @@ import type {
   FeedbackRole,
   WebsiteFeedback,
 } from "../types/feedback";
-import { WebsiteFeedbackForm } from "./WebsiteFeedbackForm";
 
 const roleLabel: Record<FeedbackRole, string> = {
   TRAINEES: "Học viên",
@@ -31,7 +30,6 @@ export function AdminWebsiteFeedback() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -63,15 +61,10 @@ export function AdminWebsiteFeedback() {
         setTotalElements(0);
       })
       .finally(() => setLoading(false));
-  }, [debouncedKeyword, rating, role, from, to, page, refreshKey]);
+  }, [debouncedKeyword, rating, role, from, to, page]);
 
   return (
     <div className="space-y-5">
-      <WebsiteFeedbackForm
-        compact
-        onSaved={() => setRefreshKey((value) => value + 1)}
-      />
-
       <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
         <div className="border-b border-gray-100 p-5">
           <div className="mb-4">

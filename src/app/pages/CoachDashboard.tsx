@@ -7,7 +7,6 @@ import { CoachMessages } from "../components/CoachMessages";
 import { CoachSubscription } from "../components/CoachSubscription";
 import { CoachSettings } from "../components/CoachSettings";
 import { NotificationBell } from "../components/NotificationBell";
-import { WebsiteFeedbackForm } from "../components/WebsiteFeedbackForm";
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import {
@@ -15,7 +14,7 @@ import {
   BarChart2, MessageCircle, Settings, LogOut, Bell,
   ChevronRight, Star, TrendingUp, Plus, Upload,
   Menu, X, Dumbbell, CheckCircle2, Clock, Play,
-  Award, Zap, Target, ArrowUpRight, CreditCard, MessageSquareHeart
+  Award, Zap, Target, ArrowUpRight, CreditCard
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -60,7 +59,6 @@ const navItems = [
   { icon: BarChart2, label: "Analytics", id: "analytics" },
   { icon: MessageCircle, label: "Tin nhắn", id: "msg" },
   { icon: CreditCard, label: "Gói đăng ký", id: "subscription" },
-  { icon: MessageSquareHeart, label: "Đánh giá web", id: "feedback" },
 ];
 
 const COACH_DASHBOARD_PATH = "/dashboard/coach";
@@ -464,8 +462,6 @@ export function CoachDashboard() {
             {/* ── SETTINGS ── */}
             <div className={activeNav === "settings" ? "block h-full" : "hidden"}><CoachSettings /></div>
 
-            <div className={activeNav === "feedback" ? "block h-full" : "hidden"}><WebsiteFeedbackForm /></div>
-
             {/* ── STATS ─────────────────────────────────── */}
             {activeNav === "overview" && (
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -489,15 +485,6 @@ export function CoachDashboard() {
                     <div style={{ fontSize: "0.72rem" }} className="text-gray-400">{sub}</div>
                   </div>
                 ))}
-              </div>
-            )}
-
-            {/* ── PLACEHOLDER for unbuilt views ── */}
-            {!["overview", "students", "schedule", "studio", "income", "analytics", "msg", "subscription", "settings"].includes(activeNav) && (
-              <div className="flex flex-col items-center justify-center h-64 bg-white rounded-2xl border border-gray-100 shadow-sm">
-                <div style={{ fontSize: "2.5rem" }} className="mb-3">🚧</div>
-                <div style={{ fontWeight: 600, fontSize: "0.95rem" }} className="text-gray-600">Đang phát triển</div>
-                <p style={{ fontSize: "0.82rem" }} className="text-gray-400 mt-1">Tính năng này sẽ sớm ra mắt</p>
               </div>
             )}
 
