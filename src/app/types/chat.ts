@@ -30,7 +30,7 @@ export type CallType = "audio" | "video";
 export function normalizeCallType(value: unknown): CallType {
   const type = String(value || "").toLowerCase();
 
-  if (type === "video" || type === "video-call") {
+  if (type === "video" || type === "video-call" || type === "videocall") {
     return "video";
   }
 

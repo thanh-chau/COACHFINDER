@@ -11,13 +11,14 @@ interface ApiRequestOptions extends RequestInit {
   authenticated?: boolean;
   acceptDataWhenSuccessFalse?: boolean;
   allowEmptyData?: boolean;
+  noCache?: boolean;
 }
 
 const API_BASE_URLS = (
   import.meta.env.VITE_API_BASE_URLS
     ? String(import.meta.env.VITE_API_BASE_URLS).split(",").map(value => value.trim()).filter(Boolean)
     : [
-        import.meta.env.VITE_API_BASE_URL || "https://be.minhthien.io.vn",
+        import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "https://be.minhthien.io.vn",
         "https://www.be.minhthien.io.vn",
       ]
 );
@@ -56,12 +57,13 @@ export async function apiRequest<T>(
     authenticated = true,
     acceptDataWhenSuccessFalse = false,
     allowEmptyData = false,
+    noCache = false,
     headers,
     ...requestOptions
   } = options;
   const token = authenticated ? getAccessToken() : undefined;
   const requestHeaders = new Headers(headers);
-  const cacheEnabled = shouldUseApiCache(requestOptions);
+  const cacheEnabled = !noCache && shouldUseApiCache(requestOptions);
 
   if (!(requestOptions.body instanceof FormData)) {
     requestHeaders.set("Content-Type", "application/json");
@@ -74,6 +76,7 @@ export async function apiRequest<T>(
   try {
     response = await fetchFromApiBaseUrls(path, {
       ...requestOptions,
+      cache: noCache ? "no-store" : requestOptions.cache,
       headers: requestHeaders,
     });
   } catch {
@@ -129,10 +132,10 @@ export async function rawApiRequest<T>(
   path: string,
   options: ApiRequestOptions = {},
 ) {
-  const { authenticated = true, headers, ...requestOptions } = options;
+  const { authenticated = true, noCache = false, headers, ...requestOptions } = options;
   const token = authenticated ? getAccessToken() : undefined;
   const requestHeaders = new Headers(headers);
-  const cacheEnabled = shouldUseApiCache(requestOptions);
+  const cacheEnabled = !noCache && shouldUseApiCache(requestOptions);
 
   if (!(requestOptions.body instanceof FormData)) {
     requestHeaders.set("Content-Type", "application/json");
@@ -145,6 +148,7 @@ export async function rawApiRequest<T>(
   try {
     response = await fetchFromApiBaseUrls(path, {
       ...requestOptions,
+      cache: noCache ? "no-store" : requestOptions.cache,
       headers: requestHeaders,
     });
   } catch {

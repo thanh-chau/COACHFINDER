@@ -50,6 +50,8 @@ export function CallModal({
   const connectedRef = useRef(false);
   const closingRef = useRef(false);
   const cleanedUpRef = useRef(false);
+  const inviteSentRef = useRef(false);
+  const readySentRef = useRef(false);
   const sessionCallIdRef = useRef<number | undefined>(callId);
   const ringingTimeoutRef = useRef<number | null>(null);
   const connectionTimeoutRef = useRef<number | null>(null);
@@ -188,19 +190,28 @@ export function CallModal({
   };
 
   const loadIceConfig = async () => {
+    console.info("[CALL] Fetching ICE configuration");
     try {
       const iceConfig = await getWebRtcIceConfig();
-      console.info("[WebRTC] ICE config loaded", {
+      console.info("[CALL] ICE configuration loaded", {
         turnConfigured: iceConfig.turnConfigured,
         iceTransportPolicy: iceConfig.iceTransportPolicy,
-        iceServerCount: iceConfig.iceServers.length,
+        serverCount: iceConfig.iceServers.length,
       });
+      if (iceConfig.iceTransportPolicy === "relay" && !iceConfig.turnConfigured) {
+        throw new Error("Backend yeu cau relay nhung TURN chua duoc cau hinh");
+      }
       if (!iceConfig.turnConfigured) {
-        console.warn("[WebRTC] TURN is not configured; calls across networks may fail");
+        console.warn("[CALL] TURN is not configured; calls across networks may fail");
       }
       return iceConfig;
     } catch (error) {
-      console.warn("[WebRTC] Failed to load ICE config; using STUN-only fallback", error);
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes("Phi") || message.toLowerCase().includes("unauthorized") || message.includes("JWT")) {
+        console.error("[CALL] ICE API unauthorized", error);
+        throw error;
+      }
+      console.warn("[CALL] Failed to load ICE config; using STUN-only fallback", error);
       return FALLBACK_ICE_CONFIG;
     }
   };
@@ -215,11 +226,12 @@ export function CallModal({
     onClose();
   };
 
-  const ensureLocalMedia = async (pc: RTCPeerConnection) => {
+  const ensureLocalMedia = async () => {
     let stream = localStreamRef.current;
 
     if (!stream) {
       setStatus("Dang lay quyen thiet bi...");
+      console.info("[CALL] Call type", normalizedCallType);
       stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: isVideoCall,
@@ -227,10 +239,28 @@ export function CallModal({
       localStreamRef.current = stream;
       if (localVideoRef.current && isVideoCall) {
         localVideoRef.current.srcObject = stream;
+        localVideoRef.current.muted = true;
+        localVideoRef.current.autoplay = true;
+        localVideoRef.current.playsInline = true;
+        void localVideoRef.current.play().catch(error => {
+          console.warn("[CALL] Local video autoplay blocked", error);
+        });
       }
+      console.info("[CALL] Local media ready");
       setStatus("Dang chuan bi ket noi...");
     }
 
+    console.info("[CALL] Local tracks", stream.getTracks().map(track => ({
+      kind: track.kind,
+      enabled: track.enabled,
+      muted: track.muted,
+      readyState: track.readyState,
+    })));
+
+    return stream;
+  };
+
+  const addLocalTracks = (pc: RTCPeerConnection, stream: MediaStream) => {
     for (const track of stream.getTracks()) {
       const alreadyAdded = pc.getSenders().some(sender => sender.track?.id === track.id);
       if (!alreadyAdded) {
@@ -238,17 +268,8 @@ export function CallModal({
       }
     }
     localTracksAddedRef.current = true;
-
-    console.info("[WebRTC] Local tracks:", stream.getTracks().map(track => ({
-      kind: track.kind,
-      enabled: track.enabled,
-      muted: track.muted,
-      readyState: track.readyState,
-    })));
-
+    console.info("[CALL] Local tracks added");
     setStatus("Dang ket noi...");
-
-    return stream;
   };
 
   const startConnectionTimeout = () => {
@@ -289,18 +310,23 @@ export function CallModal({
   const setupPeerConnectionHandlers = (pc: RTCPeerConnection) => {
     pc.ontrack = (event) => {
       const remoteStream = remoteStreamRef.current;
+      console.info("[CALL] Remote track received", {
+        kind: event.track.kind,
+        readyState: event.track.readyState,
+        streamCount: event.streams?.length || 0,
+      });
       if (!remoteStream.getTracks().some(track => track.id === event.track.id)) {
         remoteStream.addTrack(event.track);
       }
 
-      event.track.onmute = () => console.warn("[WebRTC] Remote track muted:", event.track.kind);
+      event.track.onmute = () => console.warn("[CALL] Remote track muted:", event.track.kind);
       event.track.onunmute = () => {
-        console.info("[WebRTC] Remote track unmuted:", event.track.kind);
+        console.info("[CALL] Remote track unmuted:", event.track.kind);
         void attachRemoteStream(remoteStreamRef.current);
       };
-      event.track.onended = () => console.warn("[WebRTC] Remote track ended:", event.track.kind);
+      event.track.onended = () => console.warn("[CALL] Remote track ended:", event.track.kind);
 
-      console.info("[WebRTC] Remote tracks:", remoteStream.getTracks().map(track => ({
+      console.info("[CALL] Remote tracks", remoteStream.getTracks().map(track => ({
         kind: track.kind,
         muted: track.muted,
         readyState: track.readyState,
@@ -310,12 +336,23 @@ export function CallModal({
     };
 
     pc.onicecandidate = (event) => {
-      if (!event.candidate) return;
-      const candidate = event.candidate.toJSON();
-      if (event.candidate.candidate.includes(" typ relay ")) {
-        console.info("[WebRTC] TURN relay candidate discovered");
+      if (!event.candidate) {
+        console.info("[CALL] ICE gathering completed");
+        return;
       }
+      const candidate = event.candidate.toJSON();
+      const candidateText = event.candidate.candidate || "";
+      const candidateType = candidateText.includes(" typ relay ")
+        ? "relay"
+        : candidateText.includes(" typ srflx ")
+          ? "srflx"
+          : candidateText.includes(" typ host ")
+            ? "host"
+            : "unknown";
+      console.info("[CALL] ICE candidate generated", { type: candidateType });
+      if (candidateType === "relay") console.info("[CALL] TURN relay candidate discovered");
       sendSignal("ICE", candidate);
+      console.info("[CALL] ICE candidate sent");
     };
 
     pc.onicecandidateerror = (event) => {
@@ -326,7 +363,7 @@ export function CallModal({
     };
 
     pc.onconnectionstatechange = () => {
-      console.info("[WebRTC] connectionState:", pc.connectionState);
+      console.info("[CALL] connectionState", pc.connectionState);
       if (pc.connectionState === "connected") {
         markConnected();
       } else if (pc.connectionState === "failed") {
@@ -340,7 +377,7 @@ export function CallModal({
     };
 
     pc.oniceconnectionstatechange = () => {
-      console.info("[WebRTC] iceConnectionState:", pc.iceConnectionState);
+      console.info("[CALL] iceConnectionState", pc.iceConnectionState);
       if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
         markConnected();
       } else if (pc.iceConnectionState === "failed") {
@@ -354,11 +391,11 @@ export function CallModal({
     };
 
     pc.onicegatheringstatechange = () => {
-      console.info("[WebRTC] iceGatheringState:", pc.iceGatheringState);
+      console.info("[CALL] iceGatheringState", pc.iceGatheringState);
     };
 
     pc.onsignalingstatechange = () => {
-      console.info("[WebRTC] signalingState:", pc.signalingState);
+      console.info("[CALL] signalingState", pc.signalingState);
     };
   };
 
@@ -369,6 +406,7 @@ export function CallModal({
       iceTransportPolicy: iceConfig.iceTransportPolicy ?? "all",
     });
     setupPeerConnectionHandlers(pc);
+    console.info("[CALL] Peer connection created");
     return pc;
   };
 
@@ -392,15 +430,18 @@ export function CallModal({
 
   const createAndSendOffer = async () => {
     try {
+      const stream = await ensureLocalMedia();
       const pc = await getOrCreatePeerConnection();
       if (!pc) return;
-      await ensureLocalMedia(pc);
+      addLocalTracks(pc, stream);
       setStatus("Dang tao loi moi ket noi...");
       const offer = await pc.createOffer();
+      console.info("[CALL] Offer created");
       await pc.setLocalDescription(offer);
       startConnectionTimeout();
       setStatus("Dang cho ket noi WebRTC...");
       sendSignal("OFFER", pc.localDescription ?? offer);
+      console.info("[CALL] Offer sent");
     } catch (error) {
       console.error("[WebRTC] Failed to create/send offer", error);
       setStatus("Khong the tao ket noi cuoc goi");
@@ -410,18 +451,23 @@ export function CallModal({
 
   const acceptOfferAndSendAnswer = async (offer: RTCSessionDescriptionInit) => {
     try {
+      const stream = await ensureLocalMedia();
       const pc = await getOrCreatePeerConnection();
       if (!pc) return;
       setStatus("Dang nhan loi moi ket noi...");
+      console.info("[CALL] Offer received");
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      console.info("[CALL] Remote description set");
       await flushPendingIceCandidates(pc);
-      await ensureLocalMedia(pc);
+      addLocalTracks(pc, stream);
       setStatus("Dang tao phan hoi ket noi...");
       const answer = await pc.createAnswer();
+      console.info("[CALL] Answer created");
       await pc.setLocalDescription(answer);
       startConnectionTimeout();
       setStatus("Dang cho ket noi WebRTC...");
       sendSignal("ANSWER", pc.localDescription ?? answer);
+      console.info("[CALL] Answer sent");
     } catch (error) {
       console.error("[WebRTC] Failed to accept offer/send answer", error);
       setStatus("Khong the tra loi cuoc goi");
@@ -429,19 +475,44 @@ export function CallModal({
     }
   };
 
+  const prepareCallResources = async () => {
+    const stream = await ensureLocalMedia();
+    const pc = await getOrCreatePeerConnection();
+    if (!pc) return false;
+    addLocalTracks(pc, stream);
+    return true;
+  };
+
   useEffect(() => {
+    let cancelled = false;
+
     if (isCaller) {
       setStatus("Dang goi...");
-      chatWebSocketService.sendCallSignal({
-        type: "CALL_INVITE",
-        conversationId,
-        callType: normalizedCallType,
-        targetUsername,
-      });
-      return;
+      void prepareCallResources()
+        .then((ready) => {
+          if (!ready || cancelled || inviteSentRef.current) return;
+          inviteSentRef.current = true;
+          chatWebSocketService.sendCallSignal({
+            type: "CALL_INVITE",
+            conversationId,
+            callType: normalizedCallType,
+            targetUsername,
+          });
+          console.info("[CALL] Call initiate sent");
+        })
+        .catch((error) => {
+          console.error("[CALL] Failed to prepare caller resources", error);
+          setStatus("Khong the khoi tao cuoc goi");
+        });
+      return () => {
+        cancelled = true;
+      };
     }
 
     setStatus("Dang cho ket noi...");
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -477,6 +548,7 @@ export function CallModal({
     if (!signalMatchesCall) return;
 
     if (signal.type === "ICE" && signal.payload) {
+      console.info("[CALL] ICE candidate received");
       const candidate = signal.payload as RTCIceCandidateInit;
       const key = JSON.stringify(candidate);
       const pc = peerConnectionRef.current;
@@ -509,6 +581,7 @@ export function CallModal({
     }
 
     if (signal.type === "CALL_ACCEPT" && isCaller) {
+      console.info("[CALL] Call accepted");
       if (signal.callId) updateSessionCallId(signal.callId);
       acceptedRef.current = true;
       clearRingingTimeout();
@@ -526,9 +599,11 @@ export function CallModal({
     }
 
     if (signal.type === "ANSWER" && isCaller) {
+      console.info("[CALL] Answer received");
       const pc = peerConnectionRef.current;
       if (pc) {
         await pc.setRemoteDescription(new RTCSessionDescription(signal.payload as RTCSessionDescriptionInit));
+        console.info("[CALL] Remote description set");
         await flushPendingIceCandidates(pc);
       }
       return;
@@ -543,7 +618,22 @@ export function CallModal({
   });
 
   useEffect(() => {
-    onReady?.();
+    if (!onReady || readySentRef.current) return;
+    let cancelled = false;
+    void prepareCallResources()
+      .then((ready) => {
+        if (!ready || cancelled || readySentRef.current) return;
+        readySentRef.current = true;
+        console.info("[CALL] Receiver ready; sending accept");
+        onReady();
+      })
+      .catch((error) => {
+        console.error("[CALL] Failed to prepare receiver resources", error);
+        setStatus("Khong the san sang nhan cuoc goi");
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [onReady]);
 
   const handleEndCall = () => {
