@@ -1,7 +1,7 @@
 import { Client, IMessage } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import { getAccessToken, getAuthSession } from "../utils/authSession";
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import type { CallType, ChatMessage as ApiChatMessage } from "../types/chat";
 
 export interface ApiNotification {
@@ -31,7 +31,7 @@ export interface VideoCallSignal {
   targetUsername: string;
   senderUsername?: string;
   senderFullName?: string | null;
-  payload?: any;
+  payload?: RTCSessionDescriptionInit | RTCIceCandidateInit;
 }
 
 const API_BASE_URLS = (
@@ -42,6 +42,8 @@ const API_BASE_URLS = (
         "https://www.be.minhthien.io.vn",
       ]
 );
+
+const WS_URL = import.meta.env.VITE_WS_URL || `${API_BASE_URLS[0]}/ws/chat`;
 
 class ChatWebSocketService {
   private client: Client | null = null;
@@ -58,7 +60,7 @@ class ChatWebSocketService {
     if (!token) return;
 
     this.client = new Client({
-      webSocketFactory: () => new SockJS(`${API_BASE_URLS[0]}/ws/chat`),
+      webSocketFactory: () => new SockJS(WS_URL),
       connectHeaders: {
         Authorization: `Bearer ${token}`
       },
@@ -207,22 +209,31 @@ class ChatWebSocketService {
 export const chatWebSocketService = new ChatWebSocketService();
 
 export function useChatWebSocket(onMessage: (message: ApiChatMessage) => void) {
+  const callbackRef = useRef(onMessage);
+  callbackRef.current = onMessage;
+
   useEffect(() => {
-    const unsubscribe = chatWebSocketService.subscribe(onMessage);
+    const unsubscribe = chatWebSocketService.subscribe(message => callbackRef.current(message));
     return () => unsubscribe();
-  }, [onMessage]);
+  }, []);
 }
 
 export function useNotificationWebSocket(onNotif: (notif: ApiNotification) => void) {
+  const callbackRef = useRef(onNotif);
+  callbackRef.current = onNotif;
+
   useEffect(() => {
-    const unsubscribe = chatWebSocketService.subscribeNotif(onNotif);
+    const unsubscribe = chatWebSocketService.subscribeNotif(notif => callbackRef.current(notif));
     return () => unsubscribe();
-  }, [onNotif]);
+  }, []);
 }
 
 export function useVideoCallWebSocket(onSignal: (signal: VideoCallSignal) => void) {
+  const callbackRef = useRef(onSignal);
+  callbackRef.current = onSignal;
+
   useEffect(() => {
-    const unsubscribe = chatWebSocketService.subscribeCall(onSignal);
+    const unsubscribe = chatWebSocketService.subscribeCall(signal => callbackRef.current(signal));
     return () => unsubscribe();
-  }, [onSignal]);
+  }, []);
 }

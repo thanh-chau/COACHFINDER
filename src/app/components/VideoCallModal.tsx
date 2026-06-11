@@ -3,6 +3,7 @@ import { Mic, MicOff, PhoneOff, UserRound, Video, VideoOff } from "lucide-react"
 import { chatWebSocketService, useVideoCallWebSocket } from "../api/websocket";
 import type { CallType } from "../types/chat";
 import { getAuthSession } from "../utils/authSession";
+import { getWebRtcIceConfig, type WebRtcIceConfig } from "../api/webrtc";
 
 interface CallModalProps {
   targetUsername: string;
@@ -13,17 +14,15 @@ interface CallModalProps {
   onClose: () => void;
 }
 
-function getIceServers(): RTCIceServer[] {
-  const fallback = [{ urls: "stun:stun.l.google.com:19302" }];
-  const raw = import.meta.env.VITE_WEBRTC_ICE_SERVERS;
-  if (!raw) return fallback;
+const FALLBACK_ICE_CONFIG: WebRtcIceConfig = {
+  iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+  iceTransportPolicy: "all",
+  turnConfigured: false,
+  expiresAt: 0,
+};
 
-  try {
-    const parsed = JSON.parse(raw) as RTCIceServer[];
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : fallback;
-  } catch {
-    return fallback;
-  }
+function isDevelopment() {
+  return import.meta.env.DEV;
 }
 
 export function CallModal({
@@ -39,10 +38,12 @@ export function CallModal({
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
   const peerConnection = useRef<RTCPeerConnection | null>(null);
   const localStream = useRef<MediaStream | null>(null);
+  const remoteStream = useRef<MediaStream | null>(null);
   const pendingIceCandidates = useRef<RTCIceCandidateInit[]>([]);
   const connectedRef = useRef(false);
   const closingRef = useRef(false);
   const sessionCallIdRef = useRef<number | undefined>(callId);
+  const timeoutRef = useRef<number | undefined>();
   const [sessionCallId, setSessionCallId] = useState<number | undefined>(callId);
   const [status, setStatus] = useState(isCaller ? "Dang goi..." : "Dang ket noi...");
   const [micEnabled, setMicEnabled] = useState(true);
@@ -53,7 +54,11 @@ export function CallModal({
     sessionCallIdRef.current = sessionCallId;
   }, [sessionCallId]);
 
-  const sendSignal = (type: Parameters<typeof chatWebSocketService.sendCallSignal>[0]["type"], payload?: any) => {
+  const sendSignal = (
+    type: Parameters<typeof chatWebSocketService.sendCallSignal>[0]["type"],
+    payload?: RTCSessionDescriptionInit | RTCIceCandidateInit,
+  ) => {
+    if (closingRef.current && ["OFFER", "ANSWER", "ICE"].includes(type)) return;
     chatWebSocketService.sendCallSignal({
       type,
       callId: sessionCallIdRef.current,
@@ -65,22 +70,51 @@ export function CallModal({
   };
 
   const cleanup = () => {
+    if (timeoutRef.current) {
+      window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = undefined;
+    }
     if (localStream.current) {
       localStream.current.getTracks().forEach(track => track.stop());
       localStream.current = null;
+    }
+    remoteStream.current = null;
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null;
+    }
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.srcObject = null;
     }
     if (peerConnection.current) {
       peerConnection.current.close();
       peerConnection.current = null;
     }
     pendingIceCandidates.current = [];
+    connectedRef.current = false;
   };
 
   const flushPendingIceCandidates = async (pc: RTCPeerConnection) => {
     const candidates = pendingIceCandidates.current;
     pendingIceCandidates.current = [];
     for (const candidate of candidates) {
-      await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (error) {
+        console.warn("[WebRTC] Unable to add queued ICE candidate", error);
+      }
+    }
+  };
+
+  const loadIceConfig = async () => {
+    try {
+      const iceConfig = await getWebRtcIceConfig();
+      if (!iceConfig.turnConfigured) {
+        console.warn("[WebRTC] TURN is not configured; calls across networks may fail");
+      }
+      return iceConfig;
+    } catch (error) {
+      console.warn("[WebRTC] Failed to load ICE config; using STUN-only fallback", error);
+      return FALLBACK_ICE_CONFIG;
     }
   };
 
@@ -108,13 +142,18 @@ export function CallModal({
         localVideoRef.current.srcObject = stream;
       }
 
-      const pc = new RTCPeerConnection({ iceServers: getIceServers() });
+      const iceConfig = await loadIceConfig();
+      const pc = new RTCPeerConnection({
+        iceServers: iceConfig.iceServers,
+        iceTransportPolicy: iceConfig.iceTransportPolicy ?? "all",
+      });
       peerConnection.current = pc;
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
       pc.ontrack = (event) => {
         connectedRef.current = true;
         setStatus("Dang trong cuoc goi");
+        remoteStream.current = event.streams[0];
         if (isVideoCall && remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = event.streams[0];
         }
@@ -125,17 +164,53 @@ export function CallModal({
 
       pc.onicecandidate = (event) => {
         if (event.candidate) {
+          if (event.candidate.candidate.includes(" typ relay ")) {
+            console.info("[WebRTC] TURN relay candidate discovered");
+          }
           sendSignal("ICE", event.candidate);
         }
       };
 
+      pc.onicecandidateerror = (event) => {
+        console.warn("[WebRTC] ICE candidate error", {
+          errorCode: event.errorCode,
+          errorText: event.errorText,
+        });
+      };
+
       pc.onconnectionstatechange = () => {
+        if (isDevelopment()) {
+          console.info("[WebRTC] connection state:", pc.connectionState);
+        }
         if (pc.connectionState === "connected") {
           connectedRef.current = true;
           setStatus("Dang trong cuoc goi");
         }
-        if (["failed", "disconnected", "closed"].includes(pc.connectionState)) {
+        if (pc.connectionState === "failed") {
+          if (!closingRef.current) {
+            setStatus("Khong the ket noi cuoc goi");
+            window.setTimeout(() => closeCall("CALL_END"), 700);
+          }
+        } else if (["disconnected", "closed"].includes(pc.connectionState)) {
           if (!closingRef.current) setStatus("Ket noi bi gian doan");
+        }
+      };
+
+      pc.oniceconnectionstatechange = () => {
+        if (isDevelopment()) {
+          console.info("[WebRTC] ICE state:", pc.iceConnectionState);
+        }
+      };
+
+      pc.onicegatheringstatechange = () => {
+        if (isDevelopment()) {
+          console.info("[WebRTC] ICE gathering state:", pc.iceGatheringState);
+        }
+      };
+
+      pc.onsignalingstatechange = () => {
+        if (isDevelopment()) {
+          console.info("[WebRTC] signaling state:", pc.signalingState);
         }
       };
 
@@ -175,13 +250,15 @@ export function CallModal({
 
   useEffect(() => {
     if (!isCaller || connectedRef.current) return;
-    const timer = window.setTimeout(() => {
+    timeoutRef.current = window.setTimeout(() => {
       if (!connectedRef.current && !closingRef.current) {
         setStatus("Cuoc goi bi nho");
         closeCall("TIMEOUT");
       }
     }, 45000);
-    return () => window.clearTimeout(timer);
+    return () => {
+      if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
+    };
   }, [isCaller]);
 
   useEffect(() => cleanup, []);
@@ -214,7 +291,7 @@ export function CallModal({
       if (signal.callId) setSessionCallId(signal.callId);
       const pc = await ensurePeerConnection(false);
       if (!pc) return;
-      await pc.setRemoteDescription(new RTCSessionDescription(signal.payload));
+      await pc.setRemoteDescription(new RTCSessionDescription(signal.payload as RTCSessionDescriptionInit));
       await flushPendingIceCandidates(pc);
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
@@ -225,7 +302,7 @@ export function CallModal({
     if (signal.type === "ANSWER" && isCaller) {
       const pc = peerConnection.current;
       if (pc) {
-        await pc.setRemoteDescription(new RTCSessionDescription(signal.payload));
+        await pc.setRemoteDescription(new RTCSessionDescription(signal.payload as RTCSessionDescriptionInit));
         await flushPendingIceCandidates(pc);
       }
       return;
@@ -235,9 +312,13 @@ export function CallModal({
       const pc = peerConnection.current;
       if (pc && signal.payload) {
         if (pc.remoteDescription) {
-          await pc.addIceCandidate(new RTCIceCandidate(signal.payload));
+          try {
+            await pc.addIceCandidate(new RTCIceCandidate(signal.payload as RTCIceCandidateInit));
+          } catch (error) {
+            console.warn("[WebRTC] Unable to add ICE candidate", error);
+          }
         } else {
-          pendingIceCandidates.current.push(signal.payload);
+          pendingIceCandidates.current.push(signal.payload as RTCIceCandidateInit);
         }
       }
       return;

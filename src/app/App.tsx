@@ -34,8 +34,7 @@ import {
 import { VideoCallModal } from "./components/VideoCallModal";
 import type { CallType } from "./types/chat";
 
-const GOOGLE_CLIENT_ID =
-  "798255039135-0o8kh6bhfq33qkjehg87d8q7uav28tf7.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
 type SessionState =
   | { status: "checking" }
@@ -245,21 +244,24 @@ function AppRoutes() {
 
   const acceptCall = () => {
     if (incomingCall) {
-      chatWebSocketService.sendCallSignal({
-        type: "CALL_ACCEPT",
-        callId: incomingCall.callId,
-        conversationId: incomingCall.conversationId,
-        callType: incomingCall.callType,
-        targetUsername: incomingCall.callerUsername,
-      });
+      const acceptedCall = incomingCall;
       setActiveCall({
-        targetUsername: incomingCall.callerUsername,
-        conversationId: incomingCall.conversationId,
-        callType: incomingCall.callType,
-        callId: incomingCall.callId,
+        targetUsername: acceptedCall.callerUsername,
+        conversationId: acceptedCall.conversationId,
+        callType: acceptedCall.callType,
+        callId: acceptedCall.callId,
         isCaller: false,
       });
       setIncomingCall(null);
+      window.setTimeout(() => {
+        chatWebSocketService.sendCallSignal({
+          type: "CALL_ACCEPT",
+          callId: acceptedCall.callId,
+          conversationId: acceptedCall.conversationId,
+          callType: acceptedCall.callType,
+          targetUsername: acceptedCall.callerUsername,
+        });
+      }, 0);
     }
   };
 
