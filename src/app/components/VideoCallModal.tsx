@@ -263,25 +263,31 @@ export function CallModal({
 
   const setupPeerConnectionHandlers = (pc: RTCPeerConnection) => {
     pc.ontrack = (event) => {
-      const remoteStream = remoteStreamRef.current;
-      if (!remoteStream.getTracks().some(track => track.id === event.track.id)) {
-        remoteStream.addTrack(event.track);
+      const stream = (event.streams && event.streams.length > 0) ? event.streams[0] : remoteStreamRef.current;
+      
+      if (stream === remoteStreamRef.current) {
+        if (!stream.getTracks().some(track => track.id === event.track.id)) {
+          stream.addTrack(event.track);
+        }
+      } else {
+        remoteStreamRef.current = stream;
       }
 
       event.track.onmute = () => console.warn("[WebRTC] Remote track muted:", event.track.kind);
       event.track.onunmute = () => {
         console.info("[WebRTC] Remote track unmuted:", event.track.kind);
-        void attachRemoteStream(remoteStream);
+        void attachRemoteStream(remoteStreamRef.current);
       };
       event.track.onended = () => console.warn("[WebRTC] Remote track ended:", event.track.kind);
 
-      console.info("[WebRTC] Remote tracks:", remoteStream.getTracks().map(track => ({
+      console.info("[WebRTC] Remote tracks:", stream.getTracks().map(track => ({
         kind: track.kind,
         muted: track.muted,
         readyState: track.readyState,
       })));
 
-      void attachRemoteStream(remoteStream);
+      void attachRemoteStream(remoteStreamRef.current);
+      markConnected();
     };
 
     pc.onicecandidate = (event) => {
