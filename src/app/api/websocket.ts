@@ -34,16 +34,21 @@ export interface VideoCallSignal {
   payload?: any;
 }
 
-const API_BASE_URLS = [
-  "https://be.minhthien.io.vn",
-  "https://www.be.minhthien.io.vn",
-];
+const API_BASE_URLS = (
+  import.meta.env.VITE_API_BASE_URLS
+    ? String(import.meta.env.VITE_API_BASE_URLS).split(",").map(value => value.trim()).filter(Boolean)
+    : [
+        import.meta.env.VITE_API_BASE_URL || "https://be.minhthien.io.vn",
+        "https://www.be.minhthien.io.vn",
+      ]
+);
 
 class ChatWebSocketService {
   private client: Client | null = null;
   private messageSubscribers: Set<(message: ApiChatMessage) => void> = new Set();
   private notifSubscribers: Set<(notif: ApiNotification) => void> = new Set();
   private callSubscribers: Set<(signal: VideoCallSignal) => void> = new Set();
+  private pendingCallSignals: VideoCallSignal[] = [];
   private isConnected = false;
 
   public connect() {
@@ -107,6 +112,8 @@ class ChatWebSocketService {
             }
           }
         });
+
+        this.flushPendingCallSignals();
       },
       onStompError: (frame) => {
         console.error("Broker reported error: " + frame.headers['message']);
@@ -135,7 +142,7 @@ class ChatWebSocketService {
     }
     return () => {
       this.messageSubscribers.delete(callback);
-      if (this.messageSubscribers.size === 0 && this.notifSubscribers.size === 0) {
+      if (this.messageSubscribers.size === 0 && this.notifSubscribers.size === 0 && this.callSubscribers.size === 0) {
         this.disconnect();
       }
     };
@@ -168,12 +175,32 @@ class ChatWebSocketService {
   }
 
   public sendCallSignal(signal: VideoCallSignal) {
-    if (this.client && this.isConnected) {
-      this.client.publish({
-        destination: "/app/call.signal",
-        body: JSON.stringify(signal)
-      });
+    if (!this.client || !this.client.active) {
+      this.pendingCallSignals.push(signal);
+      this.connect();
+      return;
     }
+
+    if (!this.isConnected) {
+      this.pendingCallSignals.push(signal);
+      return;
+    }
+
+    this.publishCallSignal(signal);
+  }
+
+  private flushPendingCallSignals() {
+    if (!this.client || !this.isConnected || this.pendingCallSignals.length === 0) return;
+    const signals = [...this.pendingCallSignals];
+    this.pendingCallSignals = [];
+    signals.forEach(signal => this.publishCallSignal(signal));
+  }
+
+  private publishCallSignal(signal: VideoCallSignal) {
+    this.client?.publish({
+      destination: "/app/call.signal",
+      body: JSON.stringify(signal)
+    });
   }
 }
 

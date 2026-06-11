@@ -13,10 +13,14 @@ interface ApiRequestOptions extends RequestInit {
   allowEmptyData?: boolean;
 }
 
-const API_BASE_URLS = [
-  "https://be.minhthien.io.vn",
-  "https://www.be.minhthien.io.vn",
-];
+const API_BASE_URLS = (
+  import.meta.env.VITE_API_BASE_URLS
+    ? String(import.meta.env.VITE_API_BASE_URLS).split(",").map(value => value.trim()).filter(Boolean)
+    : [
+        import.meta.env.VITE_API_BASE_URL || "https://be.minhthien.io.vn",
+        "https://www.be.minhthien.io.vn",
+      ]
+);
 
 function getRequestMethod(options: RequestInit) {
   return (options.method || "GET").toUpperCase();
