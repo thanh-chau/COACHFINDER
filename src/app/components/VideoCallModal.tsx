@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Mic, MicOff, PhoneOff, UserRound, Video, VideoOff } from "lucide-react";
 import { chatWebSocketService, useVideoCallWebSocket } from "../api/websocket";
-import type { CallType } from "../types/chat";
+import { normalizeCallType, type CallType } from "../types/chat";
 import { getAuthSession } from "../utils/authSession";
 import { getWebRtcIceConfig, type WebRtcIceConfig } from "../api/webrtc";
 
@@ -58,8 +58,9 @@ export function CallModal({
   const [status, setStatus] = useState(isCaller ? "Dang goi..." : "Dang ket noi...");
   const [needsPlaybackInteraction, setNeedsPlaybackInteraction] = useState(false);
   const [micEnabled, setMicEnabled] = useState(true);
-  const [camEnabled, setCamEnabled] = useState(callType === "VIDEO");
-  const isVideoCall = callType === "VIDEO";
+  const normalizedCallType = normalizeCallType(callType);
+  const [camEnabled, setCamEnabled] = useState(normalizedCallType === "video");
+  const isVideoCall = normalizedCallType === "video";
 
   const updateSessionCallId = (nextCallId: number | undefined) => {
     sessionCallIdRef.current = nextCallId;
@@ -81,7 +82,7 @@ export function CallModal({
       type,
       callId: sessionCallIdRef.current,
       conversationId,
-      callType,
+      callType: normalizedCallType,
       targetUsername,
       payload,
     });
@@ -434,7 +435,7 @@ export function CallModal({
       chatWebSocketService.sendCallSignal({
         type: "CALL_INVITE",
         conversationId,
-        callType,
+        callType: normalizedCallType,
         targetUsername,
       });
       return;
@@ -470,7 +471,7 @@ export function CallModal({
       (sessionCallIdRef.current && signal.callId === sessionCallIdRef.current) ||
       (!sessionCallIdRef.current &&
         signal.conversationId === conversationId &&
-        signal.callType === callType &&
+        normalizeCallType(signal.callType) === normalizedCallType &&
         (signal.senderUsername === targetUsername || signal.senderUsername === currentUsername));
 
     if (!signalMatchesCall) return;

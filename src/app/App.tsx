@@ -32,7 +32,7 @@ import {
   useVideoCallWebSocket,
 } from "./api/websocket";
 import { VideoCallModal } from "./components/VideoCallModal";
-import type { CallType } from "./types/chat";
+import { normalizeCallType, type CallType } from "./types/chat";
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
@@ -195,9 +195,10 @@ function AppRoutes() {
       const detail = (event as CustomEvent<{
         targetUsername: string;
         conversationId: number;
-        callType: CallType;
+        callType: CallType | string;
       }>).detail;
       if (!detail?.targetUsername || !detail.conversationId || !detail.callType) return;
+      const callType = normalizeCallType(detail.callType);
       if (activeCall || incomingCall) {
         toast.error("Ban dang co cuoc goi khac");
         return;
@@ -205,7 +206,7 @@ function AppRoutes() {
       setActiveCall({
         targetUsername: detail.targetUsername,
         conversationId: detail.conversationId,
-        callType: detail.callType,
+        callType,
         isCaller: true,
       });
     }
@@ -217,8 +218,9 @@ function AppRoutes() {
   useVideoCallWebSocket((signal) => {
     const currentUsername = getAuthSession()?.username;
     if (signal.type === "CALL_INVITE" && signal.senderUsername && signal.callId && signal.conversationId && signal.callType) {
+      const callType = normalizeCallType(signal.callType);
       if (signal.senderUsername === currentUsername) {
-        setActiveCall(current => current ? { ...current, callId: signal.callId } : current);
+        setActiveCall(current => current ? { ...current, callId: signal.callId, callType } : current);
         return;
       }
       if (activeCall) {
@@ -226,7 +228,7 @@ function AppRoutes() {
           type: "BUSY",
           callId: signal.callId,
           conversationId: signal.conversationId,
-          callType: signal.callType,
+          callType,
           targetUsername: signal.senderUsername!,
         });
         return;
@@ -236,7 +238,7 @@ function AppRoutes() {
         callerUsername: signal.senderUsername,
         callerFullName: signal.senderFullName,
         conversationId: signal.conversationId,
-        callType: signal.callType,
+        callType,
       });
     } else if (["CALL_END", "CALL_CANCEL", "TIMEOUT", "BUSY", "CALL_REJECT"].includes(signal.type)) {
       setIncomingCall(null);

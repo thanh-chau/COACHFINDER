@@ -2,7 +2,7 @@ import { Client, IMessage } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import { getAccessToken, getAuthSession } from "../utils/authSession";
 import { useEffect, useRef } from "react";
-import type { CallType, ChatMessage as ApiChatMessage } from "../types/chat";
+import { normalizeCallType, type CallType, type ChatMessage as ApiChatMessage } from "../types/chat";
 
 export interface ApiNotification {
   id: number;
@@ -27,7 +27,7 @@ export interface VideoCallSignal {
     | "ICE"
     | "BUSY"
     | "TIMEOUT";
-  callType?: CallType;
+  callType?: CallType | string;
   targetUsername: string;
   senderUsername?: string;
   senderFullName?: string | null;
@@ -108,6 +108,9 @@ class ChatWebSocketService {
           if (message.body) {
             try {
               const signal = JSON.parse(message.body) as VideoCallSignal;
+              if (signal.callType) {
+                signal.callType = normalizeCallType(signal.callType);
+              }
               this.callSubscribers.forEach(cb => cb(signal));
             } catch (e) {
               console.error("Error parsing video call signal", e);

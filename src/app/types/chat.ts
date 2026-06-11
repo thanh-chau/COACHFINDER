@@ -25,7 +25,17 @@ export interface ChatMessage {
   ownMessage: boolean;
 }
 
-export type CallType = "AUDIO" | "VIDEO";
+export type CallType = "audio" | "video";
+
+export function normalizeCallType(value: unknown): CallType {
+  const type = String(value || "").toLowerCase();
+
+  if (type === "video" || type === "video-call") {
+    return "video";
+  }
+
+  return "audio";
+}
 
 export type CallSessionStatus =
   | "RINGING"

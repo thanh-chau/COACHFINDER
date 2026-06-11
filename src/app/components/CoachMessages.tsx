@@ -16,7 +16,7 @@ import {
   sendConversationMessage,
 } from "../api/chat";
 import { useChatWebSocket } from "../api/websocket";
-import type { CallSession, CallType, ChatMessage as ApiChatMessage, ChatTarget, Conversation as ApiConversation } from "../types/chat";
+import { normalizeCallType, type CallSession, type CallType, type ChatMessage as ApiChatMessage, type ChatTarget, type Conversation as ApiConversation } from "../types/chat";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type MsgStatus  = "sent"|"delivered"|"read";
@@ -530,8 +530,8 @@ export function CoachMessages({ targetUsername }: { targetUsername?: string | nu
                 </div>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
-                <button onClick={() => startCall("AUDIO")} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-blue-500 transition-colors"><Phone className="w-4 h-4"/></button>
-                <button onClick={() => startCall("VIDEO")} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-blue-500 transition-colors"><Video className="w-4 h-4"/></button>
+                <button onClick={() => startCall("audio")} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-blue-500 transition-colors"><Phone className="w-4 h-4"/></button>
+                <button onClick={() => startCall("video")} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-blue-500 transition-colors"><Video className="w-4 h-4"/></button>
                 <button onClick={()=>setShowInfo(v=>!v)} className={`p-2 rounded-xl transition-colors ${showInfo?"bg-blue-50 text-blue-500":"hover:bg-gray-100 text-gray-400"}`}>
                   <Info className="w-4 h-4"/>
                 </button>
@@ -555,7 +555,7 @@ export function CoachMessages({ targetUsername }: { targetUsername?: string | nu
                   ) : callHistory.map(call => (
                     <div key={call.id} className="bg-white border border-gray-100 rounded-2xl px-3 py-2 flex items-center justify-between text-gray-600">
                       <div>
-                        <div className="font-semibold" style={{ fontSize: "0.78rem" }}>{call.callType === "VIDEO" ? "Video call" : "Goi thoai"} - {callStatusLabel(call.status)}</div>
+                        <div className="font-semibold" style={{ fontSize: "0.78rem" }}>{normalizeCallType(call.callType) === "video" ? "Video call" : "Goi thoai"} - {callStatusLabel(call.status)}</div>
                         <div className="text-gray-400" style={{ fontSize: "0.68rem" }}>{formatChatTime(call.createdAt)} {formatCallDuration(call.durationSeconds) && `- ${formatCallDuration(call.durationSeconds)}`}</div>
                       </div>
                       <span className={`text-xs font-bold ${call.ownCall ? "text-blue-500" : "text-orange-500"}`}>{call.ownCall ? "Di" : "Den"}</span>
