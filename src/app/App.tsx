@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -186,7 +186,9 @@ function AppRoutes() {
     conversationId: number;
     callType: CallType;
     callId?: number;
+    acceptSignalPending?: boolean;
   } | null>(null);
+  const acceptSignalSentRef = useRef(false);
 
   useEffect(() => {
     function handleStartCall(event: Event) {
@@ -245,24 +247,32 @@ function AppRoutes() {
   const acceptCall = () => {
     if (incomingCall) {
       const acceptedCall = incomingCall;
+      acceptSignalSentRef.current = false;
       setActiveCall({
         targetUsername: acceptedCall.callerUsername,
         conversationId: acceptedCall.conversationId,
         callType: acceptedCall.callType,
         callId: acceptedCall.callId,
         isCaller: false,
+        acceptSignalPending: true,
       });
       setIncomingCall(null);
-      window.setTimeout(() => {
-        chatWebSocketService.sendCallSignal({
-          type: "CALL_ACCEPT",
-          callId: acceptedCall.callId,
-          conversationId: acceptedCall.conversationId,
-          callType: acceptedCall.callType,
-          targetUsername: acceptedCall.callerUsername,
-        });
-      }, 0);
     }
+  };
+
+  const handleCallModalReady = () => {
+    if (!activeCall?.acceptSignalPending || acceptSignalSentRef.current) return;
+    acceptSignalSentRef.current = true;
+    chatWebSocketService.sendCallSignal({
+      type: "CALL_ACCEPT",
+      callId: activeCall.callId,
+      conversationId: activeCall.conversationId,
+      callType: activeCall.callType,
+      targetUsername: activeCall.targetUsername,
+    });
+    setActiveCall(current =>
+      current ? { ...current, acceptSignalPending: false } : current,
+    );
   };
 
   const rejectCall = () => {
@@ -315,6 +325,7 @@ function AppRoutes() {
           callType={activeCall.callType}
           callId={activeCall.callId}
           isCaller={activeCall.isCaller}
+          onReady={activeCall.acceptSignalPending ? handleCallModalReady : undefined}
           onClose={() => setActiveCall(null)}
         />
       )}

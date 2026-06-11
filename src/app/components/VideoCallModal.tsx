@@ -11,6 +11,7 @@ interface CallModalProps {
   callType: CallType;
   isCaller: boolean;
   callId?: number;
+  onReady?: () => void;
   onClose: () => void;
 }
 
@@ -31,12 +32,14 @@ export function CallModal({
   callType,
   isCaller,
   callId,
+  onReady,
   onClose,
 }: CallModalProps) {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
+  const peerConnectionPromiseRef = useRef<Promise<RTCPeerConnection | null> | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteStreamRef = useRef<MediaStream>(new MediaStream());
   const pendingIceCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
@@ -58,9 +61,10 @@ export function CallModal({
   const [camEnabled, setCamEnabled] = useState(callType === "VIDEO");
   const isVideoCall = callType === "VIDEO";
 
-  useEffect(() => {
-    sessionCallIdRef.current = sessionCallId;
-  }, [sessionCallId]);
+  const updateSessionCallId = (nextCallId: number | undefined) => {
+    sessionCallIdRef.current = nextCallId;
+    setSessionCallId(nextCallId);
+  };
 
   const sendSignal = (
     type: Parameters<typeof chatWebSocketService.sendCallSignal>[0]["type"],
@@ -159,8 +163,9 @@ export function CallModal({
   const addIceCandidateOnce = async (pc: RTCPeerConnection, candidate: RTCIceCandidateInit) => {
     const key = JSON.stringify(candidate);
     if (addedIceCandidateKeysRef.current.has(key)) return;
-    addedIceCandidateKeysRef.current.add(key);
     await pc.addIceCandidate(new RTCIceCandidate(candidate));
+    addedIceCandidateKeysRef.current.add(key);
+    pendingIceCandidateKeysRef.current.delete(key);
   };
 
   const flushPendingIceCandidates = async (pc: RTCPeerConnection) => {
@@ -178,6 +183,11 @@ export function CallModal({
   const loadIceConfig = async () => {
     try {
       const iceConfig = await getWebRtcIceConfig();
+      console.info("[WebRTC] ICE config loaded", {
+        turnConfigured: iceConfig.turnConfigured,
+        iceTransportPolicy: iceConfig.iceTransportPolicy,
+        iceServerCount: iceConfig.iceServers.length,
+      });
       if (!iceConfig.turnConfigured) {
         console.warn("[WebRTC] TURN is not configured; calls across networks may fail");
       }
@@ -199,17 +209,27 @@ export function CallModal({
   };
 
   const ensureLocalMedia = async (pc: RTCPeerConnection) => {
-    if (localStreamRef.current) return localStreamRef.current;
+    let stream = localStreamRef.current;
 
-    setStatus("Dang lay quyen thiet bi...");
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-      video: isVideoCall,
-    });
-    localStreamRef.current = stream;
-    if (localVideoRef.current && isVideoCall) {
-      localVideoRef.current.srcObject = stream;
+    if (!stream) {
+      setStatus("Dang lay quyen thiet bi...");
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: isVideoCall,
+      });
+      localStreamRef.current = stream;
+      if (localVideoRef.current && isVideoCall) {
+        localVideoRef.current.srcObject = stream;
+      }
     }
+
+    for (const track of stream.getTracks()) {
+      const alreadyAdded = pc.getSenders().some(sender => sender.track?.id === track.id);
+      if (!alreadyAdded) {
+        pc.addTrack(track, stream);
+      }
+    }
+    localTracksAddedRef.current = true;
 
     console.info("[WebRTC] Local tracks:", stream.getTracks().map(track => ({
       kind: track.kind,
@@ -217,11 +237,6 @@ export function CallModal({
       muted: track.muted,
       readyState: track.readyState,
     })));
-
-    if (!localTracksAddedRef.current) {
-      stream.getTracks().forEach(track => pc.addTrack(track, stream));
-      localTracksAddedRef.current = true;
-    }
 
     return stream;
   };
@@ -263,14 +278,9 @@ export function CallModal({
 
   const setupPeerConnectionHandlers = (pc: RTCPeerConnection) => {
     pc.ontrack = (event) => {
-      const stream = (event.streams && event.streams.length > 0) ? event.streams[0] : remoteStreamRef.current;
-      
-      if (stream === remoteStreamRef.current) {
-        if (!stream.getTracks().some(track => track.id === event.track.id)) {
-          stream.addTrack(event.track);
-        }
-      } else {
-        remoteStreamRef.current = stream;
+      const remoteStream = remoteStreamRef.current;
+      if (!remoteStream.getTracks().some(track => track.id === event.track.id)) {
+        remoteStream.addTrack(event.track);
       }
 
       event.track.onmute = () => console.warn("[WebRTC] Remote track muted:", event.track.kind);
@@ -280,14 +290,13 @@ export function CallModal({
       };
       event.track.onended = () => console.warn("[WebRTC] Remote track ended:", event.track.kind);
 
-      console.info("[WebRTC] Remote tracks:", stream.getTracks().map(track => ({
+      console.info("[WebRTC] Remote tracks:", remoteStream.getTracks().map(track => ({
         kind: track.kind,
         muted: track.muted,
         readyState: track.readyState,
       })));
 
-      void attachRemoteStream(remoteStreamRef.current);
-      markConnected();
+      void attachRemoteStream(remoteStream);
     };
 
     pc.onicecandidate = (event) => {
@@ -343,23 +352,31 @@ export function CallModal({
     };
   };
 
+  const createPeerConnection = async () => {
+    const iceConfig = await loadIceConfig();
+    const pc = new RTCPeerConnection({
+      iceServers: iceConfig.iceServers,
+      iceTransportPolicy: iceConfig.iceTransportPolicy ?? "all",
+    });
+    setupPeerConnectionHandlers(pc);
+    return pc;
+  };
+
   const getOrCreatePeerConnection = async () => {
     if (peerConnectionRef.current) return peerConnectionRef.current;
+    if (peerConnectionPromiseRef.current) return peerConnectionPromiseRef.current;
 
+    peerConnectionPromiseRef.current = createPeerConnection();
     try {
-      const iceConfig = await loadIceConfig();
-      const pc = new RTCPeerConnection({
-        iceServers: iceConfig.iceServers,
-        iceTransportPolicy: iceConfig.iceTransportPolicy ?? "all",
-      });
+      const pc = await peerConnectionPromiseRef.current;
       peerConnectionRef.current = pc;
-      setupPeerConnectionHandlers(pc);
-
       return pc;
     } catch (error) {
       console.error("[WebRTC] Peer connection setup failed", error);
       setStatus("Khong the khoi tao cuoc goi");
       return null;
+    } finally {
+      peerConnectionPromiseRef.current = null;
     }
   };
 
@@ -432,14 +449,40 @@ export function CallModal({
 
     if (!signalMatchesCall) return;
 
+    if (signal.type === "ICE" && signal.payload) {
+      const candidate = signal.payload as RTCIceCandidateInit;
+      const key = JSON.stringify(candidate);
+      const pc = peerConnectionRef.current;
+
+      if (
+        pendingIceCandidateKeysRef.current.has(key) ||
+        addedIceCandidateKeysRef.current.has(key)
+      ) {
+        return;
+      }
+
+      if (!pc || !pc.remoteDescription) {
+        pendingIceCandidateKeysRef.current.add(key);
+        pendingIceCandidatesRef.current.push(candidate);
+        return;
+      }
+
+      try {
+        await addIceCandidateOnce(pc, candidate);
+      } catch (error) {
+        console.warn("[WebRTC] Unable to add ICE candidate", error);
+      }
+      return;
+    }
+
     if (signal.type === "CALL_INVITE" && isCaller && signal.callId) {
-      setSessionCallId(signal.callId);
+      updateSessionCallId(signal.callId);
       setStatus("Dang do chuong...");
       return;
     }
 
     if (signal.type === "CALL_ACCEPT" && isCaller) {
-      if (signal.callId) setSessionCallId(signal.callId);
+      if (signal.callId) updateSessionCallId(signal.callId);
       acceptedRef.current = true;
       clearRingingTimeout();
       setStatus("Dang ket noi...");
@@ -448,7 +491,7 @@ export function CallModal({
     }
 
     if (signal.type === "OFFER" && !isCaller) {
-      if (signal.callId) setSessionCallId(signal.callId);
+      if (signal.callId) updateSessionCallId(signal.callId);
       acceptedRef.current = true;
       clearRingingTimeout();
       await acceptOfferAndSendAnswer(signal.payload as RTCSessionDescriptionInit);
@@ -464,25 +507,6 @@ export function CallModal({
       return;
     }
 
-    if (signal.type === "ICE") {
-      const pc = peerConnectionRef.current;
-      if (pc && signal.payload) {
-        const candidate = signal.payload as RTCIceCandidateInit;
-        const key = JSON.stringify(candidate);
-        if (pc.remoteDescription) {
-          try {
-            await addIceCandidateOnce(pc, candidate);
-          } catch (error) {
-            console.warn("[WebRTC] Unable to add ICE candidate", error);
-          }
-        } else if (!pendingIceCandidateKeysRef.current.has(key)) {
-          pendingIceCandidateKeysRef.current.add(key);
-          pendingIceCandidatesRef.current.push(candidate);
-        }
-      }
-      return;
-    }
-
     if (["CALL_REJECT", "CALL_CANCEL", "CALL_END", "BUSY", "TIMEOUT"].includes(signal.type)) {
       if (signal.type === "BUSY") setStatus("Nguoi dung dang ban");
       if (signal.type === "CALL_REJECT") setStatus("Cuoc goi bi tu choi");
@@ -490,6 +514,10 @@ export function CallModal({
       window.setTimeout(() => onClose(), 700);
     }
   });
+
+  useEffect(() => {
+    onReady?.();
+  }, [onReady]);
 
   const handleEndCall = () => {
     closeCall(connectedRef.current ? "CALL_END" : "CALL_CANCEL");
