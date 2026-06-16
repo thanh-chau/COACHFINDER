@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import {
-  Send, Search, Phone, Video, MoreVertical, Paperclip, Smile,
+  Send, Search, Phone, Video, MoreVertical, Paperclip,
   Lock, Check, CheckCheck, ArrowLeft, Info, X, FileText, Download, Loader2
 } from "lucide-react";
 import { toast } from "sonner";
+import { ChatEmojiPicker } from "./ChatEmojiPicker";
 import {
   createConversation,
   getConversationCalls,
@@ -509,7 +510,13 @@ export function Messaging({ userPlan = "free", onNavigate, targetUsername }: { u
                 ref={inputRef} value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }} 
                 className="w-full bg-transparent px-4 py-2.5 resize-none outline-none text-gray-700" style={{ minHeight: "44px", maxHeight: "120px" }} placeholder="Nhập tin nhắn..." 
               />
-              <button className="p-2.5 text-gray-400 hover:text-orange-500 shrink-0"><Smile className="w-5 h-5" /></button>
+              <ChatEmojiPicker
+                accent="orange"
+                textareaRef={inputRef}
+                value={inputText}
+                onChange={setInputText}
+                triggerClassName="p-2.5 text-gray-400 shrink-0 rounded-xl hover:bg-gray-100 transition-colors"
+              />
             </div>
             <button onClick={() => handleSend()} disabled={!inputText.trim()} className="p-3 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl disabled:opacity-50 shrink-0 transition-colors shadow-sm shadow-orange-500/20">
               <Send className="w-5 h-5 ml-1" />

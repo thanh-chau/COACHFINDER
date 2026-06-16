@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import {
-  Search, Send, Paperclip, Smile, Video, Phone,
+  Search, Send, Paperclip, Video, Phone,
   MoreHorizontal, Check, CheckCheck,
   Image, FileText, Star, Pin,
   ChevronLeft, Info, X,
@@ -8,6 +8,7 @@ import {
   Zap, Download, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ChatEmojiPicker } from "./ChatEmojiPicker";
 import {
   createConversation,
   getConversationCalls,
@@ -307,6 +308,7 @@ export function CoachMessages({ targetUsername }: { targetUsername?: string | nu
   const [showQuick,setShowQuick] = useState(false);
   const [uploadingAttachment,setUploadingAttachment] = useState(false);
   const msgEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const activeIdRef = useRef(activeId);
   activeIdRef.current = activeId;
@@ -662,6 +664,7 @@ export function CoachMessages({ targetUsername }: { targetUsername?: string | nu
               <div className="flex items-end gap-2">
                 <div className="flex-1 bg-gray-50 rounded-2xl px-4 py-2.5 flex items-end gap-2 border border-gray-200 focus-within:border-blue-300 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
                   <textarea
+                    ref={inputRef}
                     value={text} onChange={e=>setText(e.target.value)}
                     onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMsg();}}}
                     placeholder={`Nhắn tin với ${active.name.split(" ").pop()}...`}
@@ -671,7 +674,13 @@ export function CoachMessages({ targetUsername }: { targetUsername?: string | nu
                     <button onClick={()=>setShowQuick(v=>!v)} className={`p-1.5 rounded-lg transition-colors ${showQuick?"text-blue-500 bg-blue-50":"text-gray-400 hover:text-gray-600 hover:bg-gray-200"}`}>
                       <Zap className="w-4 h-4"/>
                     </button>
-                    <button className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition-colors"><Smile className="w-4 h-4"/></button>
+                    <ChatEmojiPicker
+                      accent="blue"
+                      textareaRef={inputRef}
+                      value={text}
+                      onChange={setText}
+                      triggerClassName="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition-colors"
+                    />
                     <button type="button" onClick={()=>fileInputRef.current?.click()} disabled={uploadingAttachment} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition-colors disabled:opacity-50">
                       {uploadingAttachment ? <Loader2 className="w-4 h-4 animate-spin"/> : <Paperclip className="w-4 h-4"/>}
                     </button>
