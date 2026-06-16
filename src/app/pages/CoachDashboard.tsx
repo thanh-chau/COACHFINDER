@@ -7,6 +7,7 @@ import { CoachMessages } from "../components/CoachMessages";
 import { CoachSubscription } from "../components/CoachSubscription";
 import { CoachSettings } from "../components/CoachSettings";
 import { NotificationBell } from "../components/NotificationBell";
+import { UserWebsiteFeedback } from "../components/UserWebsiteFeedback";
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import {
@@ -14,7 +15,7 @@ import {
   BarChart2, MessageCircle, Settings, LogOut, Bell,
   ChevronRight, Star, TrendingUp, Plus, Upload,
   Menu, X, Dumbbell, CheckCircle2, Clock, Play,
-  Award, Zap, Target, ArrowUpRight, CreditCard
+  Award, Zap, Target, ArrowUpRight, CreditCard, MessageSquareHeart
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -59,7 +60,15 @@ const navItems = [
   { icon: BarChart2, label: "Analytics", id: "analytics" },
   { icon: MessageCircle, label: "Tin nhắn", id: "msg" },
   { icon: CreditCard, label: "Gói đăng ký", id: "subscription" },
+  { icon: MessageSquareHeart, label: "Đánh giá web", id: "feedback" },
 ];
+
+const COACH_HEADER_TITLES: Record<string, { title: string; sub: string }> = {
+  feedback: {
+    title: "Đánh giá CoachFinder",
+    sub: "Gửi phản hồi và xem đánh giá từ cộng đồng",
+  },
+};
 
 const COACH_DASHBOARD_PATH = "/dashboard/coach";
 const COACH_NAV_IDS = new Set([
@@ -218,6 +227,10 @@ export function CoachDashboard() {
     .map(part => part.charAt(0))
     .join("")
     .toUpperCase();
+  const header = COACH_HEADER_TITLES[activeNav] ?? {
+    title: `Xin chào, ${coachName} 👊`,
+    sub: `${new Date().toLocaleDateString("vi-VN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · ${overview.todaySessions} buổi dạy hôm nay`,
+  };
   const logout = async () => {
     try {
       await logoutAccount();
@@ -417,8 +430,8 @@ export function CoachDashboard() {
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex-1 min-w-0">
-            <div style={{ fontWeight: 700, fontSize: "1.05rem", letterSpacing: "-0.01em" }} className="text-gray-900 truncate">Xin chào, {coachName} 👊</div>
-            <div style={{ fontSize: "0.78rem" }} className="text-gray-400 truncate">{new Date().toLocaleDateString("vi-VN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · {overview.todaySessions} buổi dạy hôm nay</div>
+            <div style={{ fontWeight: 700, fontSize: "1.05rem", letterSpacing: "-0.01em" }} className="text-gray-900 truncate">{header.title}</div>
+            <div style={{ fontSize: "0.78rem" }} className="text-gray-400 truncate">{header.sub}</div>
           </div>
           <div className="flex items-center gap-2.5">
             <button onClick={() => handleNavigate("schedule")} className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:from-blue-600 hover:to-indigo-600 transition-all shadow-md shadow-blue-200" style={{ fontSize: "0.82rem", fontWeight: 700 }}>
@@ -458,6 +471,9 @@ export function CoachDashboard() {
             <div className={activeNav === "msg" ? "block h-full" : "hidden"}><CoachMessages targetUsername={targetUsername} /></div>
             {/* ── SUBSCRIPTION ── */}
             <div className={activeNav === "subscription" ? "block h-full" : "hidden"}><CoachSubscription /></div>
+
+            {/* ── WEBSITE FEEDBACK ── */}
+            <div className={activeNav === "feedback" ? "block h-full" : "hidden"}><UserWebsiteFeedback accent="blue" /></div>
 
             {/* ── SETTINGS ── */}
             <div className={activeNav === "settings" ? "block h-full" : "hidden"}><CoachSettings /></div>
