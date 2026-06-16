@@ -73,6 +73,12 @@ export interface DashboardOverview {
   todayRevenue: number;
   monthRevenue: number;
   platformCommission: number;
+  traineeTopUpAmount: number;
+  coachTopUpAmount: number;
+  traineeFeedbackAverageRating: number;
+  traineeFeedbackCount: number;
+  coachFeedbackAverageRating: number;
+  coachFeedbackCount: number;
 }
 
 export async function fetchAdminOverview() {

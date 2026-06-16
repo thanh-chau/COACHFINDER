@@ -1,6 +1,6 @@
 import { useEffect, useState, type ElementType } from "react";
 import {
-  Users, DollarSign, CreditCard, Percent, Activity, Package,
+  Users, DollarSign, CreditCard, Percent, Activity, Package, Star, WalletCards,
   ArrowUpRight, ArrowDownRight, CheckCircle2, Clock, AlertCircle
 } from "lucide-react";
 import {
@@ -29,6 +29,8 @@ const compactMoney = (value?: number | null) => {
   if (amount >= 1000) return `${Math.round(amount / 1000)}K`;
   return amount.toLocaleString("vi-VN");
 };
+
+const formatRating = (value?: number | null) => `${(value || 0).toFixed(1)}\u2605`;
 
 const planColors: Record<string, string> = {
   FREE: "#94a3b8",
@@ -115,12 +117,16 @@ export function AdminOverview() {
         })}
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         <KpiCard icon={DollarSign} label="Doanh thu tháng" value={compactMoney(overview?.monthRevenue)} sub="Học phí + gói" color="text-emerald-600" bg="bg-emerald-50" />
         <KpiCard icon={Percent} label="Hoa hồng" value={compactMoney(overview?.platformCommission)} sub="Platform thu" color="text-blue-600" bg="bg-blue-50" />
         <KpiCard icon={CreditCard} label="Gói đăng ký" value={compactMoney(subscriptionSummary?.totalMonthlyRevenue)} sub="HV + HLV subs" color="text-violet-600" bg="bg-violet-50" />
+        <KpiCard icon={WalletCards} label={"HV \u0111\u00e3 n\u1ea1p"} value={compactMoney(overview?.traineeTopUpAmount)} sub={"V\u00ed h\u1ecdc vi\u00ean"} color="text-teal-600" bg="bg-teal-50" />
+        <KpiCard icon={WalletCards} label={"Coach \u0111\u00e3 n\u1ea1p"} value={compactMoney(overview?.coachTopUpAmount)} sub={"V\u00ed HLV"} color="text-indigo-600" bg="bg-indigo-50" />
         <KpiCard icon={Users} label="Học viên" value={(overview?.totalTrainees || 0).toLocaleString("vi-VN")} sub="Trên hệ thống" color="text-orange-500" bg="bg-orange-50" />
         <KpiCard icon={Activity} label="HLV" value={(overview?.totalCoaches || 0).toLocaleString("vi-VN")} sub="Trên hệ thống" color="text-cyan-600" bg="bg-cyan-50" />
+        <KpiCard icon={Star} label={"\u0110\u00e1nh gi\u00e1 HV"} value={formatRating(overview?.traineeFeedbackAverageRating)} sub={`${(overview?.traineeFeedbackCount || 0).toLocaleString("vi-VN")} \u0111\u00e1nh gi\u00e1 web`} color="text-amber-500" bg="bg-amber-50" />
+        <KpiCard icon={Star} label={"\u0110\u00e1nh gi\u00e1 HLV"} value={formatRating(overview?.coachFeedbackAverageRating)} sub={`${(overview?.coachFeedbackCount || 0).toLocaleString("vi-VN")} \u0111\u00e1nh gi\u00e1 web`} color="text-pink-500" bg="bg-pink-50" />
         <KpiCard icon={Package} label="Giao dịch" value={(overview?.totalTransactions || 0).toLocaleString("vi-VN")} sub="Wallet transactions" color="text-rose-500" bg="bg-rose-50" />
       </div>
 
