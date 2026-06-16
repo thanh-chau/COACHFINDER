@@ -1,14 +1,16 @@
 import { useState, useRef, useEffect } from "react";
 import {
   Send, Search, Phone, Video, MoreVertical, Paperclip, Smile,
-  Lock, Check, CheckCheck, ArrowLeft, Info, X
+  Lock, Check, CheckCheck, ArrowLeft, Info, X, FileText, Download, Loader2
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   createConversation,
   getConversationCalls,
   getConversationMessages,
   getConversations,
   markConversationRead,
+  sendConversationAttachment,
   sendConversationMessage,
 } from "../api/chat";
 import { useChatWebSocket } from "../api/websocket";
@@ -24,6 +26,9 @@ interface Message {
   type?: "text" | "image" | "file" | "system";
   fileUrl?: string;
   fileName?: string;
+  fileSize?: number | null;
+  mimeType?: string | null;
+  messageType?: ApiChatMessage["messageType"];
 }
 
 interface Conversation {
@@ -59,13 +64,35 @@ function formatChatTime(value: string | null) {
   return date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
 }
 
+function formatFileSize(size?: number | null) {
+  if (!size) return "";
+  if (size >= 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  if (size >= 1024) return `${Math.round(size / 1024)} KB`;
+  return `${size} B`;
+}
+
+function getMessagePreview(message: Message) {
+  if (message.messageType === "IMAGE") return "Đã gửi một hình ảnh";
+  if (message.messageType === "VIDEO") return "Đã gửi một video";
+  if (message.messageType === "PDF") return "Đã gửi một PDF";
+  if (message.messageType === "FILE") return "Đã gửi một tệp";
+  return message.text;
+}
+
 function mapApiMessage(message: ApiChatMessage): Message {
+  const messageType = message.messageType ?? "TEXT";
   return {
     id: String(message.id),
     senderId: message.ownMessage ? "learner" : "coach",
     text: message.content,
     time: formatChatTime(message.createdAt),
     status: message.read ? "read" : "delivered",
+    type: messageType === "TEXT" ? "text" : messageType === "IMAGE" ? "image" : "file",
+    fileUrl: message.attachmentUrl ?? undefined,
+    fileName: message.attachmentFileName ?? undefined,
+    fileSize: message.attachmentSizeBytes,
+    mimeType: message.attachmentMimeType,
+    messageType,
   };
 }
 
@@ -118,18 +145,51 @@ function matchesTarget(conversation: ApiConversation, target: ChatTarget | null)
 }
 
 function MessageBubble({ msg, isMe }: { msg: Message; isMe: boolean }) {
+  const hasAttachment = !!msg.fileUrl && msg.messageType && msg.messageType !== "TEXT";
   return (
     <div className={`flex items-end gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
       {!isMe && <div className="w-1 shrink-0" />}
       <div className={`max-w-[72%] group`}>
-        <div
-          className={`px-4 py-2.5 rounded-2xl ${
-            isMe ? "bg-orange-500 text-white rounded-br-sm" : "bg-white border border-gray-100 text-gray-800 rounded-bl-sm shadow-sm"
-          }`}
-          style={{ fontSize: "0.88rem", lineHeight: 1.55 }}
-        >
-          {msg.text}
-        </div>
+        {hasAttachment ? (
+          <div
+            className={`overflow-hidden rounded-2xl ${
+              isMe ? "bg-orange-500 text-white rounded-br-sm" : "bg-white border border-gray-100 text-gray-800 rounded-bl-sm shadow-sm"
+            }`}
+          >
+            {msg.messageType === "IMAGE" && (
+              <a href={msg.fileUrl} target="_blank" rel="noreferrer">
+                <img src={msg.fileUrl} alt={msg.fileName || "Hình ảnh"} className="max-h-72 w-full object-cover" />
+              </a>
+            )}
+            {msg.messageType === "VIDEO" && (
+              <video src={msg.fileUrl} controls preload="metadata" className="max-h-72 w-full bg-black" />
+            )}
+            {(msg.messageType === "PDF" || msg.messageType === "FILE") && (
+              <a href={msg.fileUrl} target="_blank" rel="noreferrer" className={`flex items-center gap-3 p-3 ${isMe ? "text-white" : "text-gray-800"}`}>
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${isMe ? "bg-white/20" : "bg-orange-50"}`}>
+                  <FileText className={`h-5 w-5 ${isMe ? "text-white" : "text-orange-500"}`} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-semibold" style={{ fontSize: "0.84rem" }}>{msg.fileName || msg.text}</div>
+                  <div className={isMe ? "text-orange-100" : "text-gray-400"} style={{ fontSize: "0.7rem" }}>{formatFileSize(msg.fileSize)}</div>
+                </div>
+                <Download className={`h-4 w-4 shrink-0 ${isMe ? "text-white" : "text-gray-400"}`} />
+              </a>
+            )}
+            {msg.text && msg.text !== getMessagePreview(msg) && (
+              <div className="px-3.5 py-2.5" style={{ fontSize: "0.86rem", lineHeight: 1.5 }}>{msg.text}</div>
+            )}
+          </div>
+        ) : (
+          <div
+            className={`px-4 py-2.5 rounded-2xl ${
+              isMe ? "bg-orange-500 text-white rounded-br-sm" : "bg-white border border-gray-100 text-gray-800 rounded-bl-sm shadow-sm"
+            }`}
+            style={{ fontSize: "0.88rem", lineHeight: 1.55 }}
+          >
+            {msg.text}
+          </div>
+        )}
         <div className={`flex items-center gap-1 mt-1 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
           <span style={{ fontSize: "0.68rem" }} className="text-gray-400">{msg.time}</span>
           {isMe && (msg.status === "read" ? <CheckCheck className="w-3 h-3 text-blue-400" /> : msg.status === "delivered" ? <CheckCheck className="w-3 h-3 text-gray-400" /> : <Check className="w-3 h-3 text-gray-400" />)}
@@ -190,8 +250,10 @@ export function Messaging({ userPlan = "free", onNavigate, targetUsername }: { u
   const [callHistory, setCallHistory] = useState<CallSession[]>([]);
   const [showMobileList, setShowMobileList] = useState(true);
   const [showQuickReplies, setShowQuickReplies] = useState(false);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const activeIdRef = useRef(activeId);
   activeIdRef.current = activeId;
   const activeConv = conversations.find(c => c.id === activeId);
@@ -210,7 +272,7 @@ export function Messaging({ userPlan = "free", onNavigate, targetUsername }: { u
       const mappedMsg = mapApiMessage(incomingMsg);
       const isCurrentActive = activeIdRef.current === convId;
       
-      const newConv = { ...conv, messages: [...conv.messages, mappedMsg], lastMessage: mappedMsg.text, lastTime: "Vừa xong", unread: isCurrentActive ? 0 : conv.unread + 1 };
+      const newConv = { ...conv, messages: [...conv.messages, mappedMsg], lastMessage: getMessagePreview(mappedMsg), lastTime: "Vừa xong", unread: isCurrentActive ? 0 : conv.unread + 1 };
       if (isCurrentActive && !incomingMsg.ownMessage) markConversationRead(Number(convId)).catch(() => {});
       return [newConv, ...prev.filter(c => c.id !== convId)];
     });
@@ -295,6 +357,26 @@ export function Messaging({ userPlan = "free", onNavigate, targetUsername }: { u
       setInputText("");
       setShowQuickReplies(false);
     } catch {}
+  };
+
+  const handleAttachmentSelected = async (file?: File) => {
+    if (!file || !activeConv?.subscribed || !/^\d+$/.test(activeId)) return;
+    setUploadingAttachment(true);
+    try {
+      const sent = await sendConversationAttachment(Number(activeId), file);
+      const mapped = mapApiMessage(sent);
+      setConversations(prev => prev.map(c => c.id === activeId ? {
+        ...c,
+        messages: c.messages.some(message => message.id === mapped.id) ? c.messages : [...c.messages, mapped],
+        lastMessage: getMessagePreview(mapped),
+        lastTime: "Vừa xong",
+      } : c));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Không thể gửi file. Vui lòng thử lại.");
+    } finally {
+      setUploadingAttachment(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   const startCall = (callType: CallType) => {
@@ -407,7 +489,21 @@ export function Messaging({ userPlan = "free", onNavigate, targetUsername }: { u
           </div>
 
           <div className="shrink-0 p-3 bg-white border-t border-gray-100 flex gap-2 items-end">
-            <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl shrink-0"><Paperclip className="w-5 h-5" /></button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,image/*,video/*"
+              className="hidden"
+              onChange={(event) => handleAttachmentSelected(event.target.files?.[0])}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingAttachment}
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl shrink-0 disabled:opacity-50"
+            >
+              {uploadingAttachment ? <Loader2 className="w-5 h-5 animate-spin" /> : <Paperclip className="w-5 h-5" />}
+            </button>
             <div className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl flex items-end relative transition-colors focus-within:border-orange-300 focus-within:ring-2 focus-within:ring-orange-100">
               <textarea 
                 ref={inputRef} value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }} 

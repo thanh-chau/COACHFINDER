@@ -19,6 +19,12 @@ export interface ChatMessage {
   receiverUsername: string;
   receiverFullName: string;
   content: string;
+  messageType?: "TEXT" | "IMAGE" | "PDF" | "VIDEO" | "FILE";
+  attachmentUrl?: string | null;
+  attachmentPublicId?: string | null;
+  attachmentFileName?: string | null;
+  attachmentMimeType?: string | null;
+  attachmentSizeBytes?: number | null;
   read: boolean;
   readAt: string | null;
   createdAt: string;

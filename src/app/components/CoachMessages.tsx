@@ -5,14 +5,16 @@ import {
   Image, FileText, Star, Pin,
   ChevronLeft, Info, X,
   Calendar, TrendingUp, Clock, Award, MessageSquare,
-  Zap,
+  Zap, Download, Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   createConversation,
   getConversationCalls,
   getConversationMessages,
   getConversations,
   markConversationRead,
+  sendConversationAttachment,
   sendConversationMessage,
 } from "../api/chat";
 import { useChatWebSocket } from "../api/websocket";
@@ -26,8 +28,10 @@ interface Message {
   id: string; from: "coach"|"student"; text: string;
   time: string; status?: MsgStatus; type?: "text"|"file"|"video"|"system";
   fileName?: string; fileSize?: string;
-
-
+  fileSizeBytes?: number | null;
+  fileUrl?: string;
+  mimeType?: string | null;
+  messageType?: ApiChatMessage["messageType"];
 }
 
 interface Conversation {
@@ -54,14 +58,36 @@ function formatChatTime(value: string | null) {
   return date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
 }
 
+function formatFileSize(size?: number | null) {
+  if (!size) return "";
+  if (size >= 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  if (size >= 1024) return `${Math.round(size / 1024)} KB`;
+  return `${size} B`;
+}
+
+function getMessagePreview(message: Message) {
+  if (message.messageType === "IMAGE") return "Đã gửi một hình ảnh";
+  if (message.messageType === "VIDEO") return "Đã gửi một video";
+  if (message.messageType === "PDF") return "Đã gửi một PDF";
+  if (message.messageType === "FILE") return "Đã gửi một tệp";
+  return message.text;
+}
+
 function mapApiMessage(message: ApiChatMessage): Message {
+  const messageType = message.messageType ?? "TEXT";
   return {
     id: String(message.id),
     from: message.ownMessage ? "coach" : "student",
     text: message.content,
     time: formatChatTime(message.createdAt),
     status: message.read ? "read" : "delivered",
-    type: "text",
+    type: messageType === "TEXT" ? "text" : messageType === "VIDEO" ? "video" : "file",
+    fileName: message.attachmentFileName ?? undefined,
+    fileSize: formatFileSize(message.attachmentSizeBytes),
+    fileSizeBytes: message.attachmentSizeBytes,
+    fileUrl: message.attachmentUrl ?? undefined,
+    mimeType: message.attachmentMimeType,
+    messageType,
   };
 }
 
@@ -142,6 +168,7 @@ const STATUS_LBL:Record<ConvStatus,string> = {
 // ─── Message Bubble ────────────────────────────────────────────────────────────
 function MsgBubble({ msg, isCoach }:{ msg:Message; isCoach:boolean }) {
   const mine = isCoach ? msg.from==="coach" : msg.from==="student";
+  const hasAttachment = !!msg.fileUrl && msg.messageType && msg.messageType !== "TEXT";
   if (msg.type==="system") return (
     <div className="flex justify-center">
       <span className="bg-gray-100 text-gray-400 px-3 py-1 rounded-full" style={{fontSize:"0.68rem"}}>{msg.text}</span>
@@ -150,15 +177,33 @@ function MsgBubble({ msg, isCoach }:{ msg:Message; isCoach:boolean }) {
   return (
     <div className={`flex items-end gap-2 ${mine?"flex-row-reverse":"flex-row"}`}>
       <div className={`max-w-xs lg:max-w-sm`}>
-        {msg.type==="file" ? (
-          <div className={`flex items-center gap-2.5 px-3 py-2.5 rounded-2xl ${mine?"bg-blue-500 rounded-br-sm":"bg-white border border-gray-200 rounded-bl-sm"}`}>
-            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${mine?"bg-white/20":"bg-blue-50"}`}>
-              <FileText className={`w-4 h-4 ${mine?"text-white":"text-blue-500"}`}/>
-            </div>
-            <div>
-              <div style={{fontSize:"0.78rem",fontWeight:600}} className={mine?"text-white":"text-gray-800"}>{msg.fileName}</div>
-              <div style={{fontSize:"0.65rem"}} className={mine?"text-blue-100":"text-gray-400"}>{msg.fileSize}</div>
-            </div>
+        {hasAttachment ? (
+          <div className={`overflow-hidden rounded-2xl ${mine?"bg-blue-500 text-white rounded-br-sm":"bg-white border border-gray-100 shadow-sm text-gray-800 rounded-bl-sm"}`}>
+            {msg.messageType === "IMAGE" && (
+              <a href={msg.fileUrl} target="_blank" rel="noreferrer">
+                <img src={msg.fileUrl} alt={msg.fileName || "Hình ảnh"} className="max-h-72 w-full object-cover" />
+              </a>
+            )}
+            {msg.messageType === "VIDEO" && (
+              <video src={msg.fileUrl} controls preload="metadata" className="max-h-72 w-full bg-black" />
+            )}
+            {(msg.messageType === "PDF" || msg.messageType === "FILE") && (
+              <a href={msg.fileUrl} target="_blank" rel="noreferrer" className={`flex items-center gap-2.5 px-3 py-2.5 ${mine?"text-white":"text-gray-800"}`}>
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${mine?"bg-white/20":"bg-blue-50"}`}>
+                  <FileText className={`w-4 h-4 ${mine?"text-white":"text-blue-500"}`}/>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div style={{fontSize:"0.78rem",fontWeight:600}} className={`truncate ${mine?"text-white":"text-gray-800"}`}>{msg.fileName || msg.text}</div>
+                  <div style={{fontSize:"0.65rem"}} className={mine?"text-blue-100":"text-gray-400"}>{msg.fileSize || formatFileSize(msg.fileSizeBytes)}</div>
+                </div>
+                <Download className={`w-4 h-4 shrink-0 ${mine?"text-white":"text-gray-400"}`} />
+              </a>
+            )}
+            {msg.text && msg.text !== getMessagePreview(msg) && (
+              <div className="px-3.5 py-2.5" style={{fontSize:"0.85rem",lineHeight:1.6}}>
+                {msg.text}
+              </div>
+            )}
           </div>
         ) : (
           <div className={`px-3.5 py-2.5 rounded-2xl ${mine?"bg-blue-500 text-white rounded-br-sm":"bg-white border border-gray-100 shadow-sm text-gray-800 rounded-bl-sm"}`}
@@ -260,7 +305,9 @@ export function CoachMessages({ targetUsername }: { targetUsername?: string | nu
   const [showMobile,setShowMobile] = useState<"list"|"chat">("list");
   const [filter,setFilter]       = useState<"all"|"unread"|"pinned">("all");
   const [showQuick,setShowQuick] = useState(false);
+  const [uploadingAttachment,setUploadingAttachment] = useState(false);
   const msgEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const activeIdRef = useRef(activeId);
   activeIdRef.current = activeId;
   const usingApi = convs.some((conversation) => /^\d+$/.test(conversation.id));
@@ -290,7 +337,7 @@ export function CoachMessages({ targetUsername }: { targetUsername?: string | nu
       const newConv = {
         ...conv,
         messages: [...conv.messages, mappedMsg],
-        lastMsg: mappedMsg.text,
+        lastMsg: getMessagePreview(mappedMsg),
         lastTime: "Vừa xong",
         unread: isCurrentActive ? 0 : conv.unread + 1,
       };
@@ -417,6 +464,28 @@ export function CoachMessages({ targetUsername }: { targetUsername?: string | nu
       setText("");
       setShowQuick(false);
     } catch {}
+  };
+
+  const handleAttachmentSelected = async (file?: File) => {
+    if (!file || !/^\d+$/.test(activeId)) return;
+    setUploadingAttachment(true);
+    try {
+      const sent = await sendConversationAttachment(Number(activeId), file);
+      const mapped = mapApiMessage(sent);
+      setConvs(prev=>prev.map(c=>
+        c.id===activeId ? {
+          ...c,
+          messages: c.messages.some(message => message.id === mapped.id) ? c.messages : [...c.messages, mapped],
+          lastMsg:getMessagePreview(mapped),
+          lastTime:"Vừa xong",
+        } : c
+      ));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Không thể gửi file. Vui lòng thử lại.");
+    } finally {
+      setUploadingAttachment(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   const startCall = (callType: CallType) => {
@@ -583,6 +652,13 @@ export function CoachMessages({ targetUsername }: { targetUsername?: string | nu
 
             {/* Input */}
             <div className="px-4 py-3 border-t border-gray-100 bg-white shrink-0">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,image/*,video/*"
+                className="hidden"
+                onChange={(event) => handleAttachmentSelected(event.target.files?.[0])}
+              />
               <div className="flex items-end gap-2">
                 <div className="flex-1 bg-gray-50 rounded-2xl px-4 py-2.5 flex items-end gap-2 border border-gray-200 focus-within:border-blue-300 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
                   <textarea
@@ -596,8 +672,10 @@ export function CoachMessages({ targetUsername }: { targetUsername?: string | nu
                       <Zap className="w-4 h-4"/>
                     </button>
                     <button className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition-colors"><Smile className="w-4 h-4"/></button>
-                    <button className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition-colors"><Paperclip className="w-4 h-4"/></button>
-                    <button className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition-colors"><Image className="w-4 h-4"/></button>
+                    <button type="button" onClick={()=>fileInputRef.current?.click()} disabled={uploadingAttachment} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition-colors disabled:opacity-50">
+                      {uploadingAttachment ? <Loader2 className="w-4 h-4 animate-spin"/> : <Paperclip className="w-4 h-4"/>}
+                    </button>
+                    <button type="button" onClick={()=>fileInputRef.current?.click()} disabled={uploadingAttachment} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition-colors disabled:opacity-50"><Image className="w-4 h-4"/></button>
                   </div>
                 </div>
                 <button onClick={sendMsg} disabled={!text.trim()}

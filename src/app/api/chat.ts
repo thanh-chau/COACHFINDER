@@ -37,6 +37,19 @@ export function sendConversationMessage(conversationId: number, content: string)
   });
 }
 
+export function sendConversationAttachment(conversationId: number, file: File, content?: string) {
+  const formData = new FormData();
+  formData.append("file", file);
+  if (content?.trim()) {
+    formData.append("content", content.trim());
+  }
+
+  return apiRequest<ChatMessage>(`/api/v1/chat/conversations/${conversationId}/attachments`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
 export function getChatUnreadCount() {
   return apiRequest<{ unreadCount: number }>("/api/v1/chat/unread-count");
 }
