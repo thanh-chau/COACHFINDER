@@ -145,8 +145,16 @@ export function UserWebsiteFeedback({
     loadRows();
   }, [loadRows]);
 
+  const hasSubmittedFeedback = Boolean(
+    myFeedback?.rating != null || myFeedback?.updatedAt,
+  );
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    if (hasSubmittedFeedback) {
+      toast.error("Bạn đã gửi đánh giá rồi, không thể đánh giá lần thứ hai.");
+      return;
+    }
     if (!rating) {
       toast.error("Vui lòng chọn số sao đánh giá.");
       return;
@@ -168,6 +176,7 @@ export function UserWebsiteFeedback({
           ? error.message
           : "Không thể lưu đánh giá. Vui lòng thử lại.",
       );
+      loadMine();
     } finally {
       setSaving(false);
     }
@@ -207,6 +216,11 @@ export function UserWebsiteFeedback({
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4 p-5">
+            {hasSubmittedFeedback && (
+              <div className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">
+                Bạn đã gửi đánh giá. Mỗi tài khoản chỉ được đánh giá một lần.
+              </div>
+            )}
             <div>
               <label className="mb-2 block text-sm font-bold text-gray-800">
                 Mức độ hài lòng
@@ -216,8 +230,9 @@ export function UserWebsiteFeedback({
                   <button
                     key={value}
                     type="button"
+                    disabled={hasSubmittedFeedback}
                     onClick={() => setRating(value)}
-                    className={`flex h-10 w-10 items-center justify-center rounded-xl border transition-all ${
+                    className={`flex h-10 w-10 items-center justify-center rounded-xl border transition-all disabled:cursor-not-allowed disabled:opacity-70 ${
                       rating >= value
                         ? "border-amber-300 bg-amber-50 text-amber-500"
                         : "border-gray-200 bg-white text-gray-300 hover:border-amber-200 hover:text-amber-400"
@@ -249,16 +264,17 @@ export function UserWebsiteFeedback({
               <textarea
                 value={comment}
                 onChange={(event) => setComment(event.target.value.slice(0, 1000))}
+                disabled={hasSubmittedFeedback}
                 rows={4}
                 placeholder="Viết cảm nhận của bạn về trải nghiệm sử dụng website..."
-                className={`w-full resize-none rounded-xl border border-gray-200 px-3 py-3 text-sm text-gray-700 outline-none ${styles.focus}`}
+                className={`w-full resize-none rounded-xl border border-gray-200 px-3 py-3 text-sm text-gray-700 outline-none disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 ${styles.focus}`}
               />
             </div>
 
             <div className="flex justify-end">
               <button
                 type="submit"
-                disabled={saving}
+                disabled={saving || hasSubmittedFeedback}
                 className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-lg transition-all disabled:cursor-not-allowed disabled:opacity-60 ${styles.button}`}
               >
                 {saving ? (

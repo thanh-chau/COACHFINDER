@@ -95,6 +95,8 @@ export function AdminOverview() {
   const coachPlans = subscriptionSummary?.coachPlans || [];
   const learnerTotal = learnerPlans.reduce((sum, p) => sum + p.count, 0);
   const coachTotal = coachPlans.reduce((sum, p) => sum + p.count, 0);
+  const websiteFeedbackAverageRating = overview?.websiteFeedbackAverageRating ?? 0;
+  const websiteFeedbackCount = overview?.websiteFeedbackCount ?? 0;
 
   return (
     <div className="space-y-6">
@@ -125,8 +127,8 @@ export function AdminOverview() {
         <KpiCard icon={WalletCards} label={"Coach \u0111\u00e3 n\u1ea1p"} value={compactMoney(overview?.coachTopUpAmount)} sub={"V\u00ed HLV"} color="text-indigo-600" bg="bg-indigo-50" />
         <KpiCard icon={Users} label="Học viên" value={(overview?.totalTrainees || 0).toLocaleString("vi-VN")} sub="Trên hệ thống" color="text-orange-500" bg="bg-orange-50" />
         <KpiCard icon={Activity} label="HLV" value={(overview?.totalCoaches || 0).toLocaleString("vi-VN")} sub="Trên hệ thống" color="text-cyan-600" bg="bg-cyan-50" />
-        <KpiCard icon={Star} label={"\u0110\u00e1nh gi\u00e1 HV"} value={formatRating(overview?.traineeFeedbackAverageRating)} sub={`${(overview?.traineeFeedbackCount || 0).toLocaleString("vi-VN")} \u0111\u00e1nh gi\u00e1 web`} color="text-amber-500" bg="bg-amber-50" />
-        <KpiCard icon={Star} label={"\u0110\u00e1nh gi\u00e1 HLV"} value={formatRating(overview?.coachFeedbackAverageRating)} sub={`${(overview?.coachFeedbackCount || 0).toLocaleString("vi-VN")} \u0111\u00e1nh gi\u00e1 web`} color="text-pink-500" bg="bg-pink-50" />
+        <KpiCard icon={Star} label={"\u0110\u00e1nh gi\u00e1 HV"} value={formatRating(websiteFeedbackAverageRating)} sub={`${websiteFeedbackCount.toLocaleString("vi-VN")} \u0111\u00e1nh gi\u00e1 web`} color="text-amber-500" bg="bg-amber-50" />
+        <KpiCard icon={Star} label={"\u0110\u00e1nh gi\u00e1 HLV"} value={formatRating(websiteFeedbackAverageRating)} sub={`${websiteFeedbackCount.toLocaleString("vi-VN")} \u0111\u00e1nh gi\u00e1 web`} color="text-pink-500" bg="bg-pink-50" />
         <KpiCard icon={Package} label="Giao dịch" value={(overview?.totalTransactions || 0).toLocaleString("vi-VN")} sub="Wallet transactions" color="text-rose-500" bg="bg-rose-50" />
       </div>
 

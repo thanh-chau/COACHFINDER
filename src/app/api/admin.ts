@@ -75,6 +75,8 @@ export interface DashboardOverview {
   platformCommission: number;
   traineeTopUpAmount: number;
   coachTopUpAmount: number;
+  websiteFeedbackAverageRating: number;
+  websiteFeedbackCount: number;
   traineeFeedbackAverageRating: number;
   traineeFeedbackCount: number;
   coachFeedbackAverageRating: number;
