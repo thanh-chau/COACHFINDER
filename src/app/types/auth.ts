@@ -1,4 +1,4 @@
-export type ApiRole = "TRAINEES" | "COACHES" | "ADMIN";
+export type ApiRole = "TRAINEES" | "COACHES" | "GYM_OWNERS" | "ADMIN";
 
 export interface AuthResponse {
   token: string;
@@ -24,4 +24,8 @@ export interface RegisterRequest {
   phone: string;
   password: string;
   role: ApiRole;
+  gymName?: string;
+  gymAddress?: string;
+  gymHotline?: string;
+  gymDescription?: string;
 }

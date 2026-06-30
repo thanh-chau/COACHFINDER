@@ -13,6 +13,7 @@ import { AuthPage } from "./pages/AuthPage";
 import { LearnerDashboard } from "./pages/LearnerDashboard";
 import { CoachDashboard } from "./pages/CoachDashboard";
 import { AdminDashboard } from "./pages/AdminDashboard";
+import { GymOwnerDashboard } from "./pages/GymOwnerDashboard";
 import { CoachProfileSetupPage } from "./pages/CoachProfileSetupPage";
 import { LearnerProfileSetupPage } from "./pages/LearnerProfileSetupPage";
 import type { ApiRole } from "./types/auth";
@@ -379,6 +380,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute expectedRole="ADMIN">
               <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/gym-owner/*"
+          element={
+            <ProtectedRoute expectedRole="GYM_OWNERS">
+              <GymOwnerDashboard />
             </ProtectedRoute>
           }
         />

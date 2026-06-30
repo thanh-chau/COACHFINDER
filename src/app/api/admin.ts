@@ -6,7 +6,7 @@ export interface AdminUser {
   email: string;
   fullName: string;
   phone: string;
-  role: "TRAINEES" | "COACHES" | "ADMIN";
+  role: "TRAINEES" | "COACHES" | "GYM_OWNERS" | "ADMIN";
   active: boolean;
   avatarUrl: string | null;
   createdAt: string;
@@ -397,7 +397,7 @@ export interface AdminWalletHistoryItem {
   username: string | null;
   ownerName: string | null;
   email: string | null;
-  role: "TRAINEES" | "COACHES" | "ADMIN";
+  role: "TRAINEES" | "COACHES" | "GYM_OWNERS" | "ADMIN";
   type: "TOP_UP" | "WITHDRAWAL";
   amount: number;
   balanceBefore: number | null;

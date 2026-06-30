@@ -56,6 +56,8 @@ export function getDashboardPath(role: ApiRole) {
       return "/dashboard/admin";
     case "COACHES":
       return "/dashboard/coach";
+    case "GYM_OWNERS":
+      return "/dashboard/gym-owner";
     case "TRAINEES":
       return "/dashboard/learner";
   }

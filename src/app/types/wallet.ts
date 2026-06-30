@@ -2,7 +2,7 @@ export interface Wallet {
   walletId: number;
   userId: number;
   ownerName: string;
-  role: "TRAINEES" | "COACHES" | "ADMIN";
+  role: "TRAINEES" | "COACHES" | "GYM_OWNERS" | "ADMIN";
   balance: number;
   currency: string;
   updatedAt: string;

@@ -21,6 +21,7 @@ import {
   Activity,
   MessageSquareHeart,
   WalletCards,
+  Building2,
 } from "lucide-react";
 import { AdminOverview } from "../components/AdminOverview";
 import { AdminTransactions } from "../components/AdminTransactions";
@@ -30,6 +31,7 @@ import { AdminFinance } from "../components/AdminFinance";
 import { NotificationBell } from "../components/NotificationBell";
 import { AdminWebsiteFeedback } from "../components/AdminWebsiteFeedback";
 import { AdminWalletHistory } from "../components/AdminWalletHistory";
+import { AdminGyms } from "../components/AdminGyms";
 import { clearAuthSession, getAuthSession } from "../utils/authSession";
 import { logoutAccount } from "../api/auth";
 import { DashboardOverview, fetchAdminOverview } from "../api/admin";
@@ -52,6 +54,11 @@ const navItems = [
     label: "Người dùng",
     id: "users",
     badge: "12",
+  },
+  {
+    icon: Building2,
+    label: "Phong tap",
+    id: "gyms",
   },
   {
     icon: DollarSign,
@@ -84,6 +91,7 @@ const navItems = [
 const ADMIN_TAB_IDS = [
   "overview",
   "users",
+  "gyms",
   "transactions",
   "subscriptions",
   "finance",
@@ -243,6 +251,10 @@ export function AdminDashboard() {
     users: {
       title: "Quản lý người dùng",
       sub: "Dữ liệu người dùng từ hệ thống",
+    },
+    gyms: {
+      title: "Phong tap doi tac",
+      sub: "Duyet va quan ly chu phong tap tren CoachFinder",
     },
     transactions: {
       title: "Giao dịch học phí",
@@ -547,6 +559,9 @@ export function AdminDashboard() {
             </div>
             <div className={activeNav === "users" ? "block" : "hidden"}>
               {mountedTabs["users"] && <AdminUsers />}
+            </div>
+            <div className={activeNav === "gyms" ? "block" : "hidden"}>
+              {mountedTabs["gyms"] && <AdminGyms />}
             </div>
             <div className={activeNav === "transactions" ? "block" : "hidden"}>
               {mountedTabs["transactions"] && <AdminTransactions />}

@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router";
 import {
   Eye, EyeOff, ArrowLeft, ChevronRight, Check,
-  Dumbbell, GraduationCap, Mail, Lock, User,
+  Dumbbell, GraduationCap, Mail, Lock, User, Building2,
   Phone, AlertCircle, Zap, Shield, Brain, Star
 } from "lucide-react";
 import {
@@ -21,7 +21,7 @@ const AUTH_BG =
   "https://images.unsplash.com/photo-1693214674477-1159bddf1598?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmaXRuZXNzJTIwY29hY2glMjB0cmFpbmluZyUyMGF0aGxldGUlMjBtb2RpdmF0aW9uJTIwZGFyayUyMGd5bXxlbnwxfHx8fDE3NzI2Mzc1Mjd8MA&ixlib=rb-4.1.0&q=80&w=1080";
 
 type AuthMode = "login" | "register";
-type Role = "learner" | "coach" | "admin";
+type Role = "learner" | "coach" | "gymOwner";
 type RegisterStep = 1 | 2;
 
 // ─── Reusable input ───────────────────────────────────────────────────────────
@@ -307,6 +307,7 @@ function RolePicker({ onSelect }: { onSelect: (r: Role) => void }) {
         {[
           { role: "learner" as const, Icon: GraduationCap, title: "Học viên", badge: "Miễn phí", badgeCls: "bg-orange-100 text-orange-600", hoverBorder: "border-orange-400 bg-orange-50 shadow-md shadow-orange-100", defaultBorder: "border-gray-200 hover:border-orange-300", iconActive: "bg-orange-500", iconDefault: "bg-orange-100", iconColorActive: "text-white", iconColorDefault: "text-orange-500", chevron: "text-orange-500", desc: "Tìm HLV, đặt lịch tập, nhận phân tích AI động tác và theo dõi tiến độ.", tags: ["🤖 AI Phân tích", "📅 Đặt lịch", "🎥 Video 360°", "📊 Tiến độ"] },
           { role: "coach" as const, Icon: Dumbbell, title: "Huấn luyện viên", badge: "Kiếm thu nhập", badgeCls: "bg-blue-100 text-blue-600", hoverBorder: "border-blue-400 bg-blue-50 shadow-md shadow-blue-100", defaultBorder: "border-gray-200 hover:border-blue-300", iconActive: "bg-blue-500", iconDefault: "bg-blue-100", iconColorActive: "text-white", iconColorDefault: "text-blue-500", chevron: "text-blue-500", desc: "Xây dựng profile, upload video 360°, quản lý học viên và tăng doanh thu.", tags: ["🎥 Studio 360°", "💰 Thu nhập", "📈 Analytics", "🏆 Badge Verified"] },
+          { role: "gymOwner" as const, Icon: Building2, title: "Chu phong tap", badge: "Doi tac", badgeCls: "bg-emerald-100 text-emerald-600", hoverBorder: "border-emerald-400 bg-emerald-50 shadow-md shadow-emerald-100", defaultBorder: "border-gray-200 hover:border-emerald-300", iconActive: "bg-emerald-500", iconDefault: "bg-emerald-100", iconColorActive: "text-white", iconColorDefault: "text-emerald-500", chevron: "text-emerald-500", desc: "Quan ly coach cua phong tap, theo doi booking va nhan payout ve vi doi tac.", tags: ["Coach team", "Vi doi tac", "Booking", "Bao cao"] },
         ].map(({ role, Icon, title, badge, badgeCls, hoverBorder, defaultBorder, iconActive, iconDefault, iconColorActive, iconColorDefault, chevron, desc, tags }) => (
           <button key={role} onClick={() => onSelect(role)} onMouseEnter={() => setHovered(role)} onMouseLeave={() => setHovered(null)}
             className={`w-full text-left p-5 rounded-2xl border-2 transition-all duration-200 ${hovered === role ? hoverBorder : defaultBorder}`}>
@@ -481,6 +482,80 @@ function CoachForm({ onBack, onSwitch }: { onBack: () => void; onSwitch: () => v
   );
 }
 
+interface GymOwnerData { username: string; name: string; email: string; phone: string; password: string; confirmPassword: string; gymName: string; gymAddress: string; gymHotline: string; gymDescription: string; terms: boolean; }
+
+function GymOwnerForm({ onBack, onSwitch }: { onBack: () => void; onSwitch: () => void }) {
+  const [showPw, setShowPw] = useState(false);
+  const [showCp, setShowCp] = useState(false);
+  const [registerError, setRegisterError] = useState("");
+  const navigate = useNavigate();
+  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<GymOwnerData>();
+
+  const onSubmit = async (data: GymOwnerData) => {
+    setRegisterError("");
+    try {
+      const auth = await registerAccount({
+        username: data.username.trim(),
+        fullName: data.name.trim(),
+        email: data.email.trim(),
+        phone: data.phone.trim(),
+        password: data.password,
+        role: "GYM_OWNERS",
+        gymName: data.gymName.trim(),
+        gymAddress: data.gymAddress.trim(),
+        gymHotline: data.gymHotline.trim(),
+        gymDescription: data.gymDescription.trim(),
+      });
+      saveAuthSession(auth);
+      navigate(getDashboardPath(auth.role));
+    } catch (error) {
+      setRegisterError(error instanceof Error ? error.message : "Dang ky chu phong tap khong thanh cong.");
+    }
+  };
+
+  return (
+    <div className="w-full max-w-md mx-auto">
+      <div className="mb-6">
+        <button onClick={onBack} className="flex items-center gap-1.5 text-gray-400 hover:text-gray-600 mb-4"><ArrowLeft className="w-4 h-4" /><span style={{ fontSize: "0.85rem" }}>Quay lai</span></button>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center"><Building2 className="w-5 h-5 text-emerald-500" /></div>
+          <div><h1 style={{ fontSize: "1.5rem", fontWeight: 800 }} className="text-gray-900">Dang ky Chu phong tap</h1><p style={{ fontSize: "0.8rem" }} className="text-gray-400">Ho so se cho admin duyet truoc khi nhan payout</p></div>
+        </div>
+      </div>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
+        <FormInput label="Ho va ten chu phong tap" icon={User} error={errors.name?.message} placeholder="Nguyen Van A" focusColor="blue" registration={register("name", { required: "Bat buoc" })} />
+        <FormInput label="Ten dang nhap" icon={User} error={errors.username?.message} placeholder="gymowner" focusColor="blue" registration={register("username", { required: "Bat buoc", minLength: { value: 3, message: "Toi thieu 3 ky tu" } })} />
+        <FormInput label="Email" icon={Mail} error={errors.email?.message} placeholder="owner@gym.com" focusColor="blue" registration={register("email", { required: "Bat buoc", pattern: { value: /^\S+@\S+\.\S+$/, message: "Email khong hop le" } })} />
+        <FormInput label="So dien thoai" icon={Phone} error={errors.phone?.message} placeholder="0901234567" type="tel" focusColor="blue" registration={register("phone", { required: "Bat buoc" })} />
+        <FormInput label="Ten phong tap" icon={Building2} error={errors.gymName?.message} placeholder="Elite Fitness District 1" focusColor="blue" registration={register("gymName", { required: "Bat buoc" })} />
+        <FormInput label="Hotline phong tap" icon={Phone} error={errors.gymHotline?.message} placeholder="028..." type="tel" focusColor="blue" registration={register("gymHotline")} />
+        <FormInput label="Dia chi phong tap" icon={Building2} error={errors.gymAddress?.message} placeholder="Quan 1, TP.HCM" focusColor="blue" registration={register("gymAddress", { required: "Bat buoc" })} />
+        <FormInput label="Mat khau" icon={Lock} error={errors.password?.message} focusColor="blue">
+          <input type={showPw ? "text" : "password"} placeholder="Toi thieu 8 ky tu" className="w-full bg-transparent pl-10 pr-10 py-3 outline-none text-gray-800 placeholder-gray-400" style={{ fontSize: "0.9rem" }} {...register("password", { required: "Bat buoc", minLength: { value: 8, message: "Toi thieu 8 ky tu" } })} />
+          <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3.5 text-gray-400 hover:text-gray-600">{showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
+        </FormInput>
+        <FormInput label="Xac nhan mat khau" icon={Lock} error={errors.confirmPassword?.message} focusColor="blue">
+          <input type={showCp ? "text" : "password"} placeholder="Nhap lai mat khau" className="w-full bg-transparent pl-10 pr-10 py-3 outline-none text-gray-800 placeholder-gray-400" style={{ fontSize: "0.9rem" }} {...register("confirmPassword", { required: "Bat buoc", validate: v => v === watch("password") || "Mat khau khong khop" })} />
+          <button type="button" onClick={() => setShowCp(!showCp)} className="absolute right-3.5 text-gray-400 hover:text-gray-600">{showCp ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
+        </FormInput>
+        <label>
+          <span className="block text-gray-700 mb-1.5" style={{ fontSize: "0.85rem", fontWeight: 600 }}>Mo ta phong tap</span>
+          <textarea rows={3} className="w-full rounded-xl border-2 border-gray-200 bg-gray-50 px-3 py-3 outline-none focus:border-emerald-400" style={{ fontSize: "0.9rem" }} {...register("gymDescription")} />
+        </label>
+        <label className="flex items-start gap-2.5 cursor-pointer">
+          <input type="checkbox" className="mt-0.5 w-4 h-4 rounded accent-emerald-500" {...register("terms", { required: true })} />
+          <span style={{ fontSize: "0.8rem", lineHeight: 1.6 }} className="text-gray-500">Toi dong y voi dieu khoan doi tac va chinh sach phi he thong.</span>
+        </label>
+        {errors.terms && <p className="text-red-500" style={{ fontSize: "0.78rem" }}>Vui long dong y voi dieu khoan</p>}
+        {registerError && <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3"><AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" /><span style={{ fontSize: "0.82rem" }} className="text-red-600">{registerError}</span></div>}
+        <button type="submit" disabled={isSubmitting} className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all shadow-lg shadow-emerald-200 disabled:opacity-70 flex items-center justify-center gap-2" style={{ fontWeight: 700, fontSize: "0.95rem" }}>
+          {isSubmitting ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Dang tao...</> : "Tao tai khoan chu phong tap"}
+        </button>
+      </form>
+      <p className="text-center mt-5" style={{ fontSize: "0.88rem" }}><span className="text-gray-500">Da co tai khoan? </span><button onClick={onSwitch} className="text-emerald-500 hover:text-emerald-600" style={{ fontWeight: 700 }}>Dang nhap</button></p>
+    </div>
+  );
+}
 // ─── Main AuthPage ────────────────────────────────────────────────────────────
 export function AuthPage() {
   const [mode, setMode] = useState<AuthMode>("login");
@@ -495,6 +570,7 @@ export function AuthPage() {
     if (step === 1) return <RolePicker onSelect={(r) => { setRole(r); setStep(2); }} />;
     if (role === "learner") return <LearnerForm onBack={() => { setStep(1); setRole(null); }} onSwitch={switchToLogin} />;
     if (role === "coach") return <CoachForm onBack={() => { setStep(1); setRole(null); }} onSwitch={switchToLogin} />;
+    if (role === "gymOwner") return <GymOwnerForm onBack={() => { setStep(1); setRole(null); }} onSwitch={switchToLogin} />;
   };
 
   return (
